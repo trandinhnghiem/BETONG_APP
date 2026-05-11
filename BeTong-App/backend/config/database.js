@@ -6,6 +6,7 @@ const config = {
   password: process.env.DB_PASSWORD || 'YourPassword123',
   database: process.env.DB_NAME || 'AuditAppDB',
   server: process.env.DB_SERVER || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 1433,
   pool: {
     max: 10,
     min: 0,
