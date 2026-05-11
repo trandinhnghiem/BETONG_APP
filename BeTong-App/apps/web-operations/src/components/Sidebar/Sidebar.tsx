@@ -10,21 +10,21 @@ export default function Sidebar() {
     switch (userRole) {
       case 'Admin':
         return [
-          { to: '/admin', label: 'Dashboard', icon: FiHome },
-          { to: '/admin/users', label: 'Users', icon: FiUsers },
-          { to: '/admin/settings', label: 'Settings', icon: FiSettings },
+          { to: '/admin', label: 'Tổng Quan', icon: FiHome },
+          { to: '/admin/users', label: 'Người Dùng', icon: FiUsers },
+          { to: '/admin/settings', label: 'Cài Đặt', icon: FiSettings },
         ]
       case 'Accounting':
         return [
-          { to: '/accounting', label: 'Dashboard', icon: FiHome },
-          { to: '/accounting/orders', label: 'Orders', icon: FiShoppingCart },
-          { to: '/accounting/reports', label: 'Reports', icon: FiFileText },
+          { to: '/accounting', label: 'Tổng Quan', icon: FiHome },
+          { to: '/accounting/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
+          { to: '/accounting/reports', label: 'Báo Cáo', icon: FiFileText },
         ]
       case 'Coordinator':
         return [
-          { to: '/coordinator', label: 'Dashboard', icon: FiHome },
-          { to: '/coordinator/orders', label: 'Orders', icon: FiShoppingCart },
-          { to: '/coordinator/orders/create', label: 'Create Order', icon: FiFileText },
+          { to: '/coordinator', label: 'Tổng Quan', icon: FiHome },
+          { to: '/coordinator/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
+          { to: '/coordinator/orders/create', label: 'Tạo Đơn Hàng', icon: FiFileText },
         ]
       default:
         return []
@@ -36,7 +36,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2>Quản Lý Giao Nhận</h2>
+        <h2>CÔNG TY CỔ PHẦN BÊ TÔNG TÂY ĐÔ</h2>
       </div>
       <nav className="sidebar-nav">
         {navItems.map((item) => {
