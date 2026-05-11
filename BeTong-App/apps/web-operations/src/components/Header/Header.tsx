@@ -15,7 +15,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <h1>Quản Lý Giao Nhận</h1>
+        <h1>HỆ THỐNG QUẢN LÝ KINH DOANH</h1>
         <div className="header-actions">
           <button className="notification-btn">
             <FiBell size={20} />
