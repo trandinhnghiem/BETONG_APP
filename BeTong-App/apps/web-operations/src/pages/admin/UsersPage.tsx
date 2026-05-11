@@ -109,7 +109,6 @@ export default function UsersPage() {
       case 'Admin': return 'red'
       case 'Accounting': return 'blue'
       case 'Coordinator': return 'green'
-      case 'Leader': return 'purple'
       default: return 'gray'
     }
   }
@@ -175,7 +174,6 @@ export default function UsersPage() {
               <option value="Admin">Quản trị</option>
               <option value="Accounting">Kế toán</option>
               <option value="Coordinator">Điều phối</option>
-              <option value="Leader">Trưởng nhóm</option>
             </select>
           </div>
 

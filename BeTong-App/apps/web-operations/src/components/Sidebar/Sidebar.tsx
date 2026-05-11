@@ -26,6 +26,11 @@ export default function Sidebar() {
           { to: '/coordinator/orders', label: 'Orders', icon: FiShoppingCart },
           { to: '/coordinator/orders/create', label: 'Create Order', icon: FiFileText },
         ]
+      case 'Station':
+        return [
+          { to: '/station', label: 'Dashboard', icon: FiHome },
+          { to: '/station/orders', label: 'Received Orders', icon: FiShoppingCart },
+        ]
       default:
         return []
     }

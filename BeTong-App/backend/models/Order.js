@@ -73,6 +73,25 @@ class Order {
     return result.recordset
   }
 
+  static async findSentToStation(limit = 50, offset = 0) {
+    const pool = await getConnection()
+    const result = await pool
+      .request()
+      .input('limit', sql.Int, limit)
+      .input('offset', sql.Int, offset)
+      .query(`
+        SELECT o.*, u.FullName as CoordinatorName, s1.StationName as SourceStation, s2.StationName as DestinationStation
+        FROM Orders o
+        JOIN Users u ON o.CoordinatorId = u.Id
+        JOIN Stations s1 ON o.SourceStationId = s1.Id
+        JOIN Stations s2 ON o.DestinationStationId = s2.Id
+        WHERE o.OrderStatus IN ('Sent', 'Delivered', 'Uploading', 'Approved')
+        ORDER BY o.UpdatedAt DESC
+        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+      `)
+    return result.recordset
+  }
+
   static async findAll(limit = 50, offset = 0) {
     const pool = await getConnection()
     const result = await pool

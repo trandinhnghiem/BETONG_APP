@@ -73,6 +73,19 @@ class UserModel {
     return result.rowsAffected[0] > 0
   }
 
+  static async findByRole(role) {
+    const pool = await getConnection()
+    const result = await pool
+      .request()
+      .input('role', sql.NVarChar, role)
+      .query(`
+        SELECT Id, Username, Email, FullName, Phone, Role, IsActive
+        FROM Users
+        WHERE Role = @role AND IsActive = 1
+      `)
+    return result.recordset
+  }
+
   static async verifyPassword(password, hash) {
     return await bcrypt.compare(password, hash)
   }

@@ -1,24 +1,34 @@
 import { useEffect, useState } from 'react'
-import { FiClock, FiCheckCircle, FiXCircle, FiDollarSign } from 'react-icons/fi'
-import { Link } from 'react-router-dom'
+import { FiShoppingCart, FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi'
+import OrderTable from '../../components/OrderTable/OrderTable'
+import apiClient from '../../services/api'
 import './Dashboard.css'
+
+interface DashboardStats {
+  totalOrders: number
+  pendingApproval: number
+  approved: number
+  rejected: number
+}
 
 interface Order {
   id: number
   orderCode: string
-  coordinatorName: string
-  totalAmount: number
-  orderStatus: string
+  status: string
   createdAt: string
+  totalAmount: number
+  coordinatorName: string
+  approvalStatus: string
 }
 
 export default function AccountingDashboard() {
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([])
-  const [stats, setStats] = useState({
-    pendingApprovals: 0,
-    approvedToday: 0,
-    totalValue: 0
+  const [stats, setStats] = useState<DashboardStats>({
+    totalOrders: 0,
+    pendingApproval: 0,
+    approved: 0,
+    rejected: 0
   })
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,52 +38,83 @@ export default function AccountingDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+      // Fetch from API
+      const response = await apiClient.get('/api/orders')
+      const allOrders = response.data || []
 
-      // Mock data (sau này thay bằng API thật)
-      setPendingOrders([
+      // Mock data for demo
+      const mockOrders: Order[] = [
         {
           id: 1,
-          orderCode: 'ORD-001',
-          coordinatorName: 'Nhân viên điều phối 1',
-          totalAmount: 1500000,
-          orderStatus: 'Chờ duyệt',
-          createdAt: '2024-01-15'
+          orderCode: 'ORD-2026-001',
+          status: 'Pending Approval',
+          createdAt: new Date().toISOString(),
+          totalAmount: 5000000,
+          coordinatorName: 'Nguyễn Văn A',
+          approvalStatus: 'Pending'
         },
         {
           id: 2,
-          orderCode: 'ORD-002',
-          coordinatorName: 'Nhân viên điều phối 2',
-          totalAmount: 2200000,
-          orderStatus: 'Chờ duyệt',
-          createdAt: '2024-01-15'
+          orderCode: 'ORD-2026-002',
+          status: 'Approved',
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          totalAmount: 7500000,
+          coordinatorName: 'Trần Thị B',
+          approvalStatus: 'Approved'
         }
-      ])
+      ]
 
+      setOrders(mockOrders)
       setStats({
-        pendingApprovals: 2,
-        approvedToday: 3,
-        totalValue: 4500000
+        totalOrders: mockOrders.length,
+        pendingApproval: mockOrders.filter(o => o.approvalStatus === 'Pending').length,
+        approved: mockOrders.filter(o => o.approvalStatus === 'Approved').length,
+        rejected: mockOrders.filter(o => o.approvalStatus === 'Rejected').length
       })
     } catch (error) {
-      console.error('Lỗi khi tải dashboard:', error)
+      console.error('Error fetching dashboard data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleApprove = async (orderId: number) => {
-    console.log('Duyệt đơn:', orderId)
-  }
+  const statCards = [
+    {
+      title: 'Tổng đơn hàng',
+      value: stats.totalOrders,
+      icon: FiShoppingCart,
+      color: 'blue'
+    },
+    {
+      title: 'Chờ phê duyệt',
+      value: stats.pendingApproval,
+      icon: FiClock,
+      color: 'orange'
+    },
+    {
+      title: 'Đã phê duyệt',
+      value: stats.approved,
+      icon: FiCheckCircle,
+      color: 'green'
+    },
+    {
+      title: 'Từ chối',
+      value: stats.rejected,
+      icon: FiXCircle,
+      color: 'red'
+    }
+  ]
 
-  const handleReject = async (orderId: number) => {
-    console.log('Từ chối đơn:', orderId)
+  const handleOrderAction = (order: Order, action: string) => {
+    console.log(`Action: ${action} on order:`, order)
+    // TODO: Implement order actions
   }
 
   return (
     <div className="accounting-dashboard">
       <div className="dashboard-header">
         <h1>Bảng điều khiển kế toán</h1>
-        <p>Quản lý duyệt đơn hàng và hoạt động tài chính</p>
+        <p>Quản lý và phê duyệt đơn hàng</p>
       </div>
 
       {loading ? (
@@ -81,102 +122,32 @@ export default function AccountingDashboard() {
       ) : (
         <>
           <div className="stats-grid">
-            <div className="stat-card orange">
-              <div className="stat-icon">
-                <FiClock size={24} />
-              </div>
-              <div className="stat-content">
-                <h3>Đơn chờ duyệt</h3>
-                <p className="stat-value">{stats.pendingApprovals}</p>
-              </div>
-            </div>
-
-            <div className="stat-card green">
-              <div className="stat-icon">
-                <FiCheckCircle size={24} />
-              </div>
-              <div className="stat-content">
-                <h3>Đã duyệt hôm nay</h3>
-                <p className="stat-value">{stats.approvedToday}</p>
-              </div>
-            </div>
-
-            <div className="stat-card blue">
-              <div className="stat-icon">
-                <FiDollarSign size={24} />
-              </div>
-              <div className="stat-content">
-                <h3>Tổng giá trị</h3>
-                <p className="stat-value">{stats.totalValue.toLocaleString()} VND</p>
-              </div>
-            </div>
+            {statCards.map((card, index) => {
+              const Icon = card.icon
+              return (
+                <div key={index} className={`stat-card ${card.color}`}>
+                  <div className="stat-icon">
+                    <Icon size={24} />
+                  </div>
+                  <div className="stat-content">
+                    <h3>{card.title}</h3>
+                    <p className="stat-value">{card.value}</p>
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
-          <div className="dashboard-content">
-            {/* DANH SÁCH ĐƠN CHỜ DUYỆT */}
-            <div className="section">
-              <div className="section-header">
-                <h2>Đơn hàng chờ duyệt</h2>
-                <Link to="/accounting/orders" className="view-all-link">
-                  Xem tất cả
-                </Link>
-              </div>
-
-              {pendingOrders.length === 0 ? (
-                <div className="empty-state">
-                  <FiClock size={48} />
-                  <p>Không có đơn nào cần duyệt</p>
-                </div>
-              ) : (
-                <div className="orders-list">
-                  {pendingOrders.map((order) => (
-                    <div key={order.id} className="order-item">
-                      <div className="order-info">
-                        <h4>{order.orderCode}</h4>
-                        <p className="coordinator">{order.coordinatorName}</p>
-                        <p className="amount">
-                          {order.totalAmount.toLocaleString()} VND
-                        </p>
-                        <p className="date">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-
-                      <div className="order-actions">
-                        <button
-                          className="action-btn approve"
-                          onClick={() => handleApprove(order.id)}
-                        >
-                          <FiCheckCircle size={16} />
-                          Duyệt
-                        </button>
-
-                        <button
-                          className="action-btn reject"
-                          onClick={() => handleReject(order.id)}
-                        >
-                          <FiXCircle size={16} />
-                          Từ chối
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* HÀNH ĐỘNG NHANH */}
-            <div className="section">
-              <h2>Thao tác nhanh</h2>
-              <div className="quick-actions">
-                <Link to="/accounting/orders" className="action-btn primary">
-                  Xem tất cả đơn hàng
-                </Link>
-                <Link to="/accounting/reports" className="action-btn secondary">
-                  Tạo báo cáo
-                </Link>
-              </div>
-            </div>
+          <div className="orders-section">
+            <h2>Đơn hàng cần phê duyệt</h2>
+            <OrderTable
+              orders={orders}
+              onActionClick={handleOrderAction}
+              actionButtons={[
+                { label: 'Phê duyệt', action: 'approve', className: 'success' },
+                { label: 'Từ chối', action: 'reject', className: 'danger' }
+              ]}
+            />
           </div>
         </>
       )}

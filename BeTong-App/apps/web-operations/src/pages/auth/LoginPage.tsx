@@ -9,6 +9,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showHints, setShowHints] = useState(false)
+
+  const testAccounts = [
+    { username: 'admin', password: 'Admin@123456', role: 'Admin' },
+    { username: 'account', password: '123456', role: 'Accounting' },
+    { username: 'coor', password: '123456', role: 'Coordinator' },
+    { username: 'station', password: '123456', role: 'Station' }
+  ]
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,6 +45,8 @@ export default function LoginPage() {
           navigate('/accounting')
         } else if (role === 'Coordinator') {
           navigate('/coordinator')
+        } else if (role === 'Station') {
+          navigate('/station')
         } else {
           navigate('/')
         }
@@ -46,6 +56,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleTestLogin = (account: typeof testAccounts[0]) => {
+    setUsername(account.username)
+    setPassword(account.password)
   }
 
   return (
@@ -91,7 +106,33 @@ export default function LoginPage() {
         </form>
 
         <div className="login-footer">
-          <p>Cần hỗ trợ? Liên hệ quản trị viên</p>
+          <button 
+            type="button"
+            className="hints-toggle"
+            onClick={() => setShowHints(!showHints)}
+          >
+            {showHints ? 'Ẩn' : 'Hiển thị'} tài khoản test
+          </button>
+          
+          {showHints && (
+            <div className="test-accounts">
+              <p className="test-accounts-title">Tài khoản test:</p>
+              {testAccounts.map((account) => (
+                <button
+                  key={account.username}
+                  type="button"
+                  className="test-account-btn"
+                  onClick={() => handleTestLogin(account)}
+                  disabled={loading}
+                >
+                  <span className="account-info">
+                    <strong>{account.role}</strong><br/>
+                    {account.username} / {account.password}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

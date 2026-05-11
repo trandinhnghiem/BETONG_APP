@@ -3,6 +3,7 @@ const OrderItemModel = require('../models/OrderItem')
 const ProductModel = require('../models/Product')
 const StationModel = require('../models/Station')
 const NotificationModel = require('../models/Notification')
+const UserModel = require('../models/User')
 const { getConnection, sql } = require('../config/database')
 
 class OrderController {
@@ -59,6 +60,18 @@ class OrderController {
 
       // Update order status to Pending Approval
       await OrderModel.updateStatus(orderResult.id, 'Pending Approval')
+
+      // Notify Accounting users that a new order requires approval
+      const accountingUsers = await UserModel.findByRole('Accounting')
+      for (const accountingUser of accountingUsers) {
+        await NotificationModel.create({
+          receiverId: accountingUser.Id,
+          notificationType: 'OrderPendingApproval',
+          title: 'Đơn hàng cần duyệt',
+          message: `Đơn ${orderCode} đã được tạo và đang chờ kế toán duyệt.`,
+          relatedOrderId: orderResult.id
+        })
+      }
 
       res.status(201).json({
         message: 'Order created successfully',
@@ -138,6 +151,47 @@ class OrderController {
     }
   }
 
+  static async getStationOrders(req, res) {
+    try {
+      const { limit = 50, offset = 0 } = req.query
+      const orders = await OrderModel.findSentToStation(parseInt(limit), parseInt(offset))
+      res.json(orders)
+    } catch (error) {
+      console.error('Get station orders error:', error)
+      res.status(500).json({ error: error.message })
+    }
+  }
+
+  static async exportOrdersReport(req, res) {
+    try {
+      const orders = await OrderModel.findAll(1000, 0)
+      const headers = ['Mã đơn', 'Điều phối', 'Trạm gửi', 'Trạm nhận', 'Trạng thái', 'Thanh toán', 'Tổng tiền', 'Ngày tạo']
+      const csvRows = [headers.join(',')]
+
+      orders.forEach((order) => {
+        const row = [
+          order.OrderCode,
+          order.CoordinatorName || '',
+          order.SourceStation || '',
+          order.DestinationStation || '',
+          order.OrderStatus || '',
+          order.PaymentStatus || '',
+          order.TotalAmount || 0,
+          order.CreatedAt ? new Date(order.CreatedAt).toISOString() : ''
+        ]
+        csvRows.push(row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      })
+
+      const csvContent = csvRows.join('\n')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', 'attachment; filename="order-report.csv"')
+      res.send(csvContent)
+    } catch (error) {
+      console.error('Export orders report error:', error)
+      res.status(500).json({ error: error.message })
+    }
+  }
+
   static async approveOrder(req, res) {
     try {
       const { orderId } = req.params
@@ -156,8 +210,8 @@ class OrderController {
         await NotificationModel.create({
           receiverId: order.CoordinatorId,
           notificationType: 'OrderApproved',
-          title: 'Order Approved',
-          message: `Your order ${order.OrderCode} has been approved`,
+          title: 'Đơn hàng đã được duyệt',
+          message: `Đơn ${order.OrderCode} đã được kế toán duyệt.`,
           relatedOrderId: parseInt(orderId)
         })
       }
@@ -191,8 +245,8 @@ class OrderController {
         await NotificationModel.create({
           receiverId: order.CoordinatorId,
           notificationType: 'OrderRejected',
-          title: 'Order Rejected',
-          message: `Your order ${order.OrderCode} has been rejected`,
+          title: 'Đơn hàng bị từ chối',
+          message: `Đơn ${order.OrderCode} đã bị kế toán từ chối.`,
           relatedOrderId: parseInt(orderId)
         })
       }
@@ -221,6 +275,32 @@ class OrderController {
         return res.status(404).json({ error: 'Order not found' })
       }
 
+      const order = await OrderModel.findById(parseInt(orderId))
+      if (order) {
+        if (status === 'Sent') {
+          const stationUsers = await UserModel.findByRole('Station')
+          for (const stationUser of stationUsers) {
+            await NotificationModel.create({
+              receiverId: stationUser.Id,
+              notificationType: 'OrderSentToStation',
+              title: 'Đơn hàng mới đã gửi tới trạm',
+              message: `Đơn ${order.OrderCode} đã được gửi tới trạm ${order.DestinationStation}.`,
+              relatedOrderId: parseInt(orderId)
+            })
+          }
+        }
+
+        if (status === 'Delivered') {
+          await NotificationModel.create({
+            receiverId: order.CoordinatorId,
+            notificationType: 'OrderDelivered',
+            title: 'Đơn hàng đã được trạm nhận',
+            message: `đơn ${order.OrderCode} đã được trạm xác nhận nhận.`,
+            relatedOrderId: parseInt(orderId)
+          })
+        }
+      }
+
       res.json({ message: 'Order status updated successfully' })
     } catch (error) {
       console.error('Update order status error:', error)
@@ -238,6 +318,17 @@ class OrderController {
 
       if (!success) {
         return res.status(404).json({ error: 'Order not found' })
+      }
+
+      const order = await OrderModel.findById(parseInt(orderId))
+      if (order) {
+        await NotificationModel.create({
+          receiverId: order.CoordinatorId,
+          notificationType: 'PaymentConfirmed',
+          title: 'Thanh toán đã được xác nhận',
+          message: `Thanh toán đơn ${order.OrderCode} đã được kế toán xác nhận.`,
+          relatedOrderId: parseInt(orderId)
+        })
       }
 
       res.json({ message: 'Payment confirmed successfully' })

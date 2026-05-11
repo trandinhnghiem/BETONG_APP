@@ -21,7 +21,7 @@ CREATE TABLE Users (
     PasswordHash NVARCHAR(MAX) NOT NULL,
     FullName NVARCHAR(255) NOT NULL,
     Phone NVARCHAR(20),
-    Role NVARCHAR(50) NOT NULL, -- 'Admin', 'Accounting', 'Coordinator', 'Station', 'Leader'
+    Role NVARCHAR(50) NOT NULL, -- 'Admin', 'Accounting', 'Coordinator', 'Station'
     IsActive BIT DEFAULT 1,
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE()
@@ -236,11 +236,6 @@ VALUES
     -- Station permissions
     ('Station', 'confirm_receipt'),
     ('Station', 'update_delivery_status'),
-    ('Station', 'view_assigned_orders'),
-    -- Leader permissions
-    ('Leader', 'view_dashboard'),
-    ('Leader', 'view_all_orders'),
-    ('Leader', 'generate_reports'),
-    ('Leader', 'export_data');
+    ('Station', 'view_assigned_orders');
 
 PRINT 'Database schema created successfully!';
