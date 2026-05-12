@@ -16,7 +16,7 @@ class UserModel {
     const result = await pool
       .request()
       .input('id', sql.Int, id)
-      .query('SELECT Id, Username, Email, FullName, Phone, Role, IsActive, CreatedAt FROM Users WHERE Id = @id')
+      .query('SELECT Id, Username, Email, FullName, Phone, Role, StationId, IsActive, CreatedAt, UpdatedAt FROM Users WHERE Id = @id')
     return result.recordset[0]
   }
 
@@ -27,7 +27,7 @@ class UserModel {
       .input('limit', sql.Int, limit)
       .input('offset', sql.Int, offset)
       .query(`
-        SELECT Id, Username, Email, FullName, Phone, Role, IsActive, CreatedAt, UpdatedAt
+        SELECT Id, Username, Email, FullName, Phone, Role, StationId, IsActive, CreatedAt, UpdatedAt
         FROM Users
         ORDER BY CreatedAt DESC
         OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
@@ -47,9 +47,10 @@ class UserModel {
       .input('fullName', sql.NVarChar, userData.fullName)
       .input('phone', sql.NVarChar, userData.phone || null)
       .input('role', sql.NVarChar, userData.role || 'Coordinator')
+      .input('stationId', sql.Int, userData.stationId || null)
       .query(`
-        INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role)
-        VALUES (@username, @email, @passwordHash, @fullName, @phone, @role)
+        INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, StationId)
+        VALUES (@username, @email, @passwordHash, @fullName, @phone, @role, @stationId)
         SELECT SCOPE_IDENTITY() as id
       `)
     return result.recordset[0]
@@ -64,10 +65,25 @@ class UserModel {
       .input('fullName', sql.NVarChar, userData.fullName)
       .input('phone', sql.NVarChar, userData.phone)
       .input('role', sql.NVarChar, userData.role)
+      .input('stationId', sql.Int, userData.stationId || null)
       .input('isActive', sql.Bit, userData.isActive !== undefined ? userData.isActive : 1)
       .query(`
         UPDATE Users
-        SET FullName = @fullName, Phone = @phone, Role = @role, IsActive = @isActive, UpdatedAt = GETDATE()
+        SET FullName = @fullName, Phone = @phone, Role = @role, StationId = @stationId, IsActive = @isActive, UpdatedAt = GETDATE()
+        WHERE Id = @id
+      `)
+    return result.rowsAffected[0] > 0
+  }
+
+  static async updateStationId(id, stationId) {
+    const pool = await getConnection()
+    const result = await pool
+      .request()
+      .input('id', sql.Int, id)
+      .input('stationId', sql.Int, stationId)
+      .query(`
+        UPDATE Users
+        SET StationId = @stationId, UpdatedAt = GETDATE()
         WHERE Id = @id
       `)
     return result.rowsAffected[0] > 0
@@ -79,7 +95,7 @@ class UserModel {
       .request()
       .input('role', sql.NVarChar, role)
       .query(`
-        SELECT Id, Username, Email, FullName, Phone, Role, IsActive
+        SELECT Id, Username, Email, FullName, Phone, Role, StationId, IsActive
         FROM Users
         WHERE Role = @role AND IsActive = 1
       `)

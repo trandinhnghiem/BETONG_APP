@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FiCheckCircle, FiRefreshCcw } from 'react-icons/fi'
 import apiClient from '../../services/api'
 
@@ -6,7 +7,6 @@ interface Order {
   id: number
   orderCode: string
   coordinatorName: string
-  sourceStation: string
   destinationStation: string
   totalAmount: number
   orderStatus: string
@@ -17,26 +17,40 @@ export default function StationOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
+  const [params] = useSearchParams()
+  const stationName = params.get('station')
+
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [stationName])
 
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const response = await apiClient.get('/api/orders/station-orders')
-      setOrders(response.data.map((order: any) => ({
-        id: order.Id,
-        orderCode: order.OrderCode,
-        coordinatorName: order.CoordinatorName,
-        sourceStation: order.SourceStation,
-        destinationStation: order.DestinationStation,
-        totalAmount: order.TotalAmount,
-        orderStatus: order.OrderStatus,
-        createdAt: order.CreatedAt
+
+      const res = await apiClient.get('/api/orders/station-orders')
+
+      let data = res.data || []
+
+      // ✅ lọc theo trạm
+      if (stationName) {
+        data = data.filter((o: any) =>
+          o.DestinationStation === stationName
+        )
+      }
+
+      setOrders(data.map((o: any) => ({
+        id: o.Id,
+        orderCode: o.OrderCode,
+        coordinatorName: o.CoordinatorName,
+        destinationStation: o.DestinationStation,
+        totalAmount: o.TotalAmount || 0,
+        orderStatus: o.OrderStatus,
+        createdAt: o.CreatedAt
       })))
-    } catch (error) {
-      console.error('Lỗi khi lấy đơn hàng trạm:', error)
+
+    } catch (err) {
+      console.error(err)
       setOrders([])
     } finally {
       setLoading(false)
@@ -47,49 +61,51 @@ export default function StationOrdersPage() {
     try {
       await apiClient.post(`/api/orders/${orderId}/status`, { status })
       fetchOrders()
-      alert('Cập nhật trạng thái thành công')
-    } catch (error) {
-      console.error('Lỗi khi cập nhật trạng thái:', error)
-      alert('Cập nhật trạng thái thất bại')
+      alert('Cập nhật thành công')
+    } catch (err) {
+      alert('Lỗi')
     }
   }
 
   return (
     <div className="orders-page">
-      <div className="page-header">
-        <h1>Đơn hàng trạm</h1>
-        <p>Quản lý đơn hàng được gửi tới trạm.</p>
-      </div>
+
+      <h1>📦 Đơn hàng {stationName}</h1>
 
       {loading ? (
         <div>Đang tải...</div>
       ) : orders.length === 0 ? (
-        <div>Không có đơn hàng nào được gửi tới trạm.</div>
+        <div>Không có đơn</div>
       ) : (
         <div className="orders-list">
-          {orders.map((order) => (
+          {orders.map(order => (
             <div key={order.id} className="order-card">
+
               <h3>{order.orderCode}</h3>
               <p>Điều phối: {order.coordinatorName}</p>
-              <p>{order.sourceStation} → {order.destinationStation}</p>
-              <p>Số tiền: {order.totalAmount.toLocaleString()} VND</p>
+              <p>Trạm nhận: {order.destinationStation}</p>
+              <p>Tiền: {order.totalAmount.toLocaleString()} đ</p>
               <p>Trạng thái: {order.orderStatus}</p>
+
               <div className="actions">
                 {order.orderStatus === 'Sent' && (
                   <button onClick={() => updateStatus(order.id, 'Delivered')}>
-                    <FiCheckCircle size={16} /> Xác nhận nhận
+                    <FiCheckCircle /> Xác nhận nhận
                   </button>
                 )}
+
                 {order.orderStatus === 'Delivered' && (
                   <button onClick={() => updateStatus(order.id, 'Completed')}>
-                    <FiRefreshCcw size={16} /> Đánh dấu hoàn thành
+                    <FiRefreshCcw /> Hoàn thành
                   </button>
                 )}
               </div>
+
             </div>
           ))}
         </div>
       )}
+
     </div>
   )
 }

@@ -1,0 +1,34 @@
+.station-dashboard {
+  padding: 20px;
+}
+
+.station-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.station-card {
+  background: #2c3e50;
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+  text-align: center;
+}
+
+.station-card:hover {
+  background: #34495e;
+  transform: translateY(-5px);
+}
+
+.station-card h2 {
+  font-size: 18px;
+}
+
+.station-card p {
+  margin-top: 10px;
+  font-size: 14px;
+}

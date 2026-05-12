@@ -1,180 +1,163 @@
 const { getConnection, sql } = require('../config/database')
 
-class Order {
-  static async create(orderData) {
+class OrderModel {
+
+  // ================= GET ORDERS BY COORDINATOR =================
+  static async findByCoordinator(coordinatorId, limit = 50, offset = 0) {
     const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('orderCode', sql.NVarChar, orderData.orderCode)
-      .input('coordinatorId', sql.Int, orderData.coordinatorId)
-      .input('sourceStationId', sql.Int, orderData.sourceStationId)
-      .input('destinationStationId', sql.Int, orderData.destinationStationId)
-      .input('totalAmount', sql.Decimal(18, 2), orderData.totalAmount)
-      .input('notes', sql.NVarChar, orderData.notes || null)
+
+    const result = await pool.request()
+      .input('CoordinatorId', sql.Int, coordinatorId)
+      .input('Limit', sql.Int, limit)
+      .input('Offset', sql.Int, offset)
       .query(`
-        INSERT INTO Orders (OrderCode, CoordinatorId, SourceStationId, DestinationStationId, TotalAmount, Notes)
-        OUTPUT INSERTED.Id
-        VALUES (@orderCode, @coordinatorId, @sourceStationId, @destinationStationId, @totalAmount, @notes)
+        SELECT 
+          o.Id,
+          o.OrderCode,
+
+          -- ✅ FIX: dùng StationName
+          s1.StationName AS SourceStation,
+          s2.StationName AS DestinationStation,
+
+          -- nếu chưa có TotalAmount thì dùng Volume * Price
+          ISNULL(o.TotalAmount, o.Volume * o.Price) AS TotalAmount,
+
+          o.OrderStatus,
+          o.CreatedAt
+
+        FROM Orders o
+
+        LEFT JOIN Stations s1 ON o.SourceStationId = s1.Id
+        LEFT JOIN Stations s2 ON o.DestinationStationId = s2.Id
+
+        WHERE o.CoordinatorId = @CoordinatorId
+
+        ORDER BY o.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
       `)
-    return { id: result.recordset[0].Id }
+
+    return result.recordset
   }
 
-  static async findById(id) {
+  // ================= GET ALL ORDERS =================
+  static async findAll(limit = 50, offset = 0) {
     const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('id', sql.Int, id)
+
+    const result = await pool.request()
+      .input('Limit', sql.Int, limit)
+      .input('Offset', sql.Int, offset)
       .query(`
-        SELECT o.*, u.FullName as CoordinatorName, s1.StationName as SourceStation, s2.StationName as DestinationStation
+        SELECT 
+          o.Id,
+          o.OrderCode,
+          s1.StationName AS SourceStation,
+          s2.StationName AS DestinationStation,
+          ISNULL(o.TotalAmount, o.Volume * o.Price) AS TotalAmount,
+          o.OrderStatus,
+          o.CreatedAt
+
         FROM Orders o
-        JOIN Users u ON o.CoordinatorId = u.Id
-        JOIN Stations s1 ON o.SourceStationId = s1.Id
-        JOIN Stations s2 ON o.DestinationStationId = s2.Id
-        WHERE o.Id = @id
+        LEFT JOIN Stations s1 ON o.SourceStationId = s1.Id
+        LEFT JOIN Stations s2 ON o.DestinationStationId = s2.Id
+
+        ORDER BY o.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
       `)
+
+    return result.recordset
+  }
+
+  // ================= GET ORDER BY ID =================
+  static async findById(orderId) {
+    const pool = await getConnection()
+
+    const result = await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .query(`
+        SELECT 
+          o.*,
+          s1.StationName AS SourceStation,
+          s2.StationName AS DestinationStation
+
+        FROM Orders o
+        LEFT JOIN Stations s1 ON o.SourceStationId = s1.Id
+        LEFT JOIN Stations s2 ON o.DestinationStationId = s2.Id
+
+        WHERE o.Id = @OrderId
+      `)
+
     return result.recordset[0]
   }
 
-  static async findByCoordinator(coordinatorId, limit = 50, offset = 0) {
+  // ================= UPDATE STATUS =================
+  static async updateStatus(orderId, status, userId) {
     const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('coordinatorId', sql.Int, coordinatorId)
-      .input('limit', sql.Int, limit)
-      .input('offset', sql.Int, offset)
+
+    const result = await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .input('Status', sql.NVarChar, status)
+      .input('UserId', sql.Int, userId)
       .query(`
-        SELECT o.*, s1.StationName as SourceStation, s2.StationName as DestinationStation
-        FROM Orders o
-        JOIN Stations s1 ON o.SourceStationId = s1.Id
-        JOIN Stations s2 ON o.DestinationStationId = s2.Id
-        WHERE o.CoordinatorId = @coordinatorId
-        ORDER BY o.CreatedAt DESC
-        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        UPDATE Orders
+        SET 
+          OrderStatus = @Status,
+          UpdatedAt = GETDATE()
+        WHERE Id = @OrderId
       `)
-    return result.recordset
+
+    return result.rowsAffected[0] > 0
   }
 
+  // ================= PENDING APPROVAL =================
   static async findPendingApproval(limit = 50, offset = 0) {
     const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('limit', sql.Int, limit)
-      .input('offset', sql.Int, offset)
+
+    const result = await pool.request()
+      .input('Limit', sql.Int, limit)
+      .input('Offset', sql.Int, offset)
       .query(`
-        SELECT o.*, u.FullName as CoordinatorName, s1.StationName as SourceStation, s2.StationName as DestinationStation
+        SELECT 
+          o.Id,
+          o.OrderCode,
+          s1.StationName AS SourceStation,
+          s2.StationName AS DestinationStation,
+          ISNULL(o.TotalAmount, o.Volume * o.Price) AS TotalAmount,
+          o.OrderStatus,
+          o.CreatedAt
+
         FROM Orders o
-        JOIN Users u ON o.CoordinatorId = u.Id
-        JOIN Stations s1 ON o.SourceStationId = s1.Id
-        JOIN Stations s2 ON o.DestinationStationId = s2.Id
+        LEFT JOIN Stations s1 ON o.SourceStationId = s1.Id
+        LEFT JOIN Stations s2 ON o.DestinationStationId = s2.Id
+
         WHERE o.OrderStatus = 'Pending Approval'
+
         ORDER BY o.CreatedAt DESC
-        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
       `)
+
     return result.recordset
   }
 
-  static async findSentToStation(limit = 50, offset = 0) {
+  static async findByStation(stationId) {
     const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('limit', sql.Int, limit)
-      .input('offset', sql.Int, offset)
-      .query(`
-        SELECT o.*, u.FullName as CoordinatorName, s1.StationName as SourceStation, s2.StationName as DestinationStation
-        FROM Orders o
-        JOIN Users u ON o.CoordinatorId = u.Id
-        JOIN Stations s1 ON o.SourceStationId = s1.Id
-        JOIN Stations s2 ON o.DestinationStationId = s2.Id
-        WHERE o.OrderStatus IN ('Sent', 'Delivered', 'Uploading', 'Approved')
-        ORDER BY o.UpdatedAt DESC
-        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-      `)
-    return result.recordset
-  }
 
-  static async findAll(limit = 50, offset = 0) {
-    const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('limit', sql.Int, limit)
-      .input('offset', sql.Int, offset)
+    const result = await pool.request()
+      .input('StationId', stationId)
       .query(`
-        SELECT o.*, u.FullName as CoordinatorName, s1.StationName as SourceStation, s2.StationName as DestinationStation
+        SELECT 
+          o.*,
+          u.FullName AS CoordinatorName,
+          s2.StationName AS DestinationStation
         FROM Orders o
-        JOIN Users u ON o.CoordinatorId = u.Id
-        JOIN Stations s1 ON o.SourceStationId = s1.Id
-        JOIN Stations s2 ON o.DestinationStationId = s2.Id
+        LEFT JOIN Users u ON o.CoordinatorId = u.Id
+        LEFT JOIN Stations s2 ON o.DestinationStationId = s2.Id
+        WHERE o.DestinationStationId = @StationId
         ORDER BY o.CreatedAt DESC
-        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
       `)
+
     return result.recordset
   }
 
-  static async approve(orderId, accountingId, approvalReason = null) {
-    const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('orderId', sql.Int, orderId)
-      .input('accountingId', sql.Int, accountingId)
-      .input('approvalReason', sql.NVarChar, approvalReason)
-      .query(`
-        UPDATE Orders
-        SET OrderStatus = 'Approved', ApprovedBy = @accountingId, ApprovedAt = GETDATE(), ApprovalReason = @approvalReason, UpdatedAt = GETDATE()
-        WHERE Id = @orderId AND OrderStatus = 'Pending Approval'
-      `)
-    return result.rowsAffected[0] > 0
-  }
-
-  static async reject(orderId, accountingId, rejectionReason) {
-    const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('orderId', sql.Int, orderId)
-      .input('accountingId', sql.Int, accountingId)
-      .input('rejectionReason', sql.NVarChar, rejectionReason)
-      .query(`
-        UPDATE Orders
-        SET OrderStatus = 'Rejected', ApprovedBy = @accountingId, RejectionReason = @rejectionReason, UpdatedAt = GETDATE()
-        WHERE Id = @orderId AND OrderStatus = 'Pending Approval'
-      `)
-    return result.rowsAffected[0] > 0
-  }
-
-  static async updateStatus(orderId, status, userId = null) {
-    const pool = await getConnection()
-    let query = 'UPDATE Orders SET OrderStatus = @status, UpdatedAt = GETDATE()'
-    const request = pool.request()
-      .input('orderId', sql.Int, orderId)
-      .input('status', sql.NVarChar, status)
-
-    if (status === 'Uploading' && userId) {
-      query += ', UploadedAt = GETDATE()'
-    } else if (status === 'Sent' && userId) {
-      query += ', SentToStationAt = GETDATE()'
-    } else if (status === 'Delivered' && userId) {
-      query += ', StationReceivedAt = GETDATE()'
-    }
-
-    query += ' WHERE Id = @orderId'
-
-    const result = await request.query(query)
-    return result.rowsAffected[0] > 0
-  }
-
-  static async confirmPayment(orderId, accountingId, paymentMethod = null) {
-    const pool = await getConnection()
-    const result = await pool
-      .request()
-      .input('orderId', sql.Int, orderId)
-      .input('accountingId', sql.Int, accountingId)
-      .input('paymentMethod', sql.NVarChar, paymentMethod)
-      .query(`
-        UPDATE Orders
-        SET PaymentStatus = 'Confirmed', PaymentConfirmedBy = @accountingId, PaymentConfirmedAt = GETDATE(), PaymentMethod = @paymentMethod, UpdatedAt = GETDATE()
-        WHERE Id = @orderId
-      `)
-    return result.rowsAffected[0] > 0
-  }
 }
 
-module.exports = Order
+module.exports = OrderModel

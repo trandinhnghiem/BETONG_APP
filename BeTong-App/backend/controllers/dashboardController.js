@@ -630,7 +630,7 @@ async function getSummaryTable(req, res) {
           ) THEN 'Đã thực hiện'
           ELSE 'Chưa thực hiện'
         END as AuditStatus,
-        cp.Name as ProductName,
+        ISNULL(cp.ProductName, '') as ProductName,
         ssp.PurchasePrice,
         ssp.SellingPrice
       FROM Stores s
@@ -776,7 +776,7 @@ async function getSummaryTable(req, res) {
           ELSE 1
         END ASC,
         s.StoreName ASC, 
-        cp.Name ASC
+        cp.ProductName ASC
       OFFSET @offset ROWS
       FETCH NEXT @limit ROWS ONLY
     `;

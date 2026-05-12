@@ -114,8 +114,8 @@ class StoreSurvey {
         t.TerritoryName,
         u.FullName as UserFullName,
         u.UserCode,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName,
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName,
         a.AuditDate,
         a.Notes as AuditNotes
       FROM StoreSurveys ss
@@ -143,8 +143,8 @@ class StoreSurvey {
         t.TerritoryName,
         u.FullName as UserFullName,
         u.UserCode,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName,
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName,
         a.AuditDate,
         a.Notes as AuditNotes
       FROM StoreSurveys ss
@@ -168,8 +168,8 @@ class StoreSurvey {
         s.StoreName,
         u.FullName as UserFullName,
         u.UserCode,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName,
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName,
         a.AuditDate,
         a.Notes as AuditNotes
       FROM StoreSurveys ss
@@ -204,8 +204,8 @@ class StoreSurvey {
         t.TerritoryName,
         u.FullName as UserFullName,
         u.UserCode,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName,
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName,
         a.AuditDate,
         a.Notes as AuditNotes
       FROM StoreSurveys ss
@@ -245,7 +245,7 @@ class StoreSurvey {
     }
 
     if (filters.cementProductName) {
-      query += " AND cp.Name LIKE @CementProductName";
+      query += " AND cp.ProductName LIKE @CementProductName";
       request.input(
         "CementProductName",
         sql.NVarChar(500),

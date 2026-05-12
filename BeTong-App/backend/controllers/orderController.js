@@ -6,349 +6,336 @@ const NotificationModel = require('../models/Notification')
 const UserModel = require('../models/User')
 const { getConnection, sql } = require('../config/database')
 
+
 class OrderController {
+
+  // ================= CREATE ORDER =================
   static async createOrder(req, res) {
     try {
-      const {
-        customerName,
-        address,
-        phone,
-        concreteType,
-        volume,
-        price,
-        deliveryTime,
-        engineer,
-        pipeHolder,
-        pipeFixer,
-        pouringVolume,
-        mixingStation,
-        truck,
-        sourceStation,
-        destinationStation,
-        notes
-      } = req.body
+      const { mixingStationId, notes, items } = req.body
+
+      if (!mixingStationId) {
+        return res.status(400).json({ error: 'Trạm trộn là bắt buộc' })
+      }
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ error: 'Phải có ít nhất 1 mục trong đơn hàng' })
+      }
 
       const pool = await getConnection()
+      const coordinatorId = req.user.Id
+
+      // ✅ Tạo mã đơn
+      const orderCode = 'ORD-' + Date.now()
+
+      // ✅ Tính tổng tiền
+      const totalAmount = items.reduce((sum, item) => {
+        return sum + (item.quantity * item.unitPrice)
+      }, 0)
 
       const result = await pool.request()
-        .input('CustomerName', customerName)
-        .input('Address', address)
-        .input('Phone', phone)
-        .input('ConcreteType', concreteType)
-        .input('Volume', volume)
-        .input('Price', price)
-        .input('DeliveryTime', deliveryTime)
-        .input('Engineer', engineer)
-        .input('PipeHolder', pipeHolder)
-        .input('PipeFixer', pipeFixer)
-        .input('PouringVolume', pouringVolume)
-        .input('MixingStation', mixingStation)
-        .input('Truck', truck)
-        .input('SourceStation', sourceStation)
-        .input('DestinationStation', destinationStation)
-        .input('Notes', notes)
+        .input('OrderCode', sql.NVarChar, orderCode)
+        .input('CoordinatorId', sql.Int, coordinatorId)
+        .input('SourceStationId', sql.Int, parseInt(mixingStationId))
+        .input('DestinationStationId', sql.Int, parseInt(mixingStationId))
+        .input('TotalAmount', sql.Decimal(18, 2), totalAmount)
+        .input('Notes', sql.NVarChar(sql.MAX), notes || '')
         .query(`
           INSERT INTO Orders (
-            CustomerName, Address, Phone,
-            ConcreteType, Volume, Price, DeliveryTime,
-            Engineer, PipeHolder, PipeFixer,
-            PouringVolume, MixingStation, Truck,
-            SourceStation, DestinationStation, Notes,
-            OrderStatus, CreatedAt
+            OrderCode, CoordinatorId, SourceStationId, DestinationStationId,
+            TotalAmount, Notes, OrderStatus, CreatedAt, UpdatedAt
           )
           VALUES (
-            @CustomerName, @Address, @Phone,
-            @ConcreteType, @Volume, @Price, @DeliveryTime,
-            @Engineer, @PipeHolder, @PipeFixer,
-            @PouringVolume, @MixingStation, @Truck,
-            @SourceStation, @DestinationStation, @Notes,
-            'Pending Approval', GETDATE()
+            @OrderCode, @CoordinatorId, @SourceStationId, @DestinationStationId,
+            @TotalAmount, @Notes, 'Pending Approval', GETDATE(), GETDATE()
           );
 
           SELECT SCOPE_IDENTITY() AS OrderId;
         `)
 
+      const orderId = result.recordset[0].OrderId
+
+      // ✅ Thêm order items
+      for (const item of items) {
+        await pool.request()
+          .input('OrderId', sql.Int, orderId)
+          .input('ProductId', sql.Int, item.productId)
+          .input('Quantity', sql.Float, item.quantity)
+          .input('UnitPrice', sql.Decimal(18, 2), item.unitPrice)
+          .query(`
+            INSERT INTO OrderItems (OrderId, ProductId, Quantity, UnitPrice, CreatedAt)
+            VALUES (@OrderId, @ProductId, @Quantity, @UnitPrice, GETDATE())
+          `)
+      }
+
       res.json({
         message: 'Tạo đơn thành công',
-        orderId: result.recordset[0].OrderId
+        orderId,
+        orderCode
       })
 
     } catch (err) {
+      console.error('CreateOrder Error:', err)
       res.status(500).json({ error: err.message })
     }
   }
 
+  // ================= GET MY ORDERS =================
   static async getMyOrders(req, res) {
     try {
+      
       const coordinatorId = req.user.Id
       const { limit = 50, offset = 0 } = req.query
 
-      const orders = await OrderModel.findByCoordinator(coordinatorId, parseInt(limit), parseInt(offset))
+      const orders = await OrderModel.findByCoordinator(
+        coordinatorId,
+        parseInt(limit),
+        parseInt(offset)
+      )
 
       res.json(orders)
     } catch (error) {
-      console.error('Get my orders error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
+  // ================= GET PENDING =================
   static async getPendingApprovalOrders(req, res) {
     try {
       const { limit = 50, offset = 0 } = req.query
-
       const orders = await OrderModel.findPendingApproval(parseInt(limit), parseInt(offset))
-
       res.json(orders)
     } catch (error) {
-      console.error('Get pending approval orders error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
+  // ================= GET ALL =================
   static async getAllOrders(req, res) {
     try {
       const { limit = 50, offset = 0 } = req.query
-
       const orders = await OrderModel.findAll(parseInt(limit), parseInt(offset))
-
       res.json(orders)
     } catch (error) {
-      console.error('Get all orders error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
+  // ================= GET BY ID =================
   static async getOrderById(req, res) {
     try {
-      const { orderId } = req.params
-      const orderIdInt = parseInt(orderId)
+      const orderId = parseInt(req.params.orderId)
 
-      if (isNaN(orderIdInt)) {
+      if (isNaN(orderId)) {
         return res.status(400).json({ error: 'Invalid order ID' })
       }
 
-      const order = await OrderModel.findById(orderIdInt)
+      const order = await OrderModel.findById(orderId)
       if (!order) {
         return res.status(404).json({ error: 'Order not found' })
       }
 
-      // Get order items
-      const items = await OrderItemModel.findByOrderId(orderIdInt)
+      const items = await OrderItemModel.findByOrderId(orderId)
 
       res.json({
         ...order,
         items
       })
+
     } catch (error) {
-      console.error('Get order by ID error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
-  static async getStationOrders(req, res) {
+  // ================= UPDATE STATUS =================
+  static async updateStatus(req, res) {
     try {
-      const { limit = 50, offset = 0 } = req.query
-      const orders = await OrderModel.findSentToStation(parseInt(limit), parseInt(offset))
-      res.json(orders)
+      const orderId = parseInt(req.params.orderId)
+      const { status } = req.body
+      const userId = req.user.Id
+
+      const validStatuses = [
+        'Draft',
+        'Pending Approval',
+        'Approved',
+        'Rejected',
+        'Uploading',
+        'Sent',
+        'Delivered',
+        'Completed'
+      ]
+
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' })
+      }
+
+      const success = await OrderModel.updateStatus(orderId, status, userId)
+
+      if (!success) {
+        return res.status(404).json({ error: 'Order not found' })
+      }
+
+      res.json({ message: 'Order status updated successfully' })
+
     } catch (error) {
-      console.error('Get station orders error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
-  static async exportOrdersReport(req, res) {
+  // ================= PRODUCTS =================
+  static async getProducts(req, res) {
     try {
-      const orders = await OrderModel.findAll(1000, 0)
-      const headers = ['Mã đơn', 'Điều phối', 'Trạm gửi', 'Trạm nhận', 'Trạng thái', 'Thanh toán', 'Tổng tiền', 'Ngày tạo']
-      const csvRows = [headers.join(',')]
-
-      orders.forEach((order) => {
-        const row = [
-          order.OrderCode,
-          order.CoordinatorName || '',
-          order.SourceStation || '',
-          order.DestinationStation || '',
-          order.OrderStatus || '',
-          order.PaymentStatus || '',
-          order.TotalAmount || 0,
-          order.CreatedAt ? new Date(order.CreatedAt).toISOString() : ''
-        ]
-        csvRows.push(row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      })
-
-      const csvContent = csvRows.join('\n')
-      res.setHeader('Content-Type', 'text/csv')
-      res.setHeader('Content-Disposition', 'attachment; filename="order-report.csv"')
-      res.send(csvContent)
+      const products = await ProductModel.findAll()
+      res.json(products)
     } catch (error) {
-      console.error('Export orders report error:', error)
       res.status(500).json({ error: error.message })
     }
   }
 
   static async approveOrder(req, res) {
     try {
-      const { orderId } = req.params
+      const orderId = parseInt(req.params.orderId)
       const { approvalReason } = req.body
-      const accountingId = req.user.Id
+      const userId = req.user.Id
 
-      const success = await OrderModel.approve(parseInt(orderId), accountingId, approvalReason)
-
+      const success = await OrderModel.updateStatus(orderId, 'Approved', userId)
+      
       if (!success) {
-        return res.status(404).json({ error: 'Order not found or not in pending approval status' })
+        return res.status(404).json({ error: 'Order not found' })
       }
 
-      // Create notification for coordinator
-      const order = await OrderModel.findById(parseInt(orderId))
-      if (order) {
-        await NotificationModel.create({
-          receiverId: order.CoordinatorId,
-          notificationType: 'OrderApproved',
-          title: 'Đơn hàng đã được duyệt',
-          message: `Đơn ${order.OrderCode} đã được kế toán duyệt.`,
-          relatedOrderId: parseInt(orderId)
-        })
-      }
+      const pool = await getConnection()
+      await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .input('ApprovedBy', sql.Int, userId)
+        .input('ApprovalReason', sql.NVarChar(sql.MAX), approvalReason || '')
+        .query(`UPDATE Orders SET ApprovedBy = @ApprovedBy, ApprovedAt = GETDATE(), ApprovalReason = @ApprovalReason WHERE Id = @OrderId`)
 
-      res.json({ message: 'Order approved successfully' })
+      res.json({ message: 'Đơn hàng đã được phê duyệt' })
     } catch (error) {
-      console.error('Approve order error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
   static async rejectOrder(req, res) {
     try {
-      const { orderId } = req.params
+      const orderId = parseInt(req.params.orderId)
       const { rejectionReason } = req.body
-      const accountingId = req.user.Id
-
-      if (!rejectionReason || rejectionReason.trim().length === 0) {
-        return res.status(400).json({ error: 'Rejection reason is required' })
-      }
-
-      const success = await OrderModel.reject(parseInt(orderId), accountingId, rejectionReason)
-
-      if (!success) {
-        return res.status(404).json({ error: 'Order not found or not in pending approval status' })
-      }
-
-      // Create notification for coordinator
-      const order = await OrderModel.findById(parseInt(orderId))
-      if (order) {
-        await NotificationModel.create({
-          receiverId: order.CoordinatorId,
-          notificationType: 'OrderRejected',
-          title: 'Đơn hàng bị từ chối',
-          message: `Đơn ${order.OrderCode} đã bị kế toán từ chối.`,
-          relatedOrderId: parseInt(orderId)
-        })
-      }
-
-      res.json({ message: 'Order rejected successfully' })
-    } catch (error) {
-      console.error('Reject order error:', error)
-      res.status(500).json({ error: error.message })
-    }
-  }
-
-  static async updateStatus(req, res) {
-    try {
-      const { orderId } = req.params
-      const { status } = req.body
       const userId = req.user.Id
 
-      const validStatuses = ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Uploading', 'Sent', 'Delivered', 'Completed']
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({ error: 'Invalid status' })
-      }
-
-      const success = await OrderModel.updateStatus(parseInt(orderId), status, userId)
-
+      const success = await OrderModel.updateStatus(orderId, 'Rejected', userId)
+      
       if (!success) {
         return res.status(404).json({ error: 'Order not found' })
       }
 
-      const order = await OrderModel.findById(parseInt(orderId))
-      if (order) {
-        if (status === 'Sent') {
-          const stationUsers = await UserModel.findByRole('Station')
-          for (const stationUser of stationUsers) {
-            await NotificationModel.create({
-              receiverId: stationUser.Id,
-              notificationType: 'OrderSentToStation',
-              title: 'Đơn hàng mới đã gửi tới trạm',
-              message: `Đơn ${order.OrderCode} đã được gửi tới trạm ${order.DestinationStation}.`,
-              relatedOrderId: parseInt(orderId)
-            })
-          }
-        }
+      const pool = await getConnection()
+      await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .input('RejectionReason', sql.NVarChar(sql.MAX), rejectionReason || '')
+        .query(`UPDATE Orders SET RejectionReason = @RejectionReason WHERE Id = @OrderId`)
 
-        if (status === 'Delivered') {
-          await NotificationModel.create({
-            receiverId: order.CoordinatorId,
-            notificationType: 'OrderDelivered',
-            title: 'Đơn hàng đã được trạm nhận',
-            message: `đơn ${order.OrderCode} đã được trạm xác nhận nhận.`,
-            relatedOrderId: parseInt(orderId)
-          })
-        }
-      }
-
-      res.json({ message: 'Order status updated successfully' })
+      res.json({ message: 'Đơn hàng đã bị từ chối' })
     } catch (error) {
-      console.error('Update order status error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
   static async confirmPayment(req, res) {
     try {
-      const { orderId } = req.params
-      const { paymentMethod } = req.body
-      const accountingId = req.user.Id
+      const orderId = parseInt(req.params.orderId)
+      const { paymentMethod, paymentAmount } = req.body
+      const userId = req.user.Id
 
-      const success = await OrderModel.confirmPayment(parseInt(orderId), accountingId, paymentMethod)
+      const pool = await getConnection()
+      await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .input('PaymentStatus', sql.NVarChar, 'Confirmed')
+        .input('PaymentConfirmedBy', sql.Int, userId)
+        .input('PaymentMethod', sql.NVarChar, paymentMethod || '')
+        .input('PaymentAmount', sql.Decimal(18, 2), paymentAmount || 0)
+        .query(`
+          UPDATE Orders 
+          SET PaymentStatus = @PaymentStatus, 
+              PaymentConfirmedBy = @PaymentConfirmedBy,
+              PaymentConfirmedAt = GETDATE(),
+              PaymentMethod = @PaymentMethod,
+              PaymentAmount = @PaymentAmount
+          WHERE Id = @OrderId
+        `)
 
-      if (!success) {
-        return res.status(404).json({ error: 'Order not found' })
-      }
-
-      const order = await OrderModel.findById(parseInt(orderId))
-      if (order) {
-        await NotificationModel.create({
-          receiverId: order.CoordinatorId,
-          notificationType: 'PaymentConfirmed',
-          title: 'Thanh toán đã được xác nhận',
-          message: `Thanh toán đơn ${order.OrderCode} đã được kế toán xác nhận.`,
-          relatedOrderId: parseInt(orderId)
-        })
-      }
-
-      res.json({ message: 'Payment confirmed successfully' })
+      res.json({ message: 'Thanh toán đã được xác nhận' })
     } catch (error) {
-      console.error('Confirm payment error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
-  // Additional endpoints for frontend
-  static async getProducts(req, res) {
+  static async getStationOrders(req, res) {
     try {
-      const products = await ProductModel.findAll()
-      res.json(products)
+      const stationId = req.user.StationId
+      const { limit = 50, offset = 0 } = req.query
+
+      if (!stationId) {
+        return res.status(400).json({ error: 'Station ID not found' })
+      }
+
+      const pool = await getConnection()
+      const result = await pool.request()
+        .input('StationId', sql.Int, stationId)
+        .input('Limit', sql.Int, parseInt(limit))
+        .input('Offset', sql.Int, parseInt(offset))
+        .query(`
+          SELECT 
+            o.Id, o.OrderCode, o.CoordinatorId, u.FullName AS CoordinatorName,
+            o.SourceStationId, ss.StationName AS SourceStationName,
+            o.DestinationStationId, ds.StationName AS DestinationStationName,
+            o.TotalAmount, o.OrderStatus, o.Notes,
+            o.CreatedAt, o.UpdatedAt
+          FROM Orders o
+          LEFT JOIN Users u ON o.CoordinatorId = u.Id
+          LEFT JOIN Stations ss ON o.SourceStationId = ss.Id
+          LEFT JOIN Stations ds ON o.DestinationStationId = ds.Id
+          WHERE o.DestinationStationId = @StationId
+          ORDER BY o.CreatedAt DESC
+          OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
+        `)
+
+      res.json(result.recordset)
     } catch (error) {
-      console.error('Get products error:', error)
+      console.error(error)
       res.status(500).json({ error: error.message })
     }
   }
 
+  static async exportOrdersReport(req, res) {
+    try {
+      const { limit = 1000, offset = 0 } = req.query
+      const orders = await OrderModel.findAll(parseInt(limit), parseInt(offset))
+      
+      // Simple JSON export, can be enhanced to CSV/Excel later
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Content-Disposition', 'attachment; filename="orders-report.json"')
+      res.json(orders)
+    } catch (error) {
+      console.error(error)
+      res.status(500).json({ error: error.message })
+    }
+  }
+
+  // ================= STATIONS =================
   static async getStations(req, res) {
     try {
       const stations = await StationModel.findAll()
       res.json(stations)
     } catch (error) {
-      console.error('Get stations error:', error)
       res.status(500).json({ error: error.message })
     }
   }

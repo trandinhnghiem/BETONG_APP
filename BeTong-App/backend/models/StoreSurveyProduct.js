@@ -59,8 +59,8 @@ class StoreSurveyProduct {
     const result = await request.query(`
       SELECT 
         ssp.*,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName
       FROM StoreSurveyProducts ssp
       LEFT JOIN CementProducts cp ON ssp.CementProductId = cp.Id
       WHERE ssp.StoreSurveyId = @StoreSurveyId
@@ -78,8 +78,8 @@ class StoreSurveyProduct {
     const result = await request.query(`
       SELECT 
         ssp.*,
-        cp.Code as CementProductCode,
-        cp.Name as CementProductName
+        cp.ProductCode as CementProductCode,
+        cp.ProductName as CementProductName
       FROM StoreSurveyProducts ssp
       LEFT JOIN CementProducts cp ON ssp.CementProductId = cp.Id
       WHERE ssp.Id = @Id

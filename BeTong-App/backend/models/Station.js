@@ -30,6 +30,19 @@ class Station {
     return result.recordset[0]
   }
 
+  static async findByCode(stationCode) {
+    const pool = await getConnection()
+    const result = await pool
+      .request()
+      .input('stationCode', sql.NVarChar, stationCode)
+      .query(`
+        SELECT Id, StationCode, StationName, Address, Phone, Manager, Status
+        FROM Stations
+        WHERE StationCode = @stationCode
+      `)
+    return result.recordset[0]
+  }
+
   static async create(stationData) {
     const pool = await getConnection()
     const result = await pool
