@@ -119,7 +119,7 @@ The database includes the following main entities:
 ## 🔐 Authentication
 
 - JWT-based authentication
-- Roles: Admin, Accounting, Coordinator, Station, Leader
+- Roles: Admin, Accounting, Coordinator, Station
 - Token expiry: 24 hours
 - Endpoints: `/api/auth/login`, `/api/auth/register`
 
@@ -150,12 +150,6 @@ The database includes the following main entities:
 - Confirm receipt
 - Update delivery status
 - View assigned orders
-
-### Leader (Lãnh đạo)
-- View all dashboards
-- Generate reports
-- Export data
-- View analytics
 
 ## 📡 API Endpoints
 

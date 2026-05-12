@@ -5,7 +5,7 @@
 ### 📊 **Database Layer (100%)**
 - ✅ Complete database schema design with 10 normalized tables
 - ✅ SQL migration file with all tables, indexes, and default data
-- ✅ Role-based permission system (Admin, Accounting, Coordinator, Station, Leader)
+- ✅ Role-based permission system (Admin, Accounting, Coordinator, Station)
 - ✅ Order workflow with status tracking
 - ✅ Notification system schema
 - ✅ Reports and audit trail tables
@@ -274,7 +274,6 @@ VALUES ('admin', 'admin@test.com', 'hashed_pwd', 'Admin', '123', 'Admin', 1)
 - [ ] Admin dashboard UI
 - [ ] Order approval UI
 - [ ] Coordinator order creation UI
-- [ ] Leader analytics dashboard
 - [ ] Notification bell UI
 - [ ] Report generation
 - [ ] WebSocket for real-time updates

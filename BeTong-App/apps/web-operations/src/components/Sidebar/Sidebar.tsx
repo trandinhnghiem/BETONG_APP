@@ -26,6 +26,11 @@ export default function Sidebar() {
           { to: '/coordinator/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
           { to: '/coordinator/orders/create', label: 'Tạo Đơn Hàng', icon: FiFileText },
         ]
+      case 'Station':
+        return [
+          { to: '/station', label: 'Dashboard', icon: FiHome },
+          { to: '/station/orders', label: 'Received Orders', icon: FiShoppingCart },
+        ]
       default:
         return []
     }

@@ -111,10 +111,69 @@
   border-top: 1px solid #ecf0f1;
 }
 
-.login-footer p {
+.hints-toggle {
+  background: none;
+  border: none;
+  color: #667eea;
   font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.3s ease;
+}
+
+.hints-toggle:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.test-accounts {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.test-accounts-title {
+  font-size: 12px;
   color: #95a5a6;
-  margin: 0;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.test-account-btn {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  border: 1px solid #e0e6ed;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.test-account-btn:hover:not(:disabled) {
+  background: #e8eef7;
+  border-color: #667eea;
+}
+
+.test-account-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-info {
+  font-size: 12px;
+  color: #2c3e50;
+  display: block;
+  line-height: 1.6;
+}
+
+.account-info strong {
+  color: #667eea;
+  font-weight: 600;
 }
 
 @media (max-width: 480px) {

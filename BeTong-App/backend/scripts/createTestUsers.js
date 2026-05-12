@@ -28,12 +28,12 @@ const testUsers = [
     role: 'Coordinator'
   },
   {
-    username: 'leader1',
-    password: 'Leader@123456',
-    email: 'leader@auditapp.com',
-    fullName: 'Operations Leader',
+    username: 'station1',
+    password: 'Station@123456',
+    email: 'station@auditapp.com',
+    fullName: 'Station Operator',
     phone: '0904567890',
-    role: 'Leader'
+    role: 'Station'
   }
 ];
 
