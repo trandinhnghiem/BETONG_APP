@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FiHome, FiShoppingCart, FiUsers, FiSettings, FiFileText } from 'react-icons/fi'
 import './Sidebar.css'
-import { useOperationStore } from '../../services/store'
 
 export default function Sidebar() {
   const userRole = localStorage.getItem('userRole')
