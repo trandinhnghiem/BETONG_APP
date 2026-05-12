@@ -1,16 +1,44 @@
+/* Layout.css */
+
 .layout {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
+  background: #f5f7fb;
 }
+
+/* =========================
+   CONTENT
+========================= */
 
 .layout-content {
   flex: 1;
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
+
+  overflow: hidden;
 }
+
+/* =========================
+   MAIN
+========================= */
 
 .layout-main {
   flex: 1;
-  overflow-y: auto;
+
   padding: 20px;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 768px) {
+  .layout-main {
+    padding: 14px;
+  }
 }
