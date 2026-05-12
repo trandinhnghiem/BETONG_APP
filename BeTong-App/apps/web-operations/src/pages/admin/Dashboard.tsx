@@ -237,7 +237,10 @@ export default function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <div className="page-header">
-        <h1>Bảng điều khiển quản trị</h1>
+        <div>
+          <h1>Bảng điều khiển quản trị</h1>
+          <p>Tổng quan hệ thống và các chỉ số chính</p>
+        </div>
 
         <div className="header-actions">
           <button className="action-btn primary">

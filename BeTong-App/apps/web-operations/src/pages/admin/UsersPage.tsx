@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { FiPlus, FiEdit, FiTrash2, FiUser, FiMail, FiPhone, FiSearch, FiFilter, FiMoreVertical, FiCheck, FiX } from 'react-icons/fi'
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiUser,
+  FiSearch
+} from 'react-icons/fi'
+
 import apiClient from '../../services/api'
 import './UsersPage.css'
 
@@ -38,6 +45,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
+
       const res = await apiClient.get('/api/users')
 
       const userData = res.data.data || res.data
@@ -86,6 +94,7 @@ export default function UsersPage() {
       })
 
       setShowCreateForm(false)
+
       fetchUsers()
     } catch (err: any) {
       setError(err.response?.data?.error || 'Tạo thất bại')
@@ -100,28 +109,26 @@ export default function UsersPage() {
 
     try {
       await apiClient.delete(`/api/users/${userId}`)
+
       fetchUsers()
     } catch (err: any) {
-      alert('Xóa thất bại: ' + (err.response?.data?.error || 'Lỗi không xác định'))
-    }
-  }
-
-  // ================= MÀU ROLE =================
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'Admin': return 'red'
-      case 'Accounting': return 'blue'
-      case 'Coordinator': return 'green'
-      default: return 'gray'
+      alert(
+        'Xóa thất bại: ' +
+          (err.response?.data?.error || 'Lỗi không xác định')
+      )
     }
   }
 
   // ================= FILTER & SEARCH =================
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.Username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.Email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === 'all' || user.Role === roleFilter
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.Username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.Email.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesRole =
+      roleFilter === 'all' || user.Role === roleFilter
+
     return matchesSearch && matchesRole
   })
 
@@ -130,7 +137,11 @@ export default function UsersPage() {
     <div className="users-page">
       {/* HEADER */}
       <div className="page-header">
-        <h1>Quản lý người dùng</h1>
+        <div>
+          <h1>Quản lý người dùng</h1>
+          <p>Quản lý thông tin người dùng và quyền truy cập</p>
+        </div>
+
         <button
           className="create-btn"
           onClick={() => setShowCreateForm(!showCreateForm)}
@@ -145,6 +156,7 @@ export default function UsersPage() {
         <div className="search-filter-grid">
           <div className="search-input">
             <FiSearch className="search-icon" size={16} />
+
             <input
               type="text"
               placeholder="Tìm kiếm theo tên, username hoặc email..."
@@ -162,6 +174,7 @@ export default function UsersPage() {
             <option value="Admin">Quản trị</option>
             <option value="Accounting">Kế toán</option>
             <option value="Coordinator">Điều phối</option>
+            <option value="Station">Trạm</option>
           </select>
 
           <button
@@ -179,63 +192,166 @@ export default function UsersPage() {
       {/* FORM TẠO USER */}
       {showCreateForm && (
         <div className="create-form">
-          <h3>
-            <FiPlus size={20} />
-            Tạo người dùng mới
-          </h3>
-
-          {error && <div className="error-message">{error}</div>}
-
-          <div className="form-grid">
-            <input
-              placeholder="Tên đăng nhập"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-            />
-
-            <input
-              placeholder="Email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-
-            <input
-              type="password"
-              placeholder="Mật khẩu"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
-
-            <input
-              placeholder="Họ và tên"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-            />
-
-            <input
-              placeholder="Số điện thoại"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            />
-
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-            >
-              <option value="Admin">Quản trị</option>
-              <option value="Accounting">Kế toán</option>
-              <option value="Coordinator">Điều phối</option>
-            </select>
+          
+          {/* HEADER */}
+          <div className="create-form-header">
+            <div>
+              <h3>
+                Tạo người dùng mới
+              </h3>
+            </div>
           </div>
 
+          {/* ERROR */}
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+
+          {/* FORM */}
+          <div className="form-grid">
+
+            {/* USERNAME */}
+            <div className="form-group">
+              <label>Tên đăng nhập</label>
+
+              <input
+                type="text"
+                placeholder="Nhập tên đăng nhập..."
+                value={form.username}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    username: e.target.value
+                  })
+                }
+              />
+            </div>
+
+            {/* EMAIL */}
+            <div className="form-group">
+              <label>Email</label>
+
+              <input
+                type="email"
+                placeholder="Nhập email..."
+                value={form.email}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    email: e.target.value
+                  })
+                }
+              />
+            </div>
+
+            {/* PASSWORD */}
+            <div className="form-group">
+              <label>Mật khẩu</label>
+
+              <input
+                type="password"
+                placeholder="Nhập mật khẩu..."
+                value={form.password}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    password: e.target.value
+                  })
+                }
+              />
+            </div>
+
+            {/* FULL NAME */}
+            <div className="form-group">
+              <label>Họ và tên</label>
+
+              <input
+                type="text"
+                placeholder="Nhập họ và tên..."
+                value={form.fullName}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    fullName: e.target.value
+                  })
+                }
+              />
+            </div>
+
+            {/* PHONE */}
+            <div className="form-group">
+              <label>Số điện thoại</label>
+
+              <input
+                type="text"
+                placeholder="Nhập số điện thoại..."
+                value={form.phone}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    phone: e.target.value
+                  })
+                }
+              />
+            </div>
+
+            {/* ROLE */}
+            <div className="form-group">
+              <label>Vai trò</label>
+
+              <select
+                value={form.role}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    role: e.target.value
+                  })
+                }
+              >
+                <option value="Admin">
+                  Quản trị
+                </option>
+
+                <option value="Accounting">
+                  Kế toán
+                </option>
+
+                <option value="Coordinator">
+                  Điều phối
+                </option>
+
+                <option value="Station">
+                  Trạm
+                </option>
+              </select>
+            </div>
+
+          </div>
+
+          {/* ACTIONS */}
           <div className="form-actions">
-            <button onClick={() => setShowCreateForm(false)}>
+
+            <button
+              className="cancel-btn"
+              onClick={() => setShowCreateForm(false)}
+            >
               Hủy
             </button>
 
-            <button onClick={handleCreate} disabled={creating}>
-              {creating ? 'Đang tạo...' : 'Tạo'}
+            <button
+              className="submit-btn"
+              onClick={handleCreate}
+              disabled={creating}
+            >
+              <FiPlus size={16} />
+
+              {creating
+                ? 'Đang tạo...'
+                : 'Tạo người dùng'}
             </button>
+
           </div>
         </div>
       )}
@@ -255,8 +371,13 @@ export default function UsersPage() {
         ) : filteredUsers.length === 0 ? (
           <div className="empty-state">
             <FiUser size={48} />
+
             <h3>Không tìm thấy người dùng</h3>
-            <p>Không có người dùng nào phù hợp với bộ lọc hiện tại</p>
+
+            <p>
+              Không có người dùng nào phù hợp với bộ
+              lọc hiện tại
+            </p>
           </div>
         ) : (
           <table className="users-table">
@@ -269,6 +390,7 @@ export default function UsersPage() {
                 <th>Thao tác</th>
               </tr>
             </thead>
+
             <tbody>
               {filteredUsers.map((user) => (
                 <tr key={user.Id}>
@@ -277,33 +399,54 @@ export default function UsersPage() {
                       <div className="user-avatar">
                         {user.FullName.charAt(0).toUpperCase()}
                       </div>
+
                       <div className="user-details">
                         <h4>{user.FullName}</h4>
+
                         <p>@{user.Username}</p>
                       </div>
                     </div>
                   </td>
+
                   <td>
-                    <span className={`role-badge ${user.Role.toLowerCase()}`}>
+                    <span
+                      className={`role-badge ${user.Role.toLowerCase()}`}
+                    >
                       {user.Role}
                     </span>
                   </td>
+
                   <td>
-                    <span className={`status-badge ${user.IsActive ? 'active' : 'inactive'}`}>
-                      {user.IsActive ? 'Hoạt động' : 'Ngưng hoạt động'}
+                    <span
+                      className={`status-badge ${
+                        user.IsActive
+                          ? 'active'
+                          : 'inactive'
+                      }`}
+                    >
+                      {user.IsActive
+                        ? 'Hoạt động'
+                        : 'Ngưng hoạt động'}
                     </span>
                   </td>
+
                   <td>
-                    {new Date(user.CreatedAt).toLocaleDateString('vi-VN')}
+                    {new Date(
+                      user.CreatedAt
+                    ).toLocaleDateString('vi-VN')}
                   </td>
+
                   <td>
                     <div className="user-actions">
                       <button className="action-btn edit">
                         <FiEdit size={16} />
                       </button>
+
                       <button
                         className="action-btn delete"
-                        onClick={() => handleDelete(user.Id)}
+                        onClick={() =>
+                          handleDelete(user.Id)
+                        }
                       >
                         <FiTrash2 size={16} />
                       </button>
