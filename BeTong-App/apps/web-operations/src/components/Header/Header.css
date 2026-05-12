@@ -1,60 +1,239 @@
+/* =========================
+   HEADER
+========================= */
+
 .header {
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 15px 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+
+  padding: 14px 22px;
+
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
+
+/* =========================
+   CONTENT
+========================= */
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  gap: 20px;
 }
 
+/* =========================
+   TITLE
+========================= */
+
 .header-content h1 {
-  font-size: 24px;
-  font-weight: 600;
   margin: 0;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #435ebe !important;
+
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+
+  background: none !important;
+  -webkit-text-fill-color: #435ebe !important;
 }
+
+/* =========================
+   ACTIONS
+========================= */
 
 .header-actions {
   display: flex;
-  gap: 15px;
   align-items: center;
+  gap: 14px;
 }
 
-.notification-btn,
-.logout-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 4px;
-  color: #333;
-  font-size: 14px;
-  transition: background 0.2s;
-}
+/* =========================
+   NOTIFICATION BUTTON
+========================= */
 
 .notification-btn {
   position: relative;
+
+  width: 42px;
+  height: 42px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #f3f6ff;
+  color: #435ebe;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+.notification-btn:hover {
+  background: #e7edff;
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 6px 16px rgba(67, 94, 190, 0.15);
 }
 
 .notification-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  background: #ff4444;
-  color: white;
-  font-size: 10px;
-  padding: 2px 5px;
-  border-radius: 50%;
+
+  top: -4px;
+  right: -4px;
+
   min-width: 18px;
-  text-align: center;
+  height: 18px;
+
+  padding: 0 5px;
+
+  border-radius: 999px;
+
+  background: #ef4444;
+  color: #ffffff;
+
+  border: 2px solid #ffffff;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================
+   LOGOUT BUTTON
+========================= */
+
+.logout-btn {
+  border: none;
+  border-radius: 14px;
+
+  background: #fee2e2;
+  color: #dc2626;
+
+  padding: 10px 16px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  transition: all 0.25s ease;
 }
 
 .logout-btn:hover {
-  background: #f5f5f5;
+  background: #fecaca;
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 6px 18px rgba(220, 38, 38, 0.15);
+}
+
+.logout-btn span {
+  white-space: nowrap;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 14px;
+  }
+
+  .header-content {
+    gap: 12px;
+  }
+
+  .header-content h1 {
+    font-size: 15px;
+  }
+
+  .logout-btn span {
+    display: none;
+  }
+
+  .logout-btn {
+    width: 42px;
+    height: 42px;
+
+    padding: 0;
+
+    justify-content: center;
+  }
+}
+/* =========================
+   LEFT AREA
+========================= */
+
+.header-left {
+  display: flex;
+  align-items: center;
+
+  gap: 20px;
+
+  flex: 1;
+
+  overflow: hidden;
+}
+
+/* =========================
+   MARQUEE
+========================= */
+
+.marquee-wrapper {
+  flex: 1;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  position: relative;
+}
+
+.marquee-text {
+  display: inline-block;
+
+  color: #64748b;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  padding-left: 100%;
+
+  animation: marquee-slide 15s linear infinite;
+}
+
+/* =========================
+   ANIMATION
+========================= */
+
+@keyframes marquee-slide {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
 }

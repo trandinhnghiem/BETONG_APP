@@ -70,7 +70,7 @@ export default function LoginPage() {
       <div className="login-box">
         <div className="login-header">
           <h1>Cổng vận hành</h1>
-          <p>Hệ thống quản lý kiểm tra</p>
+          <p>Hệ thống quản lý kinh doanh</p>
         </div>
 
         <form onSubmit={handleLogin} className="login-form">

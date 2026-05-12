@@ -27,6 +27,17 @@
   background-clip: text;
 }
 
+.header-content h1 {
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .header-content p {
   color: #7f8c8d;
   margin: 0;
@@ -506,9 +517,7 @@
     font-size: 2rem;
   }
 }
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
+
 
 .section h2 {
   color: #2c3e50;
@@ -593,4 +602,163 @@
   .stats-grid {
     grid-template-columns: 1fr;
   }
+}.dashboard-header .header-content h1 {
+  color: #435ebe !important;
+}
+/* CHART CARD */
+
+.chart-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-card::before {
+  content: '';
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(67, 94, 190, 0.06);
+  top: -120px;
+  right: -120px;
+}
+
+.chart-card::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: rgba(91, 124, 255, 0.05);
+  bottom: -80px;
+  left: -80px;
+}
+
+.chart-card .card-header {
+  margin-bottom: 8px;
+}
+
+.chart-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-title-wrap p {
+  margin: 0;
+  color: #8b95a7;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chart-filter {
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #435ebe;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.chart-filter:hover {
+  border-color: #435ebe;
+}
+
+.chart-stats {
+  display: flex;
+  gap: 16px;
+  margin: 18px 0 10px;
+}
+
+.chart-stat-box {
+  flex: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(67, 94, 190, 0.08),
+    rgba(91, 124, 255, 0.04)
+  );
+  border: 1px solid rgba(67, 94, 190, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.chart-stat-box h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #8b95a7;
+  font-weight: 600;
+}
+
+.chart-stat-box h3 {
+  margin: 0;
+  color: #435ebe;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.chart-stat-box span {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #43e97b;
+  font-weight: 700;
+}
+
+/* RECHARTS */
+
+.recharts-wrapper {
+  font-size: 13px;
+}
+
+.recharts-cartesian-grid line {
+  stroke: rgba(0,0,0,0.06);
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+.recharts-default-tooltip {
+  background: white !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12) !important;
+  padding: 12px 16px !important;
+}
+
+.recharts-tooltip-label {
+  color: #435ebe !important;
+  font-weight: 700 !important;
+  margin-bottom: 8px !important;
+}
+
+.recharts-legend-item-text {
+  color: #2d3748 !important;
+  font-weight: 600;
+}
+
+.recharts-xAxis .recharts-cartesian-axis-tick-value,
+.recharts-yAxis .recharts-cartesian-axis-tick-value {
+  fill: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.chart-filter {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #dfe3f0;
+  background: white;
+  color: #435ebe;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
 }
