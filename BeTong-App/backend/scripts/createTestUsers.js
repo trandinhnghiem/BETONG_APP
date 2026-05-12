@@ -20,19 +20,35 @@ const testUsers = [
     role: 'Accounting'
   },
   {
-    username: 'coordinator1',
-    password: 'Coord@123456',
+    username: 'coor',
+    password: '123456',
     email: 'coordinator@auditapp.com',
     fullName: 'Order Coordinator',
     phone: '0903456789',
     role: 'Coordinator'
   },
   {
-    username: 'station1',
-    password: 'Station@123456',
+    username: 'coordinator1',
+    password: 'Coord@123456',
+    email: 'coordinator1@auditapp.com',
+    fullName: 'Order Coordinator',
+    phone: '0903456789',
+    role: 'Coordinator'
+  },
+  {
+    username: 'station',
+    password: '123456',
     email: 'station@auditapp.com',
     fullName: 'Station Operator',
     phone: '0904567890',
+    role: 'Station'
+  },
+  {
+    username: 'station1',
+    password: 'Station@123456',
+    email: 'station1@auditapp.com',
+    fullName: 'Station Operator',
+    phone: '0904567891',
     role: 'Station'
   }
 ];

@@ -23,7 +23,7 @@ export default function Sidebar() {
         return [
           { to: '/coordinator', label: 'Tổng Quan', icon: FiHome },
           { to: '/coordinator/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
-          { to: '/coordinator/orders/create', label: 'Tạo Đơn Hàng', icon: FiFileText },
+          { to: '/coordinator/create-order', label: 'Tạo Đơn Hàng', icon: FiFileText },
         ]
       case 'Station':
         return [

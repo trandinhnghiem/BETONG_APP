@@ -13,9 +13,11 @@ export default function LoginPage() {
 
   const testAccounts = [
     { username: 'admin', password: 'Admin@123456', role: 'Admin' },
-    { username: 'account', password: '123456', role: 'Accounting' },
+    { username: 'accounting1', password: 'Acc@123456', role: 'Accounting' },
     { username: 'coor', password: '123456', role: 'Coordinator' },
-    { username: 'station', password: '123456', role: 'Station' }
+    { username: 'coordinator1', password: 'Coord@123456', role: 'Coordinator' },
+    { username: 'station', password: '123456', role: 'Station' },
+    { username: 'station1', password: 'Station@123456', role: 'Station' }
   ]
 
   const handleLogin = async (e: React.FormEvent) => {
