@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FiPlus, FiEdit, FiTrash2, FiUser, FiMail, FiPhone } from 'react-icons/fi'
+import { FiPlus, FiEdit, FiTrash2, FiUser, FiMail, FiPhone, FiSearch, FiFilter, FiMoreVertical, FiCheck, FiX } from 'react-icons/fi'
 import apiClient from '../../services/api'
 import './UsersPage.css'
 
@@ -18,6 +18,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const [form, setForm] = useState({
     username: '',
@@ -113,6 +116,15 @@ export default function UsersPage() {
     }
   }
 
+  // ================= FILTER & SEARCH =================
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.Username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.Email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesRole = roleFilter === 'all' || user.Role === roleFilter
+    return matchesSearch && matchesRole
+  })
+
   // ================= UI =================
   return (
     <div className="users-page">
@@ -128,10 +140,49 @@ export default function UsersPage() {
         </button>
       </div>
 
+      {/* SEARCH & FILTER */}
+      <div className="search-filter-section">
+        <div className="search-filter-grid">
+          <div className="search-input">
+            <FiSearch className="search-icon" size={16} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên, username hoặc email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <select
+            className="filter-select"
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="all">Tất cả vai trò</option>
+            <option value="Admin">Quản trị</option>
+            <option value="Accounting">Kế toán</option>
+            <option value="Coordinator">Điều phối</option>
+          </select>
+
+          <button
+            className="clear-filters-btn"
+            onClick={() => {
+              setSearchTerm('')
+              setRoleFilter('all')
+            }}
+          >
+            Xóa bộ lọc
+          </button>
+        </div>
+      </div>
+
       {/* FORM TẠO USER */}
       {showCreateForm && (
         <div className="create-form">
-          <h3>Tạo người dùng mới</h3>
+          <h3>
+            <FiPlus size={20} />
+            Tạo người dùng mới
+          </h3>
 
           {error && <div className="error-message">{error}</div>}
 
@@ -191,51 +242,77 @@ export default function UsersPage() {
 
       {/* DANH SÁCH USER */}
       <div className="users-section">
-        <h2>Tất cả người dùng ({users.length})</h2>
+        <h2>
+          <FiUser size={20} />
+          Tất cả người dùng ({filteredUsers.length})
+        </h2>
 
         {loading ? (
-          <div className="loading">Đang tải dữ liệu...</div>
-        ) : users.length === 0 ? (
+          <div className="loading">
+            <div className="loading-spinner"></div>
+            Đang tải dữ liệu...
+          </div>
+        ) : filteredUsers.length === 0 ? (
           <div className="empty-state">
             <FiUser size={48} />
-            <p>Không có người dùng nào</p>
+            <h3>Không tìm thấy người dùng</h3>
+            <p>Không có người dùng nào phù hợp với bộ lọc hiện tại</p>
           </div>
         ) : (
-          <div className="users-grid">
-            {users.map((user) => (
-              <div key={user.Id} className="user-card">
-                <div className="user-header">
-                  <FiUser size={24} />
-                  <div>
-                    <h3>{user.FullName}</h3>
-                    <p>@{user.Username}</p>
-                  </div>
-                  <span className={`role ${getRoleColor(user.Role)}`}>
-                    {user.Role}
-                  </span>
-                </div>
-
-                <div className="user-body">
-                  <p><FiMail /> {user.Email}</p>
-                  {user.Phone && <p><FiPhone /> {user.Phone}</p>}
-                  <p>Trạng thái: {user.IsActive ? 'Hoạt động' : 'Ngưng hoạt động'}</p>
-                </div>
-
-                <div className="user-actions">
-                  <button className="edit-btn">
-                    <FiEdit size={14} /> Sửa
-                  </button>
-
-                  <button
-                    className="delete-btn"
-                    onClick={() => handleDelete(user.Id)}
-                  >
-                    <FiTrash2 size={14} /> Xóa
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Người dùng</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr key={user.Id}>
+                  <td>
+                    <div className="user-info">
+                      <div className="user-avatar">
+                        {user.FullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="user-details">
+                        <h4>{user.FullName}</h4>
+                        <p>@{user.Username}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`role-badge ${user.Role.toLowerCase()}`}>
+                      {user.Role}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${user.IsActive ? 'active' : 'inactive'}`}>
+                      {user.IsActive ? 'Hoạt động' : 'Ngưng hoạt động'}
+                    </span>
+                  </td>
+                  <td>
+                    {new Date(user.CreatedAt).toLocaleDateString('vi-VN')}
+                  </td>
+                  <td>
+                    <div className="user-actions">
+                      <button className="action-btn edit">
+                        <FiEdit size={16} />
+                      </button>
+                      <button
+                        className="action-btn delete"
+                        onClick={() => handleDelete(user.Id)}
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
