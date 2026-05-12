@@ -45,6 +45,14 @@
   font-weight: 500;
 }
 
+/* Page header descriptive paragraph (matches SettingsPage) */
+.page-header p {
+  margin-top: 8px;
+  color: #7f8c8d;
+  font-size: 16px;
+  font-weight: 500;
+}
+
 .header-actions {
   display: flex;
   gap: 12px;
