@@ -1,239 +1,107 @@
-import { useState, useEffect } from 'react'
-import { FiPlus, FiMinus, FiSave, FiX } from 'react-icons/fi'
+import { useState } from 'react'
 import apiClient from '../../services/api'
 import './CreateOrderPage.css'
 
-interface Product {
-  Id: number
-  ProductName: string
-  UnitOfMeasure: string
-  UnitPrice: number
-}
-
-interface Station {
-  id: number
-  name: string
-  code: string
-}
-
-interface OrderItem {
-  productId: number
-  productName: string
-  quantity: number
-  unit: string
-  unitPrice: number
-  totalPrice: number
-}
-
 export default function CoordinatorCreateOrderPage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [sourceStation, setSourceStation] = useState('')
-  const [destinationStation, setDestinationStation] = useState('')
-  const [notes, setNotes] = useState('')
-  const [stations, setStations] = useState<Station[]>([])
 
-  useEffect(() => {
-    fetchProducts()
-    fetchStations()
-  }, [])
+  const [form, setForm] = useState({
+    customerName: '',
+    address: '',
+    phone: '',
+    concreteType: '',
+    volume: '',
+    price: '',
+    deliveryTime: '',
+    engineer: '',
+    pipeHolder: '',
+    pipeFixer: '',
+    pouringVolume: '',
+    mixingStation: '',
+    truck: '',
+    sourceStation: '',
+    destinationStation: '',
+    notes: ''
+  })
 
-  const fetchProducts = async () => {
-    try {
-      const response = await apiClient.get('/api/orders/products')
-      setProducts(response.data)
-    } catch (error) {
-      console.error('Lỗi khi tải sản phẩm:', error)
-      setProducts([
-        { Id: 1, ProductName: 'Xi măng loại A', UnitOfMeasure: 'bao', UnitPrice: 50000 },
-        { Id: 2, ProductName: 'Cát', UnitOfMeasure: 'm³', UnitPrice: 150000 },
-        { Id: 3, ProductName: 'Đá', UnitOfMeasure: 'm³', UnitPrice: 200000 },
-        { Id: 4, ProductName: 'Thép', UnitOfMeasure: 'kg', UnitPrice: 8000 },
-        { Id: 5, ProductName: 'Gạch', UnitOfMeasure: 'viên', UnitPrice: 1200 }
-      ])
-    }
+  const handleChange = (e: any) => {
+    setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const fetchStations = async () => {
-    try {
-      const response = await apiClient.get('/api/orders/stations')
-      const stations = response.data.map((s: any) => ({
-        id: s.Id,
-        name: s.StationName,
-        code: s.StationCode
-      }))
-      setStations(stations)
-    } catch (error) {
-      console.error('Lỗi khi tải trạm:', error)
-      setStations([
-        { id: 1, name: 'Trạm A', code: 'STA' },
-        { id: 2, name: 'Trạm B', code: 'STB' }
-      ])
-    }
-  }
-
-  const addOrderItem = (product: Product) => {
-    const existingItem = orderItems.find(i => i.productId === product.Id)
-    if (existingItem) {
-      updateOrderItem(product.Id, existingItem.quantity + 1)
-    } else {
-      setOrderItems([
-        ...orderItems,
-        {
-          productId: product.Id,
-          productName: product.ProductName,
-          quantity: 1,
-          unit: product.UnitOfMeasure,
-          unitPrice: product.UnitPrice,
-          totalPrice: product.UnitPrice
-        }
-      ])
-    }
-  }
-
-  const updateOrderItem = (productId: number, quantity: number) => {
-    if (quantity <= 0) return removeOrderItem(productId)
-
-    setOrderItems(orderItems.map(item =>
-      item.productId === productId
-        ? { ...item, quantity, totalPrice: item.unitPrice * quantity }
-        : item
-    ))
-  }
-
-  const removeOrderItem = (productId: number) => {
-    setOrderItems(orderItems.filter(i => i.productId !== productId))
-  }
-
-  const getTotalAmount = () =>
-    orderItems.reduce((sum, i) => sum + i.totalPrice, 0)
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault()
-
-    if (!sourceStation || !destinationStation || orderItems.length === 0) {
-      alert('Vui lòng nhập đầy đủ thông tin và chọn ít nhất 1 sản phẩm')
-      return
-    }
-
-    if (sourceStation === destinationStation) {
-      alert('Trạm gửi và trạm nhận không được giống nhau')
-      return
-    }
 
     try {
       setLoading(true)
 
-      const res = await apiClient.post('/api/orders', {
-        sourceStation: parseInt(sourceStation),
-        destinationStation: parseInt(destinationStation),
-        notes,
-        items: orderItems.map(i => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice
-        }))
-      })
+      const res = await apiClient.post('/api/orders', form)
 
-      alert(`Tạo đơn thành công! Mã đơn: ${res.data.orderCode}`)
+      alert('Tạo đơn thành công!')
+      console.log(res.data)
 
-      setSourceStation('')
-      setDestinationStation('')
-      setNotes('')
-      setOrderItems([])
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Tạo đơn thất bại')
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Lỗi')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="create-order-page">
-      <div className="page-header">
-        <h1>Tạo đơn hàng mới</h1>
-        <p>Yêu cầu vật tư cho trạm của bạn</p>
+    <div className="coordinator-dashboard">
+      <div className="dashboard-header">
+        <div className="header-content">
+          <h1>Tạo đơn bê tông</h1>
+          <p>Nhập thông tin đơn hàng</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="order-form">
+      <form onSubmit={handleSubmit} className="order-form modern">
 
-        {/* TRẠM */}
-        <div className="form-section">
-          <h3>Thông tin trạm</h3>
-
-          <select value={sourceStation} onChange={e => setSourceStation(e.target.value)}>
-            <option value="">Chọn trạm gửi</option>
-            {stations.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
-
-          <select value={destinationStation} onChange={e => setDestinationStation(e.target.value)}>
-            <option value="">Chọn trạm nhận</option>
-            {stations.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* SẢN PHẨM */}
-        <div className="form-section">
-          <h3>Sản phẩm</h3>
-
-          {products.map(p => (
-            <div key={p.Id}>
-              {p.ProductName} - {p.UnitPrice.toLocaleString()} VND/{p.UnitOfMeasure}
-              <button type="button" onClick={() => addOrderItem(p)}>
-                Thêm
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* DANH SÁCH */}
-        {orderItems.length > 0 && (
-          <div className="form-section">
-            <h3>Danh sách đặt</h3>
-
-            {orderItems.map(i => (
-              <div key={i.productId}>
-                {i.productName} - {i.quantity} {i.unit}
-
-                <button onClick={() => updateOrderItem(i.productId, i.quantity - 1)}>
-                  <FiMinus />
-                </button>
-
-                <button onClick={() => updateOrderItem(i.productId, i.quantity + 1)}>
-                  <FiPlus />
-                </button>
-
-                <button onClick={() => removeOrderItem(i.productId)}>
-                  <FiX />
-                </button>
-              </div>
-            ))}
-
-            <strong>
-              Tổng tiền: {getTotalAmount().toLocaleString()} VND
-            </strong>
+        {/* KHÁCH */}
+        <div className="dashboard-card">
+          <h2>Khách hàng</h2>
+          <div className="form-grid">
+            <input name="customerName" placeholder="Tên khách" onChange={handleChange}/>
+            <input name="phone" placeholder="SĐT" onChange={handleChange}/>
+            <input name="address" placeholder="Địa chỉ" className="full" onChange={handleChange}/>
           </div>
-        )}
+        </div>
 
-        {/* GHI CHÚ */}
-        <textarea
-          placeholder="Ghi chú thêm..."
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-        />
+        {/* ĐƠN */}
+        <div className="dashboard-card">
+          <h2>Đơn hàng</h2>
+          <div className="form-grid">
+            <input name="concreteType" placeholder="Mác bê tông" onChange={handleChange}/>
+            <input name="volume" placeholder="Khối lượng" onChange={handleChange}/>
+            <input name="price" placeholder="Đơn giá" onChange={handleChange}/>
+            <input name="deliveryTime" type="datetime-local" onChange={handleChange}/>
+          </div>
+        </div>
 
-        <button disabled={loading}>
-          {loading ? 'Đang tạo đơn...' : 'Tạo đơn'}
+        {/* NHÂN SỰ */}
+        <div className="dashboard-card">
+          <h2>Nhân sự</h2>
+          <div className="form-grid">
+            <input name="engineer" placeholder="Kỹ thuật" onChange={handleChange}/>
+            <input name="pipeHolder" placeholder="Ôm ống" onChange={handleChange}/>
+            <input name="pipeFixer" placeholder="Bắt ống" onChange={handleChange}/>
+          </div>
+        </div>
+
+        {/* VẬN HÀNH */}
+        <div className="dashboard-card">
+          <h2>Vận hành</h2>
+          <div className="form-grid">
+            <input name="pouringVolume" placeholder="Khối lượng đổ" onChange={handleChange}/>
+            <input name="mixingStation" placeholder="Trạm trộn" onChange={handleChange}/>
+            <input name="truck" placeholder="Xe" onChange={handleChange}/>
+          </div>
+        </div>
+
+        <button className="action-btn primary">
+          {loading ? 'Đang tạo...' : 'Tạo đơn'}
         </button>
+
       </form>
     </div>
   )

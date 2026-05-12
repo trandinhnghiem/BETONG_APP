@@ -9,78 +9,72 @@ const { getConnection, sql } = require('../config/database')
 class OrderController {
   static async createOrder(req, res) {
     try {
-      const { sourceStation, destinationStation, items, notes } = req.body
-      const coordinatorId = req.user.Id
-
-      if (!sourceStation || !destinationStation || !items || items.length === 0) {
-        return res.status(400).json({ error: 'Missing required fields' })
-      }
-
-      // Validate stations exist
-      const sourceStationData = await StationModel.findById(sourceStation)
-      const destStationData = await StationModel.findById(destinationStation)
-
-      if (!sourceStationData || !destStationData) {
-        return res.status(400).json({ error: 'Invalid station IDs' })
-      }
-
-      if (sourceStation === destinationStation) {
-        return res.status(400).json({ error: 'Source and destination stations cannot be the same' })
-      }
-
-      // Calculate total amount
-      let totalAmount = 0
-      for (const item of items) {
-        const product = await ProductModel.findById(item.productId)
-        if (!product) {
-          return res.status(400).json({ error: `Product ${item.productId} not found` })
-        }
-        totalAmount += item.quantity * product.UnitPrice
-      }
-
-      const orderCode = `ORD-${Date.now()}`
-
-      const orderResult = await OrderModel.create({
-        orderCode,
-        coordinatorId,
-        sourceStationId: sourceStation,
-        destinationStationId: destinationStation,
-        totalAmount,
+      const {
+        customerName,
+        address,
+        phone,
+        concreteType,
+        volume,
+        price,
+        deliveryTime,
+        engineer,
+        pipeHolder,
+        pipeFixer,
+        pouringVolume,
+        mixingStation,
+        truck,
+        sourceStation,
+        destinationStation,
         notes
+      } = req.body
+
+      const pool = await getConnection()
+
+      const result = await pool.request()
+        .input('CustomerName', customerName)
+        .input('Address', address)
+        .input('Phone', phone)
+        .input('ConcreteType', concreteType)
+        .input('Volume', volume)
+        .input('Price', price)
+        .input('DeliveryTime', deliveryTime)
+        .input('Engineer', engineer)
+        .input('PipeHolder', pipeHolder)
+        .input('PipeFixer', pipeFixer)
+        .input('PouringVolume', pouringVolume)
+        .input('MixingStation', mixingStation)
+        .input('Truck', truck)
+        .input('SourceStation', sourceStation)
+        .input('DestinationStation', destinationStation)
+        .input('Notes', notes)
+        .query(`
+          INSERT INTO Orders (
+            CustomerName, Address, Phone,
+            ConcreteType, Volume, Price, DeliveryTime,
+            Engineer, PipeHolder, PipeFixer,
+            PouringVolume, MixingStation, Truck,
+            SourceStation, DestinationStation, Notes,
+            OrderStatus, CreatedAt
+          )
+          VALUES (
+            @CustomerName, @Address, @Phone,
+            @ConcreteType, @Volume, @Price, @DeliveryTime,
+            @Engineer, @PipeHolder, @PipeFixer,
+            @PouringVolume, @MixingStation, @Truck,
+            @SourceStation, @DestinationStation, @Notes,
+            'Pending Approval', GETDATE()
+          );
+
+          SELECT SCOPE_IDENTITY() AS OrderId;
+        `)
+
+      res.json({
+        message: 'Tạo đơn thành công',
+        orderId: result.recordset[0].OrderId
       })
 
-      // Insert order items
-      for (const item of items) {
-        await OrderItemModel.create(orderResult.id, {
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice
-        })
-      }
-
-      // Update order status to Pending Approval
-      await OrderModel.updateStatus(orderResult.id, 'Pending Approval')
-
-      // Notify Accounting users that a new order requires approval
-      const accountingUsers = await UserModel.findByRole('Accounting')
-      for (const accountingUser of accountingUsers) {
-        await NotificationModel.create({
-          receiverId: accountingUser.Id,
-          notificationType: 'OrderPendingApproval',
-          title: 'Đơn hàng cần duyệt',
-          message: `Đơn ${orderCode} đã được tạo và đang chờ kế toán duyệt.`,
-          relatedOrderId: orderResult.id
-        })
-      }
-
-      res.status(201).json({
-        message: 'Order created successfully',
-        orderId: orderResult.id,
-        orderCode
-      })
-    } catch (error) {
-      console.error('Create order error:', error)
-      res.status(500).json({ error: error.message })
+    } catch (err) {
+      res.status(500).json({ error: err.message })
     }
   }
 
