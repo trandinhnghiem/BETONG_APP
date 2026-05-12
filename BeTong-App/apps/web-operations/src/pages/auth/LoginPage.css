@@ -185,3 +185,6 @@
     font-size: 24px;
   }
 }
+.form-group label {
+  text-transform: unset !important;
+}

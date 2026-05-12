@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import companyLogo from '../../assets/logo.png'
 import {
   FiHome,
   FiShoppingCart,
@@ -8,7 +9,6 @@ import {
   FiMenu,
   FiMoon,
   FiSun,
-  FiGrid,
 } from 'react-icons/fi'
 import { useEffect, useState } from 'react'
 import './Sidebar.css'
@@ -29,29 +29,29 @@ export default function Sidebar() {
     switch (userRole) {
       case 'Admin':
         return [
-          { to: '/admin', label: 'Tổng Quan', icon: FiHome },
-          { to: '/admin/users', label: 'Người Dùng', icon: FiUsers },
-          { to: '/admin/settings', label: 'Cài Đặt', icon: FiSettings },
+          { to: '/admin', label: 'Tổng quan', icon: FiHome },
+          { to: '/admin/users', label: 'Người dùng', icon: FiUsers },
+          { to: '/admin/settings', label: 'Cài đặt', icon: FiSettings },
         ]
 
       case 'Accounting':
         return [
-          { to: '/accounting', label: 'Tổng Quan', icon: FiHome },
-          { to: '/accounting/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
-          { to: '/accounting/reports', label: 'Báo Cáo', icon: FiFileText },
+          { to: '/accounting', label: 'Tổng quan', icon: FiHome },
+          { to: '/accounting/orders', label: 'Đơn hàng', icon: FiShoppingCart },
+          { to: '/accounting/reports', label: 'Báo cáo', icon: FiFileText },
         ]
 
       case 'Coordinator':
         return [
-          { to: '/coordinator', label: 'Tổng Quan', icon: FiHome },
-          { to: '/coordinator/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
-          { to: '/coordinator/create-order', label: 'Tạo Đơn Hàng', icon: FiFileText },
+          { to: '/coordinator', label: 'Tổng quan', icon: FiHome },
+          { to: '/coordinator/orders', label: 'Đơn hàng', icon: FiShoppingCart },
+          { to: '/coordinator/create-order', label: 'Tạo đơn hàng', icon: FiFileText },
         ]
 
       case 'Station':
         return [
-          { to: '/station', label: 'Dashboard', icon: FiHome },
-          { to: '/station/orders', label: 'Đơn Hàng', icon: FiShoppingCart },
+          { to: '/station', label: 'Tổng quan', icon: FiHome },
+          { to: '/station/orders', label: 'Đơn hàng', icon: FiShoppingCart },
         ]
 
       default:
@@ -65,9 +65,13 @@ export default function Sidebar() {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="logo-section">
-          <div className="logo-icon">
-            <FiGrid />
-          </div>
+        <div className="logo-icon">
+          <img
+            src={companyLogo}
+            alt="Logo"
+            className="company-logo"
+          />
+        </div>
 
           <div className="logo-text">
             <h2>BÊ TÔNG TÂY ĐÔ</h2>

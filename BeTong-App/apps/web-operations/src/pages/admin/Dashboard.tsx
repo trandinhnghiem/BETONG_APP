@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FiUsers,
   FiShoppingCart,
@@ -50,6 +51,8 @@ interface RecentActivity {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -243,10 +246,13 @@ export default function AdminDashboard() {
         </div>
 
         <div className="header-actions">
-          <button className="action-btn primary">
-            <FiSettings size={16} />
-            Cài đặt
-          </button>
+        <button
+          className="action-btn primary"
+          onClick={() => navigate('/admin/settings')}
+        >
+          <FiSettings size={16} />
+          Cài đặt
+        </button>
 
           <button className="action-btn secondary">
             <FiBarChart2 size={16} />
@@ -527,7 +533,9 @@ export default function AdminDashboard() {
               </div>
 
               <div className="quick-actions-grid">
-                <button className="quick-action-btn primary">
+                <button className="quick-action-btn primary"
+                 onClick={() => navigate('/admin/users')}
+                >
                   <FiUserPlus size={24} />
                   <span>Tạo người dùng</span>
                 </button>
@@ -542,7 +550,10 @@ export default function AdminDashboard() {
                   <span>Xem thống kê</span>
                 </button>
 
-                <button className="quick-action-btn warning">
+                <button
+                  className="quick-action-btn warning"
+                  onClick={() => navigate('/admin/settings')}
+                >
                   <FiSettings size={24} />
                   <span>Cài đặt hệ thống</span>
                 </button>
