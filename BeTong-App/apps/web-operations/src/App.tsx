@@ -35,6 +35,7 @@ function App() {
           {/* Coordinator Routes */}
           <Route path="/coordinator" element={<ProtectedRoute requiredRole="Coordinator"><CoordinatorDashboard /></ProtectedRoute>} />
           <Route path="/coordinator/orders" element={<ProtectedRoute requiredRole="Coordinator"><CoordinatorOrdersPage /></ProtectedRoute>} />
+          <Route path="/coordinator/create-order" element={<ProtectedRoute requiredRole="Coordinator"><CoordinatorCreateOrderPage /></ProtectedRoute>} />
           <Route path="/coordinator/orders/create" element={<ProtectedRoute requiredRole="Coordinator"><CoordinatorCreateOrderPage /></ProtectedRoute>} />
 
           {/* Station Routes */}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FiPlus, FiShoppingCart, FiClock, FiCheckCircle, FiTruck, FiTrendingUp, FiPackage, FiMapPin, FiBarChart2 } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
+import apiClient from '../../services/api'
 import './Dashboard.css'
 
 interface Order {
@@ -40,52 +41,49 @@ export default function CoordinatorDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      // Mock data for now - will be replaced with real API calls
-      setStats({
-        totalOrders: 156,
-        pendingOrders: 23,
-        completedOrders: 89,
-        inTransitOrders: 44,
-        monthlyRevenue: 285000000,
-        activeStations: 12
-      })
-
-      setRecentOrders([
-        {
-          id: 1,
-          orderCode: 'ORD-2024-001',
-          orderStatus: 'Approved',
-          totalAmount: 1500000,
-          createdAt: '2024-01-15',
-          destinationStation: 'Station A'
-        },
-        {
-          id: 2,
-          orderCode: 'ORD-2024-002',
-          orderStatus: 'Pending Approval',
-          totalAmount: 2200000,
-          createdAt: '2024-01-14',
-          destinationStation: 'Station B'
-        },
-        {
-          id: 3,
-          orderCode: 'ORD-2024-003',
-          orderStatus: 'In Transit',
-          totalAmount: 1800000,
-          createdAt: '2024-01-13',
-          destinationStation: 'Station C'
-        },
-        {
-          id: 4,
-          orderCode: 'ORD-2024-004',
-          orderStatus: 'Completed',
-          totalAmount: 3200000,
-          createdAt: '2024-01-12',
-          destinationStation: 'Station A'
-        }
+      const [ordersResponse, stationsResponse] = await Promise.all([
+        apiClient.get('/api/orders/my-orders'),
+        apiClient.get('/api/orders/stations')
       ])
+
+      const ordersData = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
+      const stationsData = Array.isArray(stationsResponse.data) ? stationsResponse.data : []
+
+      const parsedOrders = ordersData.map((order: any) => ({
+        id: order.Id,
+        orderCode: order.OrderCode,
+        orderStatus: order.OrderStatus,
+        totalAmount: order.TotalAmount ?? 0,
+        createdAt: order.CreatedAt,
+        destinationStation: order.DestinationStation
+      }))
+
+      const totalOrders = parsedOrders.length
+      const pendingOrders = parsedOrders.filter((order) => order.orderStatus === 'Pending Approval').length
+      const completedOrders = parsedOrders.filter((order) => order.orderStatus === 'Completed').length
+      const inTransitOrders = parsedOrders.filter((order) => ['Sent', 'Delivered', 'Uploading', 'Approved', 'In Transit'].includes(order.orderStatus)).length
+      const monthlyRevenue = parsedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+
+      setStats({
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        inTransitOrders,
+        monthlyRevenue,
+        activeStations: stationsData.length
+      })
+      setRecentOrders(parsedOrders.slice(0, 4))
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      setStats({
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        inTransitOrders: 0,
+        monthlyRevenue: 0,
+        activeStations: 0
+      })
+      setRecentOrders([])
     } finally {
       setLoading(false)
     }

@@ -7,7 +7,9 @@ interface InfoStat {
 }
 
 export default function StationDashboard() {
-  const [ordersCount, setOrdersCount] = useState(0)
+  const [sentCount, setSentCount] = useState(0)
+  const [deliveredCount, setDeliveredCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -18,17 +20,24 @@ export default function StationDashboard() {
     try {
       setLoading(true)
       const response = await apiClient.get('/api/orders/station-orders')
-      setOrdersCount(Array.isArray(response.data) ? response.data.length : 0)
+      const orders = Array.isArray(response.data) ? response.data : []
+      setTotalCount(orders.length)
+      setSentCount(orders.filter((order: any) => order.OrderStatus === 'Sent').length)
+      setDeliveredCount(orders.filter((order: any) => order.OrderStatus === 'Delivered').length)
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu trạm:', error)
-      setOrdersCount(0)
+      setTotalCount(0)
+      setSentCount(0)
+      setDeliveredCount(0)
     } finally {
       setLoading(false)
     }
   }
 
   const stats: InfoStat[] = [
-    { label: 'Đơn đang chờ xử lý', value: ordersCount },
+    { label: 'Đơn đang chờ xử lý', value: sentCount },
+    { label: 'Đơn đã nhận', value: deliveredCount },
+    { label: 'Tổng đơn', value: totalCount }
   ]
 
   return (

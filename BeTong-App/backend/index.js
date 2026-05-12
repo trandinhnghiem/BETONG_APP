@@ -91,23 +91,48 @@ app.use((err, req, res, next) => {
 // =======================
 // INIT SERVICES
 // =======================
-async function seedAdminUser() {
+async function seedDefaultUsers() {
   try {
     const UserModel = require('./models/User');
-    const existingAdmin = await UserModel.findByUsername('admin');
-
-    if (!existingAdmin) {
-      await UserModel.create({
+    const defaultUsers = [
+      {
         username: 'admin',
         email: 'admin@auditapp.com',
         password: 'Admin@123456',
         fullName: 'System Admin',
         role: 'Admin'
-      });
-      console.log('✅ Default admin user created');
+      },
+      {
+        username: 'coor',
+        email: 'coordinator@auditapp.com',
+        password: '123456',
+        fullName: 'Order Coordinator',
+        role: 'Coordinator'
+      },
+      {
+        username: 'station',
+        email: 'station@auditapp.com',
+        password: '123456',
+        fullName: 'Station Operator',
+        role: 'Station'
+      }
+    ];
+
+    for (const user of defaultUsers) {
+      const existing = await UserModel.findByUsername(user.username);
+      if (!existing) {
+        await UserModel.create({
+          username: user.username,
+          email: user.email,
+          password: user.password,
+          fullName: user.fullName,
+          role: user.role
+        });
+        console.log(`✅ Default user created: ${user.username} (${user.role})`);
+      }
     }
   } catch (error) {
-    console.error('Error seeding admin user:', error.message);
+    console.error('Error seeding default users:', error.message);
   }
 }
 
@@ -118,7 +143,7 @@ async function initializeServices() {
     await getConnection();
     console.log("✅ Database connected");
 
-    await seedAdminUser();
+    await seedDefaultUsers();
   } catch (error) {
     console.error("❌ DB Error:", error.message);
   }
