@@ -84,23 +84,6 @@ export default function StationOrdersPage() {
     }
   }
 
-<<<<<<< HEAD
-  const filterOrders = () => {
-    let filtered = orders
-
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.coordinatorName.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    if (statusFilter) {
-      filtered = filtered.filter(order => order.orderStatus === statusFilter)
-    }
-
-    setFilteredOrders(filtered)
-=======
   const openOrder = async (orderId: number) => {
     try {
       const res = await apiClient.get(`/api/orders/${orderId}`)
@@ -115,22 +98,17 @@ export default function StationOrdersPage() {
   const closeDetail = () => {
     setSelectedOrder(null)
     setDetailOpen(false)
->>>>>>> UPDATE-BY-THONG
   }
 
   const updateStatus = async (orderId: number, status: string) => {
     try {
       await apiClient.post(`/api/orders/${orderId}/status`, { status })
       fetchOrders()
-<<<<<<< HEAD
-      alert('Cập nhật thành công!')
-=======
       if (detailOpen) {
         // refresh detail view if open
         openOrder(orderId)
       }
       alert('Cập nhật thành công')
->>>>>>> UPDATE-BY-THONG
     } catch (err) {
       alert('Lỗi cập nhật trạng thái')
     }
@@ -248,8 +226,6 @@ export default function StationOrdersPage() {
           ))}
         </div>
       )}
-<<<<<<< HEAD
-=======
 
       {detailOpen && selectedOrder && (
         <div className="modal-overlay" onClick={closeDetail}>
@@ -301,7 +277,6 @@ export default function StationOrdersPage() {
         </div>
       )}
 
->>>>>>> UPDATE-BY-THONG
     </div>
   )
 }
