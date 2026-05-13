@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { FiCheckCircle, FiRefreshCcw, FiSearch, FiFilter } from 'react-icons/fi'
+import { FiCheckCircle, FiRefreshCcw } from 'react-icons/fi'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
@@ -16,7 +16,6 @@ interface Order {
 
 export default function StationOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -37,10 +36,6 @@ export default function StationOrdersPage() {
     fetchOrders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramStationName])
-
-  useEffect(() => {
-    filterOrders()
-  }, [orders, searchTerm, statusFilter])
 
   const fetchOrders = async () => {
     try {
@@ -110,89 +105,29 @@ export default function StationOrdersPage() {
       }
       alert('Cập nhật thành công')
     } catch (err) {
-      alert('Lỗi cập nhật trạng thái')
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending Approval': return '#ffc107'
-      case 'Approved': return '#28a745'
-      case 'Sent': return '#007bff'
-      case 'Delivered': return '#17a2b8'
-      case 'Completed': return '#6c757d'
-      default: return '#6c757d'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'Pending Approval': return 'Chờ xác nhận'
-      case 'Approved': return 'Đã xác nhận'
-      case 'Sent': return 'Đang giao'
-      case 'Delivered': return 'Đã giao'
-      case 'Completed': return 'Hoàn thành'
-      default: return status
+      alert('Lỗi')
     }
   }
 
   return (
     <div className="orders-page">
-      <div className="page-header">
-        <h1>📦 Đơn hàng {stationName || 'Trạm của bạn'}</h1>
-        <p>Quản lý và cập nhật trạng thái đơn hàng</p>
-      </div>
 
-      <div className="filters-section">
-        <div className="search-box">
-          <FiSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo mã đơn hoặc tên điều phối..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="filter-box">
-          <FiFilter className="filter-icon" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">Tất cả trạng thái</option>
-            <option value="Pending Approval">Chờ xác nhận</option>
-            <option value="Approved">Đã xác nhận</option>
-            <option value="Sent">Đang giao</option>
-            <option value="Delivered">Đã giao</option>
-            <option value="Completed">Hoàn thành</option>
-          </select>
-        </div>
-      </div>
+      <h1>📦 Đơn hàng {stationName}</h1>
 
       {loading ? (
         <div className="loading">Đang tải đơn hàng...</div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="no-orders">
-          {orders.length === 0 ? 'Không có đơn hàng nào' : 'Không tìm thấy đơn hàng phù hợp'}
-        </div>
+      ) : orders.length === 0 ? (
+        <div className="no-orders">Không có đơn hàng nào cho trạm của bạn</div>
       ) : (
-        <div className="orders-grid">
-          {filteredOrders.map(order => (
+        <div className="orders-list">
+          {orders.map(order => (
             <div key={order.id} className="order-card">
-              <div className="order-header">
-                <h3>{order.orderCode}</h3>
-                <span
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusColor(order.orderStatus) }}
-                >
-                  {getStatusText(order.orderStatus)}
-                </span>
-              </div>
 
-              <div className="order-details">
-                <p><strong>Điều phối:</strong> {order.coordinatorName}</p>
-                <p><strong>Trạm nhận:</strong> {order.destinationStation}</p>
-                <p><strong>Tổng tiền:</strong> {order.totalAmount.toLocaleString()} VND</p>
-                <p><strong>Ngày tạo:</strong> {new Date(order.createdAt).toLocaleDateString('vi-VN')}</p>
-              </div>
+              <h3>{order.orderCode}</h3>
+              <p>Điều phối: {order.coordinatorName}</p>
+              <p>Trạm nhận: {order.destinationStation}</p>
+              <p>Tiền: {order.totalAmount.toLocaleString()} đ</p>
+              <p>Trạng thái: {order.orderStatus}</p>
 
               <div className="actions">
                 {order.orderStatus === 'Pending Approval' && (
@@ -222,6 +157,7 @@ export default function StationOrdersPage() {
                   Chi tiết
                 </button>
               </div>
+
             </div>
           ))}
         </div>
