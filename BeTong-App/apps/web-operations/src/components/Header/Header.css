@@ -237,3 +237,101 @@
     transform: translateX(-100%);
   }
 }
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 55px;
+  right: 0;
+
+  width: 360px;
+
+  background: white;
+
+  border-radius: 18px;
+
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+
+  overflow: hidden;
+
+  z-index: 999;
+}
+
+.notification-header {
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+.notification-header h3 {
+  margin: 0;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  color: #25396f;
+}
+
+.notification-list {
+  max-height: 400px;
+
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  gap: 14px;
+
+  padding: 16px 20px;
+
+  border-bottom: 1px solid #f3f4f6;
+
+  transition: all 0.25s ease;
+
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: #f8faff;
+}
+
+.notification-dot {
+  width: 10px;
+  height: 10px;
+
+  min-width: 10px;
+
+  border-radius: 50%;
+
+  background: #435ebe;
+
+  margin-top: 6px;
+}
+
+.notification-content h4 {
+  margin: 0 0 4px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #25396f;
+}
+
+.notification-content p {
+  margin: 0 0 6px;
+
+  font-size: 13px;
+
+  color: #6b7280;
+
+  line-height: 1.5;
+}
+
+.notification-content span {
+  font-size: 12px;
+
+  color: #9ca3af;
+}
