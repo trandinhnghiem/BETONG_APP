@@ -1,23 +1,20 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import apiClient from '../../services/api'
 import './StationDashboard.css'
 
-interface StationStat {
-  name: string
-  count: number
-}
-
 export default function StationDashboard() {
-  const [stations, setStations] = useState<StationStat[]>([])
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    sent: 0,
+    delivered: 0,
+    completed: 0
+  })
   const [loading, setLoading] = useState(true)
-
-  // 4 trạm cố định
-  const stationList = [
-    'Trạm Ô Môn 1',
-    'Trạm Ô Môn 2',
-    'Trạm T82',
-    'Trạm Hậu Giang'
-  ]
+  const [stationName, setStationName] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchData()
@@ -30,51 +27,143 @@ export default function StationDashboard() {
       const res = await apiClient.get('/api/orders/station-orders')
       const orders = res.data || []
 
-      const result = stationList.map(name => {
-        const count = orders.filter((o: any) =>
-          o.DestinationStation === name && o.OrderStatus === 'Sent'
-        ).length
+      // Tính số liệu từ orders của trạm này
+      const pending = orders.filter((o: any) => o.OrderStatus === 'Pending Approval').length
+      const approved = orders.filter((o: any) => o.OrderStatus === 'Approved').length
+      const sent = orders.filter((o: any) => o.OrderStatus === 'Sent').length
+      const delivered = orders.filter((o: any) => o.OrderStatus === 'Delivered').length
+      const completed = orders.filter((o: any) => o.OrderStatus === 'Completed').length
 
-        return { name, count }
-      })
+      setStats({ pending, approved, sent, delivered, completed })
 
-      setStations(result)
+      // Lấy tên trạm từ đơn đầu tiên (nếu có)
+      if (orders.length > 0) {
+        setStationName(orders[0].DestinationStationName || 'Trạm của bạn')
+      } else {
+        setStationName('Trạm của bạn')
+      }
 
     } catch (err) {
       console.error(err)
-      setStations([])
+      setStats({ pending: 0, approved: 0, sent: 0, delivered: 0, completed: 0 })
     } finally {
       setLoading(false)
     }
   }
 
-  const goToStation = (name: string) => {
-    window.location.href = `/station-orders?station=${encodeURIComponent(name)}`
+  const goToOrders = () => {
+    navigate('/station/orders')
   }
+
+  // Data cho biểu đồ
+  const pieData = [
+    { name: 'Chờ xác nhận', value: stats.pending, color: '#ffc107' },
+    { name: 'Đã xác nhận', value: stats.approved, color: '#28a745' },
+    { name: 'Đang giao', value: stats.sent, color: '#007bff' },
+    { name: 'Đã giao', value: stats.delivered, color: '#17a2b8' },
+    { name: 'Hoàn thành', value: stats.completed, color: '#6c757d' }
+  ].filter(item => item.value > 0)
+
+  const barData = [
+    { name: 'Chờ xác nhận', count: stats.pending },
+    { name: 'Đã xác nhận', count: stats.approved },
+    { name: 'Đang giao', count: stats.sent },
+    { name: 'Đã giao', count: stats.delivered },
+    { name: 'Hoàn thành', count: stats.completed }
+  ] as const
 
   return (
     <div className="station-dashboard">
-
-      <h1>🏭 Dashboard Trạm</h1>
-      <p>Các đơn hàng đang chờ xác nhận tại từng trạm</p>
+      <div className="dashboard-header">
+        <h1>🏭 Dashboard {stationName}</h1>
+        <p>Quản lý đơn hàng tại trạm của bạn</p>
+        <button onClick={goToOrders} className="view-orders-btn">
+          📋 Xem đơn hàng
+        </button>
+      </div>
 
       {loading ? (
-        <div>Đang tải...</div>
+        <div className="loading">Đang tải dữ liệu...</div>
       ) : (
-        <div className="station-grid">
-          {stations.map(st => (
-            <div
-              key={st.name}
-              className="station-card"
-              onClick={() => goToStation(st.name)}
-            >
-              <h2>{st.name}</h2>
-              <p>{st.count} đơn chờ xử lý</p>
+        <>
+          <div className="stats-grid">
+            <div className="stat-card pending">
+              <h3>Chờ xác nhận</h3>
+              <p className="count">{stats.pending}</p>
+              <div className="progress-bar">
+                <div className="progress" style={{width: `${stats.pending > 0 ? 100 : 0}%`, backgroundColor: '#ffc107'}}></div>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="stat-card approved">
+              <h3>Đã xác nhận</h3>
+              <p className="count">{stats.approved}</p>
+              <div className="progress-bar">
+                <div className="progress" style={{width: `${stats.approved > 0 ? 100 : 0}%`, backgroundColor: '#28a745'}}></div>
+              </div>
+            </div>
+            <div className="stat-card sent">
+              <h3>Đang giao</h3>
+              <p className="count">{stats.sent}</p>
+              <div className="progress-bar">
+                <div className="progress" style={{width: `${stats.sent > 0 ? 100 : 0}%`, backgroundColor: '#007bff'}}></div>
+              </div>
+            </div>
+            <div className="stat-card delivered">
+              <h3>Đã giao</h3>
+              <p className="count">{stats.delivered}</p>
+              <div className="progress-bar">
+                <div className="progress" style={{width: `${stats.delivered > 0 ? 100 : 0}%`, backgroundColor: '#17a2b8'}}></div>
+              </div>
+            </div>
+            <div className="stat-card completed">
+              <h3>Hoàn thành</h3>
+              <p className="count">{stats.completed}</p>
+              <div className="progress-bar">
+                <div className="progress" style={{width: `${stats.completed > 0 ? 100 : 0}%`, backgroundColor: '#6c757d'}}></div>
+              </div>
+            </div>
+          </div>
 
+          <div className="charts-section">
+            <div className="chart-container">
+              <h3>📊 Phân bố trạng thái đơn hàng</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="chart-container">
+              <h3>📈 Thống kê chi tiết</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -283,6 +283,8 @@ class OrderController {
       const stationId = req.user.StationId
       const { limit = 50, offset = 0 } = req.query
 
+      console.log('User StationId:', stationId) // ✅ debug
+
       if (!stationId) {
         return res.status(400).json({ error: 'Station ID not found' })
       }
@@ -304,8 +306,12 @@ class OrderController {
         FROM Orders o
         LEFT JOIN Stations s ON o.DestinationStationId = s.Id
         LEFT JOIN Users c ON o.CoordinatorId = c.Id
+        WHERE o.DestinationStationId = @StationId
         ORDER BY o.CreatedAt DESC
+        OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
         `)
+
+      console.log('Orders found:', result.recordset.length) // ✅ debug
 
       res.json(result.recordset)
     } catch (error) {

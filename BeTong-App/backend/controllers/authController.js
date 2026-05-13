@@ -27,13 +27,14 @@ class AuthController {
       const isPasswordValid = await UserModel.verifyPassword(password, user.PasswordHash)
 
       console.log('PASSWORD MATCH:', isPasswordValid) // ✅ thêm
+      console.log('USER STATION ID:', user.StationId) // ✅ thêm
 
       if (!isPasswordValid) {
         return res.status(401).json({ error: 'Invalid credentials' })
       }
 
       const token = jwt.sign(
-        { id: user.Id, username: user.Username, role: user.Role },
+        { id: user.Id, username: user.Username, role: user.Role, stationId: user.StationId },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
       )
