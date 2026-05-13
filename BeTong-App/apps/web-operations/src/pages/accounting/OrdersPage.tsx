@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { FiEye, FiFilter } from 'react-icons/fi'
-import { FiCheckCircle, FiXCircle } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
@@ -18,7 +16,9 @@ interface Order {
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+
+  // 🔥 lưu action đã chọn cho từng order
+  const [selectedActions, setSelectedActions] = useState<{ [key: number]: string }>({})
 
   useEffect(() => {
     fetchOrders()
@@ -27,7 +27,7 @@ export default function AccountingOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      // accounting cares about orders pending approval
+
       const response = await apiClient.get('/api/orders/pending-approval')
       const list = Array.isArray(response.data) ? response.data : []
 
@@ -48,45 +48,52 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  const handleApprove = async (orderId: number) => {
-    if (!confirm('Bạn có chắc muốn phê duyệt và gửi trạm không?')) return
+  // 🔥 xử lý action
+  const handleAction = async (order: Order, action: string) => {
+    if (!action) return
 
     try {
-      await apiClient.post(`/api/orders/${orderId}/approve`, { approvalReason: 'Phê duyệt bởi kế toán' })
-      // after approve, send to station
-      await apiClient.post(`/api/orders/${orderId}/status`, { status: 'Sent' })
-      fetchOrders()
-      alert('Đã phê duyệt và gửi trạm')
-    } catch (err) {
-      console.error(err)
-      alert('Thao tác thất bại')
-    }
-  }
+      if (action === 'approve_send') {
+        await apiClient.post(`/api/orders/${order.id}/approve`, {
+          approvalReason: 'Phê duyệt bởi kế toán'
+        })
 
-  const handleReject = async (orderId: number) => {
-    const reason = prompt('Nhập lý do từ chối:')
-    if (!reason) return
+        await apiClient.post(`/api/orders/${order.id}/status`, {
+          status: 'Sent'
+        })
 
-    try {
-      await apiClient.post(`/api/orders/${orderId}/reject`, { rejectionReason: reason })
-      fetchOrders()
-      alert('Đã từ chối đơn')
-    } catch (err) {
-      console.error(err)
-      alert('Từ chối thất bại')
-    }
-  }
+        alert('Đã phê duyệt và gửi trạm')
+      }
 
-  const handleSendToStation = async (order: Order) => {
-    try {
-      if (order.orderStatus !== 'Approved') {
-        // If not approved, cancel the order as per requirement
-        await apiClient.post(`/api/orders/${order.id}/reject`, { rejectionReason: 'Bị huỷ do chưa phê duyệt khi gửi trạm' })
-        alert('Đơn chưa được phê duyệt, đã huỷ')
-      } else {
-        await apiClient.post(`/api/orders/${order.id}/status`, { status: 'Sent' })
+      if (action === 'send') {
+        if (order.orderStatus !== 'Approved') {
+          alert('Đơn phải được phê duyệt trước khi gửi trạm!')
+          return
+        }
+
+        await apiClient.post(`/api/orders/${order.id}/status`, {
+          status: 'Sent'
+        })
+
         alert('Đã gửi trạm')
       }
+
+      if (action === 'reject') {
+        const reason = prompt('Nhập lý do từ chối:')
+        if (!reason) return
+
+        await apiClient.post(`/api/orders/${order.id}/reject`, {
+          rejectionReason: reason
+        })
+
+        alert('Đã từ chối đơn')
+      }
+
+      // reset action đã chọn
+      setSelectedActions(prev => ({
+        ...prev,
+        [order.id]: ''
+      }))
 
       fetchOrders()
     } catch (err) {
@@ -99,9 +106,7 @@ export default function AccountingOrdersPage() {
     <div className="orders-container">
       <div className="orders-header">
         <h1>📋 Đơn hàng - Kế toán</h1>
-        <div>
-          <Link to="/accounting" className="action-btn secondary">Dashboard</Link>
-        </div>
+        
       </div>
 
       {loading ? (
@@ -130,13 +135,44 @@ export default function AccountingOrdersPage() {
                   <td>{order.coordinatorName}</td>
                   <td>{order.destinationStation}</td>
                   <td className="money">{order.totalAmount.toLocaleString()} đ</td>
-                  <td><span className={`status ${order.orderStatus.replace(/\s+/g, '-')} `}>{order.orderStatus}</span></td>
-                  <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <button className="btn-approve" onClick={() => handleApprove(order.id)}>Phê duyệt & Gửi trạm</button>
-                    <button className="btn-reject" onClick={() => handleReject(order.id)}>Từ chối</button>
-                    <button className="btn-send" onClick={() => handleSendToStation(order)}>Gửi trạm</button>
+                    <span className={`status ${order.orderStatus.replace(/\s+/g, '-')}`}>
+                      {order.orderStatus}
+                    </span>
                   </td>
+                  <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+
+                  {/* ✅ ACTION MỚI */}
+                  <td>
+                    <div className="action-group">
+                      <select
+                        className="action-select"
+                        value={selectedActions[order.id] || ''}
+                        onChange={(e) =>
+                          setSelectedActions({
+                            ...selectedActions,
+                            [order.id]: e.target.value
+                          })
+                        }
+                      >
+                        <option value="">-- Chọn --</option>
+                        <option value="approve_send">Phê duyệt & Gửi trạm</option>
+                        <option value="send">Gửi trạm</option>
+                        <option value="reject">Từ chối</option>
+                      </select>
+
+                      <button
+                        className="action-confirm"
+                        onClick={() =>
+                          handleAction(order, selectedActions[order.id])
+                        }
+                        disabled={!selectedActions[order.id]}
+                      >
+                        Xác nhận
+                      </button>
+                    </div>
+                  </td>
+
                 </tr>
               ))}
             </tbody>
