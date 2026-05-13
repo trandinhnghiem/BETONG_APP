@@ -18,12 +18,29 @@ export default function Sidebar() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [systemInfo, setSystemInfo] = useState({
+  companyName: 'BÊ TÔNG TÂY ĐÔ',
+  systemName: 'CRM / ERP SYSTEM'
+})
 
   const userRole = localStorage.getItem('userRole')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+  const savedSettings = localStorage.getItem('systemSettings')
+
+  if (savedSettings) {
+    const parsed = JSON.parse(savedSettings)
+
+    setSystemInfo({
+      companyName: parsed.companyName,
+      systemName: parsed.systemName
+    })
+  }
+}, [])
 
   const getNavItems = () => {
     switch (userRole) {
@@ -73,10 +90,10 @@ export default function Sidebar() {
           />
         </div>
 
-          <div className="logo-text">
-            <h2>BÊ TÔNG TÂY ĐÔ</h2>
-            <p>CRM / ERP SYSTEM</p>
-          </div>
+        <div className="logo-text">
+          <h2>{systemInfo.companyName}</h2>
+          <p>{systemInfo.systemName}</p>
+        </div>
         </div>
 
         <div className="sidebar-controls">
@@ -127,7 +144,9 @@ export default function Sidebar() {
 
           <div className="user-info">
             <h4>{userRole}</h4>
-            <p>Đang hoạt động</p>
+            <span className="status-badge online">
+              Hoạt động
+            </span>
           </div>
         </div>
       </div>

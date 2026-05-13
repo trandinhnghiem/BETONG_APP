@@ -67,9 +67,244 @@ export default function AdminDashboard() {
   const [recentActivities, setRecentActivities] =
     useState<RecentActivity[]>([])
 
+  const [salesData, setSalesData] = useState<any[]>([])
+  const [orderStatusData, setOrderStatusData] = useState<any[]>([])
+  const [allActivities, setAllActivities] = useState<any[]>([])
+  const [showAllActivities, setShowAllActivities] = useState(false)
+  const [ordersList, setOrdersList] = useState<any[]>([])
+  const [chartRange, setChartRange] = useState<string>('7ngay')
+  const [chartSummary, setChartSummary] = useState<{ revenue: number; orders: number; growth: number }>({ revenue: 0, orders: 0, growth: 0 })
+  const [customFrom, setCustomFrom] = useState<string>('')
+  const [customTo, setCustomTo] = useState<string>('')
+
   useEffect(() => {
     fetchDashboardStats()
   }, [])
+
+  useEffect(() => {
+    // recompute chart and summary whenever ordersList, chartRange or custom dates change
+    computeChartForRange(chartRange)
+  }, [ordersList, chartRange, customFrom, customTo])
+
+  const computeChartForRange = (range: string) => {
+    if (!ordersList || ordersList.length === 0) {
+      setSalesData([])
+      setChartSummary({ revenue: 0, orders: 0, growth: 0 })
+      return
+    }
+
+    const now = new Date()
+    let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date
+
+    if (range === 'custom') {
+      if (!customFrom || !customTo) return
+
+      const start = new Date(customFrom)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(customTo)
+      end.setHours(23, 59, 59, 999)
+
+      const diffDays = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1
+
+      // previous period of same length
+      const prevEnd = new Date(start)
+      prevEnd.setDate(prevEnd.getDate() - 1)
+      const prevStart = new Date(prevEnd)
+      prevStart.setDate(prevStart.getDate() - diffDays + 1)
+
+      if (diffDays <= 90) {
+        const points: any[] = []
+        for (let i = 0; i < diffDays; i++) {
+          const d = new Date(start)
+          d.setDate(start.getDate() + i)
+          const label = `${d.getDate()}/${d.getMonth() + 1}`
+          const s = new Date(d); s.setHours(0,0,0,0)
+          const e = new Date(d); e.setHours(23,59,59,999)
+
+          const dayOrders = ordersList.filter((o: any) => {
+            const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+            return created >= s && created <= e
+          })
+          const revenue = dayOrders.reduce((sum: number, o: any) => sum + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+          points.push({ day: label, orders: dayOrders.length, revenue })
+        }
+
+        const currentRevenue = points.reduce((s,p)=>s+p.revenue,0)
+        const currentOrders = points.reduce((s,p)=>s+p.orders,0)
+
+        const prevOrdersList = ordersList.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= prevStart && created <= prevEnd
+        })
+        const prevRevenue = prevOrdersList.reduce((s:number,o:any)=>s+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+        const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
+
+        setSalesData(points)
+        setChartSummary({ revenue: currentRevenue, orders: currentOrders, growth })
+      } else {
+        // aggregate by month for long ranges
+        const months: { start: Date; end: Date; label: string }[] = []
+        let cur = new Date(start.getFullYear(), start.getMonth(), 1)
+        const last = new Date(end.getFullYear(), end.getMonth(), 1)
+        while (cur <= last) {
+          const s = new Date(cur)
+          const e = new Date(cur.getFullYear(), cur.getMonth() + 1, 0)
+          months.push({ start: s, end: e, label: `${s.getMonth()+1}/${s.getFullYear()}` })
+          cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1)
+        }
+
+        const points = months.map(({ start: s, end: e, label }) => {
+          const monthOrders = ordersList.filter((o: any) => {
+            const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+            return created >= s && created <= e
+          })
+          const revenue = monthOrders.reduce((sum:number,o:any)=>sum+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+          return { day: label, orders: monthOrders.length, revenue }
+        })
+
+        const currentRevenue = points.reduce((s,p)=>s+p.revenue,0)
+        const currentOrders = points.reduce((s,p)=>s+p.orders,0)
+
+        const prevRangeEnd = new Date(start); prevRangeEnd.setDate(prevRangeEnd.getDate() - 1)
+        const prevRangeStart = new Date(prevRangeEnd); prevRangeStart.setDate(prevRangeStart.getDate() - diffDays + 1)
+        const prevOrdersList = ordersList.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= prevRangeStart && created <= prevRangeEnd
+        })
+        const prevRevenue = prevOrdersList.reduce((s:number,o:any)=>s+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+        const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
+
+        setSalesData(points)
+        setChartSummary({ revenue: currentRevenue, orders: currentOrders, growth })
+      }
+      return
+    }
+
+    if (range === '7ngay') {
+      currentEnd = new Date(now)
+      currentEnd.setHours(23, 59, 59, 999)
+      currentStart = new Date(now)
+      currentStart.setDate(currentStart.getDate() - 6)
+      currentStart.setHours(0, 0, 0, 0)
+
+      previousEnd = new Date(currentStart)
+      previousEnd.setHours(23, 59, 59, 999)
+      previousStart = new Date(currentStart)
+      previousStart.setDate(previousStart.getDate() - 7)
+      previousStart.setHours(0, 0, 0, 0)
+
+      // build daily points for current period
+      const days: { date: Date; label: string }[] = []
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(currentStart)
+        d.setDate(currentStart.getDate() + i)
+        const wd = d.getDay()
+        const label = wd === 0 ? 'CN' : `T${wd + 1}`
+        days.push({ date: d, label })
+      }
+
+      const sales = days.map(({ date, label }) => {
+        const start = new Date(date)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(date)
+        end.setHours(23, 59, 59, 999)
+
+        const dayOrders = ordersList.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= start && created <= end
+        })
+        const revenue = dayOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        return { day: label, orders: dayOrders.length, revenue }
+      })
+
+      const currentRevenue = sales.reduce((s, p) => s + p.revenue, 0)
+      const currentOrders = sales.reduce((s, p) => s + p.orders, 0)
+
+      const prevOrders = ordersList.filter((o: any) => {
+        const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+        return created >= previousStart && created <= previousEnd
+      })
+      const prevRevenue = prevOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+
+      const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
+
+      setSalesData(sales)
+      setChartSummary({ revenue: currentRevenue, orders: currentOrders, growth })
+    } else if (range === '30ngay') {
+      // daily for last 30 days
+      currentEnd = new Date(now)
+      currentEnd.setHours(23, 59, 59, 999)
+      currentStart = new Date(now)
+      currentStart.setDate(currentStart.getDate() - 29)
+      currentStart.setHours(0, 0, 0, 0)
+
+      previousEnd = new Date(currentStart)
+      previousEnd.setHours(23, 59, 59, 999)
+      previousStart = new Date(currentStart)
+      previousStart.setDate(previousStart.getDate() - 30)
+      previousStart.setHours(0, 0, 0, 0)
+
+      const points: any[] = []
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(currentStart)
+        d.setDate(currentStart.getDate() + i)
+        const label = `${d.getDate()}/${d.getMonth() + 1}`
+        const start = new Date(d); start.setHours(0,0,0,0)
+        const end = new Date(d); end.setHours(23,59,59,999)
+        const dayOrders = ordersList.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= start && created <= end
+        })
+        const revenue = dayOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        points.push({ day: label, orders: dayOrders.length, revenue })
+      }
+      const currentRevenue = points.reduce((s,p)=>s+p.revenue,0)
+      const currentOrders = points.reduce((s,p)=>s+p.orders,0)
+
+      const prevOrders = ordersList.filter((o: any) => {
+        const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+        return created >= previousStart && created <= previousEnd
+      })
+      const prevRevenue = prevOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+      const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
+
+      setSalesData(points)
+      setChartSummary({ revenue: currentRevenue, orders: currentOrders, growth })
+    } else {
+      // 1 year aggregated monthly
+      const months: { start: Date; end: Date; label: string }[] = []
+      const nowMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      for (let i = 11; i >= 0; i--) {
+        const m = new Date(nowMonth.getFullYear(), nowMonth.getMonth() - i, 1)
+        const start = new Date(m)
+        const end = new Date(m.getFullYear(), m.getMonth()+1, 0)
+        const label = `${m.getMonth()+1}/${m.getFullYear()}`
+        months.push({ start, end, label })
+      }
+
+      const points = months.map(({ start, end, label }) => {
+        const monthOrders = ordersList.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= start && created <= end
+        })
+        const revenue = monthOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        return { day: label, orders: monthOrders.length, revenue }
+      })
+
+      const currentRevenue = points.reduce((s,p)=>s+p.revenue,0)
+      const currentOrders = points.reduce((s,p)=>s+p.orders,0)
+
+      // previous year same period
+      const prevStart = new Date(now.getFullYear()-1, now.getMonth(), 1)
+      const prevEnd = new Date(now.getFullYear()-1, now.getMonth()+1, 0)
+      const prevOrders = ordersList.filter((o:any)=>{ const c=new Date(o.CreatedAt||o.createdAt||o.Created||o.created); return c>=prevStart && c<=prevEnd })
+      const prevRevenue = prevOrders.reduce((s:number,o:any)=>s+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+      const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
+
+      setSalesData(points)
+      setChartSummary({ revenue: currentRevenue, orders: currentOrders, growth })
+    }
+  }
 
   const fetchDashboardStats = async () => {
     try {
@@ -77,50 +312,112 @@ export default function AdminDashboard() {
 
       const usersRes = await apiClient.get('/api/users')
 
+      // fetch all orders (admin) to compute totals/status counts
+      const ordersRes = await apiClient.get('/api/orders')
+
       const totalUsers = Array.isArray(usersRes.data)
         ? usersRes.data.length
         : 0
 
+      const orders = Array.isArray(ordersRes.data)
+        ? ordersRes.data
+        : Array.isArray(ordersRes.data?.data)
+        ? ordersRes.data.data
+        : []
+      // keep full orders list in state for re-computing on filter change
+      setOrdersList(orders)
+      const totalOrders = orders.length
+      const pendingOrders = orders.filter((o: any) => (o.OrderStatus || o.orderStatus || '').toString().toLowerCase() === 'pending approval' || (o.OrderStatus || o.orderStatus || '').toString().toLowerCase() === 'pending').length
+      const completedOrders = orders.filter((o: any) => (o.OrderStatus || o.orderStatus || '').toString().toLowerCase() === 'completed').length
+
+      // active users: count where IsActive flag is true (best available indicator)
+      const activeUsers = Array.isArray(usersRes.data) ? usersRes.data.filter((u: any) => u.IsActive === 1 || u.IsActive === true).length : 0
+
       setStats({
         totalUsers,
-        totalOrders: 25,
-        pendingOrders: 8,
-        completedOrders: 17,
-        activeUsers: Math.floor(totalUsers * 0.7),
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        activeUsers,
         systemHealth: 98
       })
 
-      setRecentActivities([
-        {
-          id: 1,
-          type: 'user',
-          message:
-            'Người dùng mới đăng ký: coordinator1',
-          time: '2 giờ trước',
-          icon: FiUserPlus
-        },
-        {
-          id: 2,
-          type: 'order',
-          message: 'Đơn hàng #ORD-001 đã được duyệt',
-          time: '4 giờ trước',
-          icon: FiCheckCircle
-        },
-        {
-          id: 3,
-          type: 'system',
-          message: 'Sao lưu hệ thống hoàn tất',
-          time: '1 ngày trước',
-          icon: FiServer
-        },
-        {
-          id: 4,
-          type: 'order',
-          message: 'Đơn hàng #ORD-002 được tạo mới',
-          time: '2 ngày trước',
-          icon: FiShoppingCart
-        }
-      ])
+      // build sales data for last 7 days and order status breakdown
+      // Prepare last 7 days labels (Mon..Sun as T2..CN)
+      const days: { date: Date; label: string }[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const wd = d.getDay() // 0 Sun .. 6 Sat
+        const label = wd === 0 ? 'CN' : `T${wd + 1}`
+        days.push({ date: d, label })
+      }
+
+      const sales = days.map(({ date, label }) => {
+        const start = new Date(date)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(date)
+        end.setHours(23, 59, 59, 999)
+
+        const dayOrders = orders.filter((o: any) => {
+          const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
+          return created >= start && created <= end
+        })
+
+        const revenue = dayOrders.reduce((sum: number, o: any) => {
+          return sum + (Number(o.TotalAmount || o.totalAmount || 0) || 0)
+        }, 0)
+
+        return { day: label, orders: dayOrders.length, revenue }
+      })
+
+      // default sales data for 7 days; actual chart will recompute when `chartRange` is applied
+      setSalesData(sales)
+
+      const statusCounts: Record<string, number> = {}
+      orders.forEach((o: any) => {
+        const st = (o.OrderStatus || o.orderStatus || '').toString()
+        const key = st.toLowerCase()
+        statusCounts[key] = (statusCounts[key] || 0) + 1
+      })
+
+      const statusData = [
+        { name: 'Hoàn thành', value: statusCounts['completed'] || 0, color: '#43e97b' },
+        { name: 'Đang xử lý', value: (statusCounts['pending approval'] || 0) + (statusCounts['pending'] || 0) + (statusCounts['approved'] || 0), color: '#4facfe' },
+        { name: 'Đang vận chuyển', value: (statusCounts['sent'] || 0) + (statusCounts['delivered'] || 0) + (statusCounts['uploading'] || 0), color: '#f7b500' },
+        { name: 'Hủy', value: (statusCounts['rejected'] || 0) || 0, color: '#f5576c' }
+      ]
+
+      setOrderStatusData(statusData)
+
+      // build recent activities from latest users and orders
+      const usersList = Array.isArray(usersRes.data) ? usersRes.data : Array.isArray(usersRes.data?.data) ? usersRes.data.data : []
+
+      const userActivities = usersList.slice(0, 10).map((u: any, idx: number) => ({
+        id: 1000 + idx,
+        type: 'user' as const,
+        message: `Người dùng mới: ${u.FullName || u.Username} (${u.Username})`,
+        time: u.CreatedAt ? new Date(u.CreatedAt).toLocaleString() : '',
+        icon: FiUserPlus,
+        createdAt: u.CreatedAt || u.createdAt
+      }))
+
+      const orderList = orders
+
+      const orderActivities = orderList.slice(0, 20).map((o: any, idx: number) => ({
+        id: 2000 + idx,
+        type: 'order' as const,
+        message: `Đơn ${o.OrderCode || o.orderCode} (${o.OrderStatus || o.orderStatus})`,
+        time: o.CreatedAt ? new Date(o.CreatedAt).toLocaleString() : '',
+        icon: FiShoppingCart,
+        createdAt: o.CreatedAt || o.createdAt
+      }))
+
+      const activitiesAll = [...userActivities, ...orderActivities]
+        .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+
+      setAllActivities(activitiesAll.map((a: any) => ({ id: a.id, type: a.type, message: a.message, time: a.time, icon: a.icon })))
+      setRecentActivities(activitiesAll.slice(0, 8).map((a: any) => ({ id: a.id, type: a.type, message: a.message, time: a.time, icon: a.icon })))
     } catch (error) {
       console.error(
         'Lỗi khi lấy dữ liệu dashboard:',
@@ -131,33 +428,7 @@ export default function AdminDashboard() {
     }
   }
 
-  const salesData = [
-    { day: 'T2', orders: 12, revenue: 25 },
-    { day: 'T3', orders: 19, revenue: 40 },
-    { day: 'T4', orders: 15, revenue: 32 },
-    { day: 'T5', orders: 27, revenue: 58 },
-    { day: 'T6', orders: 35, revenue: 70 },
-    { day: 'T7', orders: 30, revenue: 65 },
-    { day: 'CN', orders: 22, revenue: 48 }
-  ]
-
-  const orderStatusData = [
-    {
-      name: 'Hoàn thành',
-      value: 17,
-      color: '#43e97b'
-    },
-    {
-      name: 'Đang xử lý',
-      value: 8,
-      color: '#4facfe'
-    },
-    {
-      name: 'Hủy',
-      value: 2,
-      color: '#f5576c'
-    }
-  ]
+  // `salesData` and `orderStatusData` are populated from API via state
 
   const statCards = [
     {
@@ -278,7 +549,13 @@ export default function AdminDashboard() {
                   key={index}
                   className="stat-card"
                   style={{
-                    background: card.gradient
+                    background: card.gradient,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    // make key cards navigable
+                    if (card.title === 'Tổng người dùng') navigate('/admin/users')
+                    if (card.title === 'Người dùng hoạt động') navigate('/admin/users')
                   }}
                 >
                   <div className="stat-icon">
@@ -324,41 +601,55 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <select
                   className="chart-filter"
-                  defaultValue="7ngay"
+                  value={chartRange}
+                  onChange={(e) => setChartRange(e.target.value)}
                 >
-                  <option value="7ngay">
-                    7 ngày
-                  </option>
-
-                  <option value="30ngay">
-                    30 ngày
-                  </option>
-
-                  <option value="1nam">
-                    1 năm
-                  </option>
+                  <option value="7ngay">7 ngày</option>
+                  <option value="30ngay">30 ngày</option>
+                  <option value="1nam">1 năm</option>
+                  <option value="custom">Tùy chỉnh</option>
                 </select>
+
+                {chartRange === 'custom' && (
+                  <div className="chart-custom-inputs">
+                    <input
+                      type="date"
+                      className="chart-date-input"
+                      value={customFrom}
+                      onChange={(e) => setCustomFrom(e.target.value)}
+                    />
+                    <span style={{ margin: '0 4px' }}>—</span>
+                    <input
+                      type="date"
+                      className="chart-date-input"
+                      value={customTo}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                    />
+                  </div>
+                )}
+                </div>
               </div>
 
               <div className="chart-stats">
                 <div className="chart-stat-box">
                   <h4>Tổng doanh thu</h4>
-                  <h3>338M</h3>
-                  <span>+12.5%</span>
+                  <h3>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(chartSummary.revenue)}</h3>
+                  <span>{chartSummary.growth >= 0 ? `+${chartSummary.growth}%` : `${chartSummary.growth}%`}</span>
                 </div>
 
                 <div className="chart-stat-box">
                   <h4>Tổng đơn hàng</h4>
-                  <h3>160</h3>
-                  <span>+8.2%</span>
+                  <h3>{chartSummary.orders}</h3>
+                  <span>—</span>
                 </div>
 
                 <div className="chart-stat-box">
                   <h4>Tăng trưởng</h4>
-                  <h3>86%</h3>
-                  <span>Ổn định</span>
+                  <h3>{chartSummary.growth}%</h3>
+                  <span>so với kỳ trước</span>
                 </div>
               </div>
 
@@ -482,7 +773,7 @@ export default function AdminDashboard() {
                   Hoạt động gần đây
                 </h2>
 
-                <button className="view-all-btn">
+                <button className="view-all-btn" onClick={() => setShowAllActivities(true)}>
                   Xem tất cả
                 </button>
               </div>
@@ -522,6 +813,39 @@ export default function AdminDashboard() {
                 })}
               </div>
             </div>
+
+            {showAllActivities && (
+              <div className="modal-overlay" onClick={() => setShowAllActivities(false)}>
+                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h3>Hoạt động đầy đủ</h3>
+                    <button className="close-btn" onClick={() => setShowAllActivities(false)}>×</button>
+                  </div>
+                  <div className="modal-body">
+                    {allActivities.length === 0 ? (
+                      <div>Không có hoạt động</div>
+                    ) : (
+                      <div className="activities-list-full">
+                        {allActivities.map((act) => {
+                          const Icon = act.icon
+                          return (
+                            <div key={act.id} className="activity-item">
+                              <div className="activity-icon" style={{ backgroundColor: getActivityIconColor(act.type) }}>
+                                <Icon size={16} />
+                              </div>
+                              <div className="activity-content">
+                                <p className="activity-message">{act.message}</p>
+                                <span className="activity-time">{act.time}</span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="dashboard-card actions-card">

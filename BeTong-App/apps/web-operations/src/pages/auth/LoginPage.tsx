@@ -39,6 +39,12 @@ export default function LoginPage() {
         localStorage.setItem('userRole', response.data.user.role)
         localStorage.setItem('userName', response.data.user.username)
         localStorage.setItem('fullName', response.data.user.fullName)
+        // lưu stationId nếu có
+        if (response.data.user.stationId) {
+          localStorage.setItem('stationId', response.data.user.stationId)
+        } else {
+          localStorage.removeItem('stationId')
+        }
 
         // Điều hướng theo role
         const role = response.data.user.role

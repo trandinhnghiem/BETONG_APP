@@ -24,9 +24,10 @@ export default function StationDashboard() {
     try {
       setLoading(true)
 
-      const res = await apiClient.get('/api/orders/station-orders')
-      const orders = res.data || []
+      const userRole = localStorage.getItem('userRole')
+      const stationIdStr = localStorage.getItem('stationId')
 
+<<<<<<< HEAD
       // Tính số liệu từ orders của trạm này
       const pending = orders.filter((o: any) => o.OrderStatus === 'Pending Approval').length
       const approved = orders.filter((o: any) => o.OrderStatus === 'Approved').length
@@ -41,6 +42,40 @@ export default function StationDashboard() {
         setStationName(orders[0].DestinationStationName || 'Trạm của bạn')
       } else {
         setStationName('Trạm của bạn')
+=======
+      if (userRole === 'Station' && stationIdStr) {
+        // For station users, backend `GET /api/orders/station-orders` already returns orders for their station.
+        const res = await apiClient.get('/api/orders/station-orders')
+        const orders = res.data || []
+
+        // Lookup station name by ID
+        let stationName = ''
+        try {
+          const stationsRes = await apiClient.get('/api/orders/stations')
+          const stations = stationsRes.data || []
+          const sid = parseInt(stationIdStr)
+          const st = stations.find((s: any) => s.Id === sid || s.id === sid)
+          stationName = st ? (st.StationName || st.stationName || '') : ''
+        } catch (err) {
+          console.warn('Could not fetch stations list', err)
+        }
+
+        const count = orders.filter((o: any) => (o.OrderStatus || o.orderStatus || '').toString().toLowerCase() === 'sent').length
+        setStations([{ name: stationName || 'Trạm của bạn', count }])
+      } else {
+        const res = await apiClient.get('/api/orders/station-orders')
+        const orders = res.data || []
+
+        const result = stationList.map(name => {
+          const count = orders.filter((o: any) =>
+            o.DestinationStation === name && o.OrderStatus === 'Sent'
+          ).length
+
+          return { name, count }
+        })
+
+        setStations(result)
+>>>>>>> UPDATE-BY-THONG
       }
 
     } catch (err) {
@@ -51,8 +86,18 @@ export default function StationDashboard() {
     }
   }
 
+<<<<<<< HEAD
   const goToOrders = () => {
     navigate('/station/orders')
+=======
+  const goToStation = (name: string) => {
+    const userRole = localStorage.getItem('userRole')
+    if (userRole === 'Station') {
+      window.location.href = '/station/orders'
+    } else {
+      window.location.href = `/station-orders?station=${encodeURIComponent(name)}`
+    }
+>>>>>>> UPDATE-BY-THONG
   }
 
   // Data cho biểu đồ

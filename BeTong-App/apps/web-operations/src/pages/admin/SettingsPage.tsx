@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
 import {
   FiSettings,
   FiSave,
@@ -24,22 +25,37 @@ export default function SettingsPage() {
   })
 
   const [saving, setSaving] = useState(false)
+  useEffect(() => {
+  const savedSettings = localStorage.getItem('systemSettings')
 
-  const handleSave = async () => {
-    try {
-      setSaving(true)
-
-      // TODO: API save settings
-
-      setTimeout(() => {
-        alert('Lưu cài đặt thành công!')
-        setSaving(false)
-      }, 1000)
-    } catch (error) {
-      setSaving(false)
-      alert('Lưu thất bại!')
-    }
+  if (savedSettings) {
+    setSettings(JSON.parse(savedSettings))
   }
+}, [])
+
+const handleSave = async () => {
+  try {
+    setSaving(true)
+
+    // Lưu vào localStorage
+    localStorage.setItem(
+      'systemSettings',
+      JSON.stringify(settings)
+    )
+
+    setTimeout(() => {
+      alert('Lưu cài đặt thành công!')
+      setSaving(false)
+
+      // reload để sidebar cập nhật
+      window.location.reload()
+    }, 1000)
+
+  } catch (error) {
+    setSaving(false)
+    alert('Lưu thất bại!')
+  }
+}
 
   return (
     <div className="settings-page">
