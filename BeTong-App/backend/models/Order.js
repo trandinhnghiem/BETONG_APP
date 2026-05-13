@@ -92,6 +92,45 @@ class OrderModel {
   // ================= UPDATE STATUS =================
   static async updateStatus(orderId, status, userId) {
     const pool = await getConnection()
+    // If status is 'Sent' ensure only allowed transition: must be Approved
+    if (status === 'Sent') {
+      // fetch current status
+      const cur = await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .query('SELECT OrderStatus FROM Orders WHERE Id = @OrderId')
+
+      const currentStatus = cur.recordset[0] ? cur.recordset[0].OrderStatus : null
+
+      if (currentStatus !== 'Approved') {
+        // If not approved, mark as Rejected (cancelled) and set rejection reason
+        const rej = await pool.request()
+          .input('OrderId', sql.Int, orderId)
+          .input('Reason', sql.NVarChar(sql.MAX), 'Auto-rejected: sent without approval')
+          .query(`
+            UPDATE Orders
+            SET OrderStatus = 'Rejected', RejectionReason = @Reason, UpdatedAt = GETDATE()
+            WHERE Id = @OrderId
+          `)
+
+        return rej.rowsAffected[0] > 0
+      }
+
+      const result = await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .input('Status', sql.NVarChar, status)
+        .input('UserId', sql.Int, userId)
+        .query(`
+          UPDATE Orders
+          SET 
+            OrderStatus = @Status,
+            SentBy = @UserId,
+            SentAt = GETDATE(),
+            UpdatedAt = GETDATE()
+          WHERE Id = @OrderId
+        `)
+
+      return result.rowsAffected[0] > 0
+    }
 
     const result = await pool.request()
       .input('OrderId', sql.Int, orderId)

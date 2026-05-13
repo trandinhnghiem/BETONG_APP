@@ -44,9 +44,10 @@ export default function CoordinatorOrdersPage() {
 
   const sendOrderToStation = async (orderId: number) => {
     try {
-      await apiClient.post(`/api/orders/${orderId}/status`, { status: 'Sent' })
+      // Send to accounting for approval instead of directly to station
+      await apiClient.post(`/api/orders/${orderId}/status`, { status: 'Pending Approval' })
       fetchOrders()
-      alert('Đã gửi đơn tới trạm thành công')
+      alert('Đã gửi đơn tới bộ phận kế toán (chờ phê duyệt)')
     } catch (error) {
       console.error(error)
       alert('Gửi đơn thất bại')
@@ -105,7 +106,7 @@ export default function CoordinatorOrdersPage() {
                         className="btn-send"
                         onClick={() => sendOrderToStation(order.id)}
                       >
-                        Gửi trạm
+                        Gửi kế toán
                       </button>
                     )}
                   </td>

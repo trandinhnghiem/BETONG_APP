@@ -15,7 +15,8 @@ router.get('/stations', OrderController.getStations)
 router.post('/', roleMiddleware(['Coordinator']), OrderController.createOrder)
 router.get('/my-orders', roleMiddleware(['Coordinator']), OrderController.getMyOrders)
 router.get('/export', roleMiddleware(['Accounting', 'Coordinator']), OrderController.exportOrdersReport)
-router.post('/:orderId/status', roleMiddleware(['Coordinator', 'Station']), OrderController.updateStatus)
+// Allow Accounting to change status to 'Sent' when forwarding to station
+router.post('/:orderId/status', roleMiddleware(['Coordinator', 'Station', 'Accounting']), OrderController.updateStatus)
 
 // Station routes
 router.get('/station-orders', roleMiddleware(['Station']), OrderController.getStationOrders)

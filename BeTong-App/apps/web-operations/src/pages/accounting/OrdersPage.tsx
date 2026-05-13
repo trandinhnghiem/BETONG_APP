@@ -1,25 +1,23 @@
 import { useEffect, useState } from 'react'
-import { FiCheckCircle, FiXCircle, FiEye, FiFilter, FiSearch } from 'react-icons/fi'
+import { FiEye, FiFilter } from 'react-icons/fi'
+import { FiCheckCircle, FiXCircle } from 'react-icons/fi'
+import { Link } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
 interface Order {
   id: number
   orderCode: string
-  coordinatorName: string
-  sourceStation: string
   destinationStation: string
   totalAmount: number
   orderStatus: string
   createdAt: string
-  paymentStatus: string
+  coordinatorName?: string
 }
 
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
@@ -29,58 +27,39 @@ export default function AccountingOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
+      // accounting cares about orders pending approval
       const response = await apiClient.get('/api/orders/pending-approval')
+      const list = Array.isArray(response.data) ? response.data : []
 
-      setOrders(response.data.map((order: any) => ({
-        id: order.Id,
-        orderCode: order.OrderCode,
-        coordinatorName: order.CoordinatorName,
-        sourceStation: order.SourceStation,
-        destinationStation: order.DestinationStation,
-        totalAmount: order.TotalAmount,
-        orderStatus: order.OrderStatus,
-        createdAt: order.CreatedAt,
-        paymentStatus: order.PaymentStatus || 'Chờ thanh toán'
+      setOrders(list.map((o: any) => ({
+        id: o.Id,
+        orderCode: o.OrderCode,
+        destinationStation: o.DestinationStation,
+        totalAmount: o.TotalAmount || 0,
+        orderStatus: o.OrderStatus,
+        createdAt: o.CreatedAt,
+        coordinatorName: o.CoordinatorName || o.Coordinator || ''
       })))
     } catch (error) {
       console.error('Lỗi khi lấy danh sách đơn hàng:', error)
-
-      // dữ liệu mẫu
-      setOrders([
-        {
-          id: 1,
-          orderCode: 'ORD-001',
-          coordinatorName: 'John Coordinator',
-          sourceStation: 'Trạm A',
-          destinationStation: 'Trạm B',
-          totalAmount: 1500000,
-          orderStatus: 'Chờ duyệt',
-          createdAt: '2024-01-15',
-          paymentStatus: 'Chờ thanh toán'
-        }
-      ])
+      setOrders([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleApprove = async (orderId: number) => {
-    if (!confirm('Bạn có chắc muốn duyệt đơn này không?')) return
+    if (!confirm('Bạn có chắc muốn phê duyệt và gửi trạm không?')) return
 
     try {
-      await apiClient.post(`/api/orders/${orderId}/approve`, {
-        approvalReason: 'Đã duyệt bởi kế toán'
-      })
-
-      setOrders(orders.map(order =>
-        order.id === orderId
-          ? { ...order, orderStatus: 'Đã duyệt' }
-          : order
-      ))
-
-      alert('Duyệt đơn thành công!')
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Duyệt đơn thất bại')
+      await apiClient.post(`/api/orders/${orderId}/approve`, { approvalReason: 'Phê duyệt bởi kế toán' })
+      // after approve, send to station
+      await apiClient.post(`/api/orders/${orderId}/status`, { status: 'Sent' })
+      fetchOrders()
+      alert('Đã phê duyệt và gửi trạm')
+    } catch (err) {
+      console.error(err)
+      alert('Thao tác thất bại')
     }
   }
 
@@ -89,141 +68,80 @@ export default function AccountingOrdersPage() {
     if (!reason) return
 
     try {
-      await apiClient.post(`/api/orders/${orderId}/reject`, {
-        rejectionReason: reason
-      })
-
-      setOrders(orders.map(order =>
-        order.id === orderId
-          ? { ...order, orderStatus: 'Đã từ chối' }
-          : order
-      ))
-
-      alert('Đã từ chối đơn!')
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Từ chối thất bại')
+      await apiClient.post(`/api/orders/${orderId}/reject`, { rejectionReason: reason })
+      fetchOrders()
+      alert('Đã từ chối đơn')
+    } catch (err) {
+      console.error(err)
+      alert('Từ chối thất bại')
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Chờ duyệt': return 'orange'
-      case 'Đã duyệt': return 'green'
-      case 'Đã từ chối': return 'red'
-      case 'Hoàn thành': return 'blue'
-      default: return 'gray'
+  const handleSendToStation = async (order: Order) => {
+    try {
+      if (order.orderStatus !== 'Approved') {
+        // If not approved, cancel the order as per requirement
+        await apiClient.post(`/api/orders/${order.id}/reject`, { rejectionReason: 'Bị huỷ do chưa phê duyệt khi gửi trạm' })
+        alert('Đơn chưa được phê duyệt, đã huỷ')
+      } else {
+        await apiClient.post(`/api/orders/${order.id}/status`, { status: 'Sent' })
+        alert('Đã gửi trạm')
+      }
+
+      fetchOrders()
+    } catch (err) {
+      console.error(err)
+      alert('Thao tác thất bại')
     }
   }
-
-  const filteredOrders = orders.filter(order => {
-    const matchesFilter =
-      filter === 'all' ||
-      order.orderStatus.toLowerCase().includes(filter)
-
-    const matchesSearch =
-      order.orderCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.coordinatorName.toLowerCase().includes(searchTerm.toLowerCase())
-
-    return matchesFilter && matchesSearch
-  })
 
   return (
-    <div className="orders-page">
-      <div className="page-header">
-        <h1>Quản lý đơn hàng</h1>
-        <p>Xem và duyệt đơn từ điều phối viên</p>
-      </div>
-
-      {/* SEARCH + FILTER */}
-      <div className="filters-section">
-        <div className="search-box">
-          <FiSearch size={16} />
-          <input
-            type="text"
-            placeholder="Tìm kiếm đơn hàng..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="filter-tabs">
-          <button onClick={() => setFilter('all')}>Tất cả</button>
-          <button onClick={() => setFilter('pending')}>Chờ duyệt</button>
-          <button onClick={() => setFilter('approved')}>Đã duyệt</button>
-          <button onClick={() => setFilter('rejected')}>Đã từ chối</button>
+    <div className="orders-container">
+      <div className="orders-header">
+        <h1>📋 Đơn hàng - Kế toán</h1>
+        <div>
+          <Link to="/accounting" className="action-btn secondary">Dashboard</Link>
         </div>
       </div>
 
-      {/* LIST */}
-      <div className="orders-section">
-        {loading ? (
-          <div className="loading">Đang tải dữ liệu...</div>
-        ) : filteredOrders.length === 0 ? (
-          <div className="empty-state">
-            <FiFilter size={48} />
-            <p>Không tìm thấy đơn hàng</p>
-          </div>
-        ) : (
-          <div className="orders-table">
-            <div className="table-header">
-              <div>Mã đơn</div>
-              <div>Điều phối</div>
-              <div>Tuyến</div>
-              <div>Số tiền</div>
-              <div>Trạng thái</div>
-              <div>Thao tác</div>
-            </div>
+      {loading ? (
+        <div className="loading">Đang tải...</div>
+      ) : orders.length === 0 ? (
+        <div className="empty">Không có đơn hàng</div>
+      ) : (
+        <div className="table-wrapper">
+          <table className="orders-table">
+            <thead>
+              <tr>
+                <th>Mã đơn</th>
+                <th>Điều phối</th>
+                <th>Trạm nhận</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
 
-            {filteredOrders.map(order => (
-              <div key={order.id} className="table-row">
-                <div>{order.orderCode}</div>
-                <div>{order.coordinatorName}</div>
-                <div>{order.sourceStation} → {order.destinationStation}</div>
-                <div>{order.totalAmount.toLocaleString()} VND</div>
+            <tbody>
+              {orders.map(order => (
+                <tr key={order.id}>
+                  <td className="code">{order.orderCode}</td>
+                  <td>{order.coordinatorName}</td>
+                  <td>{order.destinationStation}</td>
+                  <td className="money">{order.totalAmount.toLocaleString()} đ</td>
+                  <td><span className={`status ${order.orderStatus.replace(/\s+/g, '-')} `}>{order.orderStatus}</span></td>
+                  <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <button className="btn-approve" onClick={() => handleApprove(order.id)}>Phê duyệt & Gửi trạm</button>
+                    <button className="btn-reject" onClick={() => handleReject(order.id)}>Từ chối</button>
+                    <button className="btn-send" onClick={() => handleSendToStation(order)}>Gửi trạm</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
 
-                <div>
-                  <span className={`status-badge ${getStatusColor(order.orderStatus)}`}>
-                    {order.orderStatus}
-                  </span>
-                </div>
-
-                <div className="actions">
-                  <button onClick={() => setSelectedOrder(order)}>
-                    <FiEye size={14} /> Xem
-                  </button>
-
-                  {order.orderStatus === 'Chờ duyệt' && (
-                    <>
-                      <button onClick={() => handleApprove(order.id)}>
-                        <FiCheckCircle size={14} /> Duyệt
-                      </button>
-
-                      <button onClick={() => handleReject(order.id)}>
-                        <FiXCircle size={14} /> Từ chối
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* MODAL */}
-      {selectedOrder && (
-        <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Chi tiết đơn: {selectedOrder.orderCode}</h2>
-
-            <p>Điều phối: {selectedOrder.coordinatorName}</p>
-            <p>Tuyến: {selectedOrder.sourceStation} → {selectedOrder.destinationStation}</p>
-            <p>Số tiền: {selectedOrder.totalAmount.toLocaleString()} VND</p>
-            <p>Thanh toán: {selectedOrder.paymentStatus}</p>
-            <p>Ngày tạo: {new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
-
-            <button onClick={() => setSelectedOrder(null)}>Đóng</button>
-          </div>
+          </table>
         </div>
       )}
     </div>

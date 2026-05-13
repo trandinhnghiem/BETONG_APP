@@ -1,0 +1,11 @@
+.reports-page { padding: 18px; }
+
+.section { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); }
+
+.section-header { display:flex; justify-content:space-between; align-items:center }
+
+.action-btn { padding: 10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600 }
+.action-btn.primary { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white }
+.action-btn.primary:hover { transform: translateY(-2px) }
+
+input[type=date] { padding: 8px 10px; border-radius:8px; border:1px solid #e6eefc }
