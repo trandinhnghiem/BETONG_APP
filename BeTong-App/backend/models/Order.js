@@ -123,8 +123,8 @@ class OrderModel {
           UPDATE Orders
           SET 
             OrderStatus = @Status,
-            SentBy = @UserId,
-            SentAt = GETDATE(),
+            OrderStatus = @Status,
+            UpdatedAt = GETDATE(),
             UpdatedAt = GETDATE()
           WHERE Id = @OrderId
         `)

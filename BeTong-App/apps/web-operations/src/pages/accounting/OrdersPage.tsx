@@ -54,14 +54,26 @@ export default function AccountingOrdersPage() {
 
     try {
       if (action === 'approve_send') {
-        await apiClient.post(`/api/orders/${order.id}/approve`, {
-          approvalReason: 'Phê duyệt bởi kế toán'
-        })
+        
+        try {
+          await apiClient.post(`/api/orders/${order.id}/approve`, {
+            approvalReason: 'Phê duyệt bởi kế toán'
+          })
 
-        await apiClient.post(`/api/orders/${order.id}/status`, {
-          status: 'Sent'
-        })
+          // delay nhẹ để tránh race condition
+          await new Promise(res => setTimeout(res, 300))
 
+          await apiClient.post(`/api/orders/${order.id}/status`, {
+            status: 'Sent'
+          })
+
+          fetchOrders()
+          alert('Đã phê duyệt và gửi trạm')
+        } catch (err: any) {
+          console.error(err.response?.data || err)
+          alert(err.response?.data?.error || 'Thao tác thất bại')
+        }
+      
         alert('Đã phê duyệt và gửi trạm')
       }
 
