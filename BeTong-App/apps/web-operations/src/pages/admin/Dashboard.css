@@ -629,6 +629,7 @@
   background: rgba(67, 94, 190, 0.06);
   top: -120px;
   right: -120px;
+  z-index: 0;
 }
 
 .chart-card::after {
@@ -640,10 +641,13 @@
   background: rgba(91, 124, 255, 0.05);
   bottom: -80px;
   left: -80px;
+  z-index: 0;
 }
 
 .chart-card .card-header {
   margin-bottom: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .chart-title-wrap {
@@ -670,6 +674,8 @@
   cursor: pointer;
   transition: 0.3s;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  position: relative;
+  z-index: 3;
 }
 
 .chart-filter:hover {
@@ -770,3 +776,31 @@
   -webkit-appearance: menulist;
   -moz-appearance: menulist;
 }
+
+/* Modal for full activities */
+.modal-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  max-width: 900px;
+  width: 95%;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #eee }
+.modal-body { padding:16px }
+.close-btn { background:transparent; border:none; font-size:20px; cursor:pointer }

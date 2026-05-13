@@ -17,6 +17,8 @@ interface Order {
 export default function StationOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   const [params] = useSearchParams()
   const stationName = params.get('station')
@@ -54,10 +56,30 @@ export default function StationOrdersPage() {
     }
   }
 
+  const openOrder = async (orderId: number) => {
+    try {
+      const res = await apiClient.get(`/api/orders/${orderId}`)
+      setSelectedOrder(res.data)
+      setDetailOpen(true)
+    } catch (err) {
+      console.error('Lỗi lấy chi tiết đơn:', err)
+      alert('Không thể tải chi tiết đơn')
+    }
+  }
+
+  const closeDetail = () => {
+    setSelectedOrder(null)
+    setDetailOpen(false)
+  }
+
   const updateStatus = async (orderId: number, status: string) => {
     try {
       await apiClient.post(`/api/orders/${orderId}/status`, { status })
       fetchOrders()
+      if (detailOpen) {
+        // refresh detail view if open
+        openOrder(orderId)
+      }
       alert('Cập nhật thành công')
     } catch (err) {
       alert('Lỗi')
@@ -108,10 +130,63 @@ export default function StationOrdersPage() {
                     <FiRefreshCcw /> Hoàn thành
                   </button>
                 )}
+                <button onClick={() => openOrder(order.id)} className="confirm-btn">
+                  Chi tiết
+                </button>
               </div>
 
             </div>
           ))}
+        </div>
+      )}
+
+      {detailOpen && selectedOrder && (
+        <div className="modal-overlay" onClick={closeDetail}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Chi tiết đơn {selectedOrder.OrderCode}</h3>
+              <button className="close-btn" onClick={closeDetail}>×</button>
+            </div>
+            <div className="modal-body">
+              <p><strong>Trạng thái:</strong> {selectedOrder.OrderStatus}</p>
+              <p><strong>Ghi chú:</strong></p>
+              <pre style={{whiteSpace: 'pre-wrap'}}>{selectedOrder.Notes}</pre>
+
+              <h4>Mặt hàng</h4>
+              {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                <table className="detail-table">
+                  <thead>
+                    <tr><th>Sản phẩm</th><th>Số lượng</th><th>Đơn giá</th></tr>
+                  </thead>
+                  <tbody>
+                    {selectedOrder.items.map((it: any) => (
+                      <tr key={it.Id}>
+                        <td>{it.ProductName || it.Product}</td>
+                        <td>{it.Quantity}</td>
+                        <td>{Number(it.UnitPrice || it.Price || 0).toLocaleString()} đ</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div>Không có sản phẩm</div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {selectedOrder.OrderStatus === 'Pending Approval' && (
+                <button onClick={() => updateStatus(selectedOrder.Id, 'Approved')} className="confirm-btn">Xác nhận trộn</button>
+              )}
+              {selectedOrder.OrderStatus === 'Approved' && (
+                <button onClick={() => updateStatus(selectedOrder.Id, 'Sent')} className="start-btn">Bắt đầu giao</button>
+              )}
+              {selectedOrder.OrderStatus === 'Sent' && (
+                <button onClick={() => updateStatus(selectedOrder.Id, 'Delivered')} className="deliver-btn">Đã giao</button>
+              )}
+              {selectedOrder.OrderStatus === 'Delivered' && (
+                <button onClick={() => updateStatus(selectedOrder.Id, 'Completed')} className="complete-btn">Hoàn thành</button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

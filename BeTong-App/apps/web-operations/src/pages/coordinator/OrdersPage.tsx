@@ -100,7 +100,7 @@ export default function CoordinatorOrdersPage() {
                   </td>
 
                   <td>
-                    {order.orderStatus === 'Approved' && (
+                    {(order.orderStatus === 'Approved' || order.orderStatus === 'Pending Approval') && (
                       <button
                         className="btn-send"
                         onClick={() => sendOrderToStation(order.id)}

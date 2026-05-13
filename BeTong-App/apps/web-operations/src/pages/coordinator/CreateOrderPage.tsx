@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './CreateOrderPage.css'
 
@@ -36,6 +37,8 @@ export default function CoordinatorCreateOrderPage() {
     mixingStationId: '',
     truck: ''
   })
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchProducts()
@@ -145,6 +148,8 @@ export default function CoordinatorCreateOrderPage() {
         mixingStationId: '',
         truck: ''
       })
+      // show the coordinator orders list so the created order is visible and can be sent to station
+      navigate('/coordinator/orders')
     } catch (error: any) {
       alert(`❌ Lỗi: ${error.response?.data?.error || 'Tạo đơn thất bại'}`)
     } finally {

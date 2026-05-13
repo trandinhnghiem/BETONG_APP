@@ -28,6 +28,8 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
 
   const [form, setForm] = useState({
     username: '',
@@ -102,21 +104,37 @@ export default function UsersPage() {
       setCreating(false)
     }
   }
+  // ================= XÓA USER (modal) =================
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user)
+    setShowDeleteModal(true)
+  }
 
-  // ================= XÓA USER =================
-  const handleDelete = async (userId: number) => {
-    if (!confirm('Bạn có chắc muốn xóa user này không?')) return
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return
 
     try {
-      await apiClient.delete(`/api/users/${userId}`)
-
+      await apiClient.delete(`/api/users/${userToDelete.Id}`)
+      setShowDeleteModal(false)
+      setUserToDelete(null)
       fetchUsers()
     } catch (err: any) {
-      alert(
-        'Xóa thất bại: ' +
-          (err.response?.data?.error || 'Lỗi không xác định')
-      )
+      alert('Xóa thất bại: ' + (err.response?.data?.error || 'Lỗi không xác định'))
     }
+  }
+
+  // ================= CHỈNH SỬA USER =================
+  const handleEditClick = (user: User) => {
+    setEditingUser(user)
+    setForm({
+      username: user.Username,
+      email: user.Email || '',
+      password: '',
+      fullName: user.FullName || '',
+      phone: user.Phone || '',
+      role: user.Role || 'Coordinator'
+    })
+    setShowCreateForm(true)
   }
 
   // ================= FILTER & SEARCH =================
@@ -197,7 +215,7 @@ export default function UsersPage() {
           <div className="create-form-header">
             <div>
               <h3>
-                Tạo người dùng mới
+                {editingUser ? 'Chỉnh sửa người dùng' : 'Tạo người dùng mới'}
               </h3>
             </div>
           </div>
@@ -332,26 +350,77 @@ export default function UsersPage() {
 
           {/* ACTIONS */}
           <div className="form-actions">
-
             <button
               className="cancel-btn"
-              onClick={() => setShowCreateForm(false)}
+              onClick={() => {
+                setShowCreateForm(false)
+                setEditingUser(null)
+                setForm({ username: '', email: '', password: '', fullName: '', phone: '', role: 'Coordinator' })
+              }}
             >
               Hủy
             </button>
 
             <button
               className="submit-btn"
-              onClick={handleCreate}
+              onClick={async () => {
+                if (editingUser) {
+                  // update
+                  try {
+                    setCreating(true)
+                    await apiClient.put(`/api/users/${editingUser.Id}`, {
+                      fullName: form.fullName,
+                      email: form.email,
+                      phone: form.phone,
+                      role: form.role,
+                      password: form.password || undefined
+                    })
+
+                    setShowCreateForm(false)
+                    setEditingUser(null)
+                    setForm({ username: '', email: '', password: '', fullName: '', phone: '', role: 'Coordinator' })
+                    fetchUsers()
+                  } catch (err: any) {
+                    setError(err.response?.data?.error || 'Cập nhật thất bại')
+                  } finally {
+                    setCreating(false)
+                  }
+                } else {
+                  // create
+                  handleCreate()
+                }
+              }}
               disabled={creating}
             >
-              <FiPlus size={16} />
-
-              {creating
-                ? 'Đang tạo...'
-                : 'Tạo người dùng'}
+              {editingUser ? 'Lưu thay đổi' : (
+                <>
+                  <FiPlus size={16} />
+                  {creating ? 'Đang tạo...' : 'Tạo người dùng'}
+                </>
+              )}
             </button>
 
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+      {showDeleteModal && userToDelete && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Xác nhận xóa</h3>
+              <button className="close-btn" onClick={() => setShowDeleteModal(false)}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <p>Bạn có chắc muốn xóa tài khoản <strong>{userToDelete.FullName}</strong> (@{userToDelete.Username}) không? Hành động này không thể hoàn tác.</p>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button className="cancel-btn" onClick={() => setShowDeleteModal(false)}>Hủy</button>
+                <button className="submit-btn" onClick={handleDeleteConfirm}>Xóa</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -438,14 +507,14 @@ export default function UsersPage() {
 
                   <td>
                     <div className="user-actions">
-                      <button className="action-btn edit">
+                      <button className="action-btn edit" onClick={() => handleEditClick(user)}>
                         <FiEdit size={16} />
                       </button>
 
                       <button
                         className="action-btn delete"
                         onClick={() =>
-                          handleDelete(user.Id)
+                          handleDeleteClick(user)
                         }
                       >
                         <FiTrash2 size={16} />

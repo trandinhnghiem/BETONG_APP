@@ -440,3 +440,13 @@
     justify-content: center;
   }
 }
+
+.status-badge.online {
+  background: #22c55e; /* xanh lá gọn nhẹ */
+
+  color: white;
+
+  box-shadow: none;
+
+  text-transform: none; /* không in hoa */
+}
