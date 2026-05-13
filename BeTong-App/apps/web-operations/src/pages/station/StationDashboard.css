@@ -1,34 +1,34 @@
-.station-dashboard {
-  padding: 20px;
-}
-
-.station-grid {
+.status-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
   margin-top: 20px;
 }
 
-.station-card {
-  background: #2c3e50;
-  color: white;
-  padding: 20px;
+.status-card {
+  background: white;
   border-radius: 12px;
-  cursor: pointer;
-  transition: 0.3s;
+  padding: 20px;
   text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: 0.2s;
 }
 
-.station-card:hover {
-  background: #34495e;
+.status-card:hover {
   transform: translateY(-5px);
 }
 
-.station-card h2 {
-  font-size: 18px;
+/* SỐ TO */
+.status-card p {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 10px 0 0;
 }
 
-.station-card p {
-  margin-top: 10px;
-  font-size: 14px;
-}
+/* MÀU */
+.pending { border-top: 5px solid #ffc107; }
+.approved { border-top: 5px solid #28a745; }
+.sent { border-top: 5px solid #007bff; }
+.delivered { border-top: 5px solid #17a2b8; }
+.completed { border-top: 5px solid #6c757d; }

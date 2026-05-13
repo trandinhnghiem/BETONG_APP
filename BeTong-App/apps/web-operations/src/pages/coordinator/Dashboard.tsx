@@ -279,15 +279,21 @@ export default function CoordinatorDashboard() {
               <span>Quản lý đơn hàng</span>
             </Link>
 
-            <button className="quick-action-btn success">
-              <FiBarChart2 size={24} />
-              <span>Báo cáo</span>
-            </button>
+            
+              <Link to="/coordinator/reports" className="quick-action-btn success">
+                <FiBarChart2 size={24} />
+                <span>Báo cáo</span>
+              </Link>
 
-            <button className="quick-action-btn warning">
-              <FiMapPin size={24} />
-              <span>Quản lý trạm</span>
-            </button>
+             
+            
+
+            
+               <Link to="/coordinator/stations" className="quick-action-btn warning">
+                <FiMapPin size={24} />
+                <span>Quản lý trạm</span>
+              </Link>
+            
           </div>
         </div>
       </div>

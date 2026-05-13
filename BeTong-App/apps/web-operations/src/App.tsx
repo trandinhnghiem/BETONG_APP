@@ -17,11 +17,14 @@ import AccountingReportsPage from './pages/accounting/ReportsPage'
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
 import CoordinatorOrdersPage from './pages/coordinator/OrdersPage'
 import CoordinatorCreateOrderPage from './pages/coordinator/CreateOrderPage'
+import CoordinatorReportsPage from './pages/coordinator/ReportsPage'
+import CoordinatorStationsPage from './pages/coordinator/StationsPage'
 
 import StationDashboard from './pages/station/Dashboard'
 import StationOrdersPage from './pages/station/OrdersPage'
 
 import NotFound from './pages/NotFound'
+
 
 function App() {
   return (
@@ -132,6 +135,24 @@ function App() {
             element={
               <ProtectedRoute requiredRole="Coordinator">
                 <CoordinatorCreateOrderPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/coordinator/reports"
+            element={
+              <ProtectedRoute requiredRole="Coordinator">
+                <CoordinatorReportsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/coordinator/stations"
+            element={
+              <ProtectedRoute requiredRole="Coordinator">
+                <CoordinatorStationsPage />
               </ProtectedRoute>
             }
           />
