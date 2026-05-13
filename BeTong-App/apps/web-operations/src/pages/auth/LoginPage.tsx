@@ -13,11 +13,12 @@ export default function LoginPage() {
 
   const testAccounts = [
     { username: 'admin', password: 'Admin@123456', role: 'Admin' },
-    { username: 'accounting1', password: 'Acc@123456', role: 'Accounting' },
+    { username: 'account', password: '123456', role: 'Accounting' },
     { username: 'coor', password: '123456', role: 'Coordinator' },
-    { username: 'coordinator1', password: 'Coord@123456', role: 'Coordinator' },
-    { username: 'station', password: '123456', role: 'Station' },
-    { username: 'station1', password: 'Station@123456', role: 'Station' }
+    { username: 'omon1', password: '123456', role: 'Station' },
+    { username: 'omon2', password: '123456', role: 'Station' },
+    { username: 'T82', password: '123456', role: 'Station' },
+    { username: 'haugiang', password: '123456', role: 'Station' }
   ]
 
   const handleLogin = async (e: React.FormEvent) => {

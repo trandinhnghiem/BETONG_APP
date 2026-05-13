@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FiCheckCircle, FiRefreshCcw } from 'react-icons/fi'
 import apiClient from '../../services/api'
+import './OrdersPage.css'
 
 interface Order {
   id: number
@@ -33,11 +34,7 @@ export default function StationOrdersPage() {
       let data = res.data || []
 
       // ✅ lọc theo trạm
-      if (stationName) {
-        data = data.filter((o: any) =>
-          o.DestinationStation === stationName
-        )
-      }
+      
 
       setOrders(data.map((o: any) => ({
         id: o.Id,
@@ -73,9 +70,9 @@ export default function StationOrdersPage() {
       <h1>📦 Đơn hàng {stationName}</h1>
 
       {loading ? (
-        <div>Đang tải...</div>
+        <div className="loading">Đang tải đơn hàng...</div>
       ) : orders.length === 0 ? (
-        <div>Không có đơn</div>
+        <div className="no-orders">Không có đơn hàng nào cho trạm của bạn</div>
       ) : (
         <div className="orders-list">
           {orders.map(order => (
@@ -88,14 +85,26 @@ export default function StationOrdersPage() {
               <p>Trạng thái: {order.orderStatus}</p>
 
               <div className="actions">
+                {order.orderStatus === 'Pending Approval' && (
+                  <button onClick={() => updateStatus(order.id, 'Approved')} className="confirm-btn">
+                    <FiCheckCircle /> Xác nhận trộn
+                  </button>
+                )}
+
+                {order.orderStatus === 'Approved' && (
+                  <button onClick={() => updateStatus(order.id, 'Sent')} className="start-btn">
+                    <FiRefreshCcw /> Bắt đầu giao
+                  </button>
+                )}
+
                 {order.orderStatus === 'Sent' && (
-                  <button onClick={() => updateStatus(order.id, 'Delivered')}>
-                    <FiCheckCircle /> Xác nhận nhận
+                  <button onClick={() => updateStatus(order.id, 'Delivered')} className="deliver-btn">
+                    <FiCheckCircle /> Đã giao
                   </button>
                 )}
 
                 {order.orderStatus === 'Delivered' && (
-                  <button onClick={() => updateStatus(order.id, 'Completed')}>
+                  <button onClick={() => updateStatus(order.id, 'Completed')} className="complete-btn">
                     <FiRefreshCcw /> Hoàn thành
                   </button>
                 )}

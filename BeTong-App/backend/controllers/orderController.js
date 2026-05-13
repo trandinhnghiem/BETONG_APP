@@ -294,18 +294,17 @@ class OrderController {
         .input('Offset', sql.Int, parseInt(offset))
         .query(`
           SELECT 
-            o.Id, o.OrderCode, o.CoordinatorId, u.FullName AS CoordinatorName,
-            o.SourceStationId, ss.StationName AS SourceStationName,
-            o.DestinationStationId, ds.StationName AS DestinationStationName,
-            o.TotalAmount, o.OrderStatus, o.Notes,
-            o.CreatedAt, o.UpdatedAt
-          FROM Orders o
-          LEFT JOIN Users u ON o.CoordinatorId = u.Id
-          LEFT JOIN Stations ss ON o.SourceStationId = ss.Id
-          LEFT JOIN Stations ds ON o.DestinationStationId = ds.Id
-          WHERE o.DestinationStationId = @StationId
-          ORDER BY o.CreatedAt DESC
-          OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
+          o.Id,
+          o.OrderCode,
+          o.TotalAmount,
+          o.OrderStatus,
+          o.CreatedAt,
+          s.StationName AS DestinationStation,
+          c.FullName AS CoordinatorName
+        FROM Orders o
+        LEFT JOIN Stations s ON o.DestinationStationId = s.Id
+        LEFT JOIN Users c ON o.CoordinatorId = c.Id
+        ORDER BY o.CreatedAt DESC
         `)
 
       res.json(result.recordset)
@@ -329,6 +328,8 @@ class OrderController {
       res.status(500).json({ error: error.message })
     }
   }
+
+  
 
   // ================= STATIONS =================
   static async getStations(req, res) {

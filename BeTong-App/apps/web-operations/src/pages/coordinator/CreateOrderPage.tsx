@@ -156,11 +156,11 @@ export default function CoordinatorCreateOrderPage() {
     <div className="create-order-page">
       <div className="page-header">
         <h1>📝 Tạo đơn hàng mới</h1>
-        <p>Điền đầy đủ thông tin để tạo và điều phối giao bê tông</p>
+        <p>Chọn trạm trộn và điền thông tin để đơn chỉ hiển thị đúng trạm.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="order-form">
-        {/* KHÁCH HÀNG */}
+        {successMessage && <div className="success-banner">{successMessage}</div>}
         <div className="form-section">
           <h3>🏢 Thông tin khách hàng</h3>
           <div className="form-row">

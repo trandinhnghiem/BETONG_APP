@@ -808,6 +808,26 @@ async function getSummaryTable(req, res) {
   }
 }
 
+exports.getStationSummary = async (req, res) => {
+  try {
+    const pool = await getPool()
+
+    const result = await pool.request().query(`
+      SELECT 
+        s.StationName AS DestinationStation,
+        COUNT(*) AS PendingOrders
+      FROM Orders o
+      LEFT JOIN Stations s ON o.DestinationStationId = s.Id
+      WHERE o.OrderStatus = 'Sent'
+      GROUP BY s.StationName
+    `)
+
+    res.json(result.recordset)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 // Get stores summary by territory (for table below bar chart)
 async function getStoresByTerritory(req, res) {
   try {
