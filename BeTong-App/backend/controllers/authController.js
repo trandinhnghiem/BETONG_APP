@@ -45,7 +45,8 @@ class AuthController {
           username: user.Username,
           email: user.Email,
           fullName: user.FullName,
-          role: user.Role
+          role: user.Role,
+          stationId: user.StationId || null
         }
       })
     } catch (error) {
@@ -90,6 +91,8 @@ class AuthController {
           email,
           fullName,
           role: role || 'Coordinator'
+          ,
+          stationId: newUser.stationId || newUser.StationId || null
         }
       })
     } catch (error) {

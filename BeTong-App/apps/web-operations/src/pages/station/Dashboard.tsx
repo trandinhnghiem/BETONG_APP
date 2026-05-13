@@ -27,18 +27,42 @@ export default function StationDashboard() {
     try {
       setLoading(true)
 
-      const res = await apiClient.get('/api/orders/station-orders')
-      const orders = res.data || []
+      const userRole = localStorage.getItem('userRole')
+      const stationIdStr = localStorage.getItem('stationId')
 
-      const result = stationList.map(name => {
-        const count = orders.filter((o: any) =>
-          o.DestinationStation === name && o.OrderStatus === 'Sent'
-        ).length
+      if (userRole === 'Station' && stationIdStr) {
+        // For station users, backend `GET /api/orders/station-orders` already returns orders for their station.
+        const res = await apiClient.get('/api/orders/station-orders')
+        const orders = res.data || []
 
-        return { name, count }
-      })
+        // Lookup station name by ID
+        let stationName = ''
+        try {
+          const stationsRes = await apiClient.get('/api/orders/stations')
+          const stations = stationsRes.data || []
+          const sid = parseInt(stationIdStr)
+          const st = stations.find((s: any) => s.Id === sid || s.id === sid)
+          stationName = st ? (st.StationName || st.stationName || '') : ''
+        } catch (err) {
+          console.warn('Could not fetch stations list', err)
+        }
 
-      setStations(result)
+        const count = orders.filter((o: any) => (o.OrderStatus || o.orderStatus || '').toString().toLowerCase() === 'sent').length
+        setStations([{ name: stationName || 'Trạm của bạn', count }])
+      } else {
+        const res = await apiClient.get('/api/orders/station-orders')
+        const orders = res.data || []
+
+        const result = stationList.map(name => {
+          const count = orders.filter((o: any) =>
+            o.DestinationStation === name && o.OrderStatus === 'Sent'
+          ).length
+
+          return { name, count }
+        })
+
+        setStations(result)
+      }
 
     } catch (err) {
       console.error(err)
@@ -49,7 +73,12 @@ export default function StationDashboard() {
   }
 
   const goToStation = (name: string) => {
-    window.location.href = `/station-orders?station=${encodeURIComponent(name)}`
+    const userRole = localStorage.getItem('userRole')
+    if (userRole === 'Station') {
+      window.location.href = '/station/orders'
+    } else {
+      window.location.href = `/station-orders?station=${encodeURIComponent(name)}`
+    }
   }
 
   return (

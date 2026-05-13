@@ -304,6 +304,7 @@ class OrderController {
         FROM Orders o
         LEFT JOIN Stations s ON o.DestinationStationId = s.Id
         LEFT JOIN Users c ON o.CoordinatorId = c.Id
+        WHERE o.DestinationStationId = @StationId
         ORDER BY o.CreatedAt DESC
         `)
 

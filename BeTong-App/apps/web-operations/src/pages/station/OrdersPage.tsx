@@ -21,22 +21,45 @@ export default function StationOrdersPage() {
   const [detailOpen, setDetailOpen] = useState(false)
 
   const [params] = useSearchParams()
-  const stationName = params.get('station')
+  const paramStationName = params.get('station')
+  const [stationName, setStationName] = useState<string | null>(paramStationName)
 
   useEffect(() => {
+    const role = localStorage.getItem('userRole')
+    if (role === 'Station') {
+      const fn = localStorage.getItem('fullName')
+      setStationName(fn || 'Trạm của bạn')
+    } else {
+      setStationName(paramStationName)
+    }
+
     fetchOrders()
-  }, [stationName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramStationName])
 
   const fetchOrders = async () => {
     try {
       setLoading(true)
 
-      const res = await apiClient.get('/api/orders/station-orders')
+      const role = localStorage.getItem('userRole')
+      let res
+
+      if (role === 'Station') {
+        // station users: backend should return only orders for their station
+        res = await apiClient.get('/api/orders/station-orders')
+      } else if (paramStationName) {
+        // admins/others viewing a station via query param: fetch all and filter client-side
+        res = await apiClient.get('/api/orders')
+      } else {
+        // fallback: fetch station-orders endpoint
+        res = await apiClient.get('/api/orders/station-orders')
+      }
 
       let data = res.data || []
 
-      // ✅ lọc theo trạm
-      
+      if (role !== 'Station' && paramStationName) {
+        data = data.filter((o: any) => (o.DestinationStation || o.destinationStation || '').toString() === paramStationName)
+      }
 
       setOrders(data.map((o: any) => ({
         id: o.Id,
