@@ -24,6 +24,16 @@ export default function Sidebar() {
 })
 
   const userRole = localStorage.getItem('userRole')
+  const userData = JSON.parse(
+  localStorage.getItem('user') || '{}'
+)
+
+const displayName =
+  userData.FullName ||
+  userData.fullName ||
+  userData.Username ||
+  userData.username ||
+  userRole
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -137,19 +147,22 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <div className="user-box">
-          <div className="user-avatar">
-            {userRole?.charAt(0)}
-          </div>
+  <div className="user-box">
 
-          <div className="user-info">
-            <h4>{userRole}</h4>
-            <span className="status-badge online">
-              Hoạt động
-            </span>
-          </div>
-        </div>
-      </div>
+    <div className="user-avatar">
+      {displayName?.split(' ')[1]?.charAt(0) || 'U'}
+    </div>
+
+    <div className="user-info">
+      <h4>{displayName}</h4>
+
+      <span className="status-badge online">
+        Hoạt động
+      </span>
+    </div>
+
+  </div>
+</div>
     </aside>
   )
 }

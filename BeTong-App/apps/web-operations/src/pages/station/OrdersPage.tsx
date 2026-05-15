@@ -59,7 +59,18 @@ export default function StationOrdersPage() {
   return (
     <div className="orders-page">
 
-      <h1>📦 Quản lý đơn hàng</h1>
+      {/* HEADER */}
+<div className="dashboard-header">
+  <div className="header-content">
+    <h1>Quản lý đơn hàng</h1>
+    <p>Theo dõi và cập nhật trạng thái đơn hàng của trạm</p>
+  </div>
+
+  <button className="refresh-btn" onClick={fetchOrders}>
+    <FiRefreshCcw size={16} />
+    Làm mới
+  </button>
+</div>
 
       {loading ? (
         <div className="loading">Đang tải...</div>
