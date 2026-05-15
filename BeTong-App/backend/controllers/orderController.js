@@ -4,6 +4,7 @@ const ProductModel = require('../models/Product')
 const StationModel = require('../models/Station')
 const { getConnection, sql } = require('../config/database')
 
+
 class OrderController {
 
   // ================= CREATE ORDER =================
@@ -237,13 +238,54 @@ class OrderController {
     }
   }
 
-  // ================= EXPORT =================
+   // ================= EXPORT =================
   static async exportOrdersReport(req, res) {
     try {
       const orders = await OrderModel.findAll()
       res.json(orders)
     } catch (error) {
       res.status(500).json({ error: error.message })
+    }
+  }
+
+  // ================= ACCOUNTING ORDERS =================
+  static async getAccountingOrders(req, res) {
+    try {
+
+      const pool = await getConnection()
+
+      const result = await pool.request().query(`
+        SELECT
+          o.Id,
+          o.OrderCode,
+          o.TotalAmount,
+          o.OrderStatus,
+          o.CreatedAt,
+
+          s.StationName AS DestinationStation,
+
+          u.FullName AS CoordinatorName
+
+        FROM Orders o
+
+        LEFT JOIN Stations s
+          ON o.DestinationStationId = s.Id
+
+        LEFT JOIN Users u
+          ON o.CoordinatorId = u.Id
+
+        ORDER BY o.CreatedAt DESC
+      `)
+
+      res.json(result.recordset)
+
+    } catch (error) {
+
+      console.error('getAccountingOrders ERROR:', error)
+
+      res.status(500).json({
+        error: 'Lỗi server'
+      })
     }
   }
 }

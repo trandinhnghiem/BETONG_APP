@@ -42,11 +42,12 @@ export default function AccountingDashboard() {
     try {
       setLoading(true)
       const [ordersResponse, stationsResponse] = await Promise.all([
-        apiClient.get('/api/orders/pending-approval'),
+        apiClient.get('/api/orders'),
         apiClient.get('/api/orders/stations')
       ])
 
       const ordersData = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
+      console.log(ordersResponse.data)
       const stationsData = Array.isArray(stationsResponse.data) ? stationsResponse.data : []
 
       const parsedOrders = ordersData.map((order: any) => ({

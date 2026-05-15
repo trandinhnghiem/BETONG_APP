@@ -23,13 +23,26 @@ router.get('/station-orders', roleMiddleware(['Station']), OrderController.getSt
 
 // Accounting routes
 router.get('/pending-approval', roleMiddleware(['Accounting']), OrderController.getPendingApprovalOrders)
+router.get(
+  '/accounting-orders',
+  roleMiddleware(['Accounting']),
+  OrderController.getAccountingOrders
+)
 router.post('/:orderId/approve', roleMiddleware(['Accounting']), OrderController.approveOrder)
 router.post('/:orderId/reject', roleMiddleware(['Accounting']), OrderController.rejectOrder)
 router.post('/:orderId/confirm-payment', roleMiddleware(['Accounting']), OrderController.confirmPayment)
 
 // Admin routes
-router.get('/', roleMiddleware(['Admin']), OrderController.getAllOrders)
-
+router.get(
+  '/',
+  roleMiddleware(['Admin', 'Accounting']),
+  OrderController.getAllOrders
+)
+router.get(
+  '/accounting-orders',
+  roleMiddleware(['Accounting']),
+  OrderController.getAccountingOrders
+)
 // Common routes
 router.get('/:orderId', OrderController.getOrderById)
 

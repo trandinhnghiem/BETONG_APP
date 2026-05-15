@@ -28,7 +28,7 @@ export default function AccountingOrdersPage() {
     try {
       setLoading(true)
 
-      const response = await apiClient.get('/api/orders/pending-approval')
+      const response = await apiClient.get('/api/orders/accounting-orders')
       const list = Array.isArray(response.data) ? response.data : []
 
       setOrders(list.map((o: any) => ({
@@ -156,34 +156,48 @@ export default function AccountingOrdersPage() {
 
                   {/* ✅ ACTION MỚI */}
                   <td>
-                    <div className="action-group">
-                      <select
-                        className="action-select"
-                        value={selectedActions[order.id] || ''}
-                        onChange={(e) =>
-                          setSelectedActions({
-                            ...selectedActions,
-                            [order.id]: e.target.value
-                          })
-                        }
-                      >
-                        <option value="">-- Chọn --</option>
-                        <option value="approve_send">Phê duyệt & Gửi trạm</option>
-                        <option value="send">Gửi trạm</option>
-                        <option value="reject">Từ chối</option>
-                      </select>
+  {order.orderStatus === 'Pending Approval' ? (
 
-                      <button
-                        className="action-confirm"
-                        onClick={() =>
-                          handleAction(order, selectedActions[order.id])
-                        }
-                        disabled={!selectedActions[order.id]}
-                      >
-                        Xác nhận
-                      </button>
-                    </div>
-                  </td>
+    <div className="action-group">
+      <select
+        className="action-select"
+        value={selectedActions[order.id] || ''}
+        onChange={(e) =>
+          setSelectedActions({
+            ...selectedActions,
+            [order.id]: e.target.value
+          })
+        }
+      >
+        <option value="">-- Chọn --</option>
+        <option value="approve_send">
+          Phê duyệt & Gửi trạm
+        </option>
+
+        <option value="reject">
+          Từ chối
+        </option>
+      </select>
+
+      <button
+        className="action-confirm"
+        onClick={() =>
+          handleAction(order, selectedActions[order.id])
+        }
+        disabled={!selectedActions[order.id]}
+      >
+        Xác nhận
+      </button>
+    </div>
+
+  ) : (
+
+    <div className="current-status">
+      {order.orderStatus}
+    </div>
+
+  )}
+</td>
 
                 </tr>
               ))}
