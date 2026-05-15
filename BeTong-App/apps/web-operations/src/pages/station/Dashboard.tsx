@@ -23,10 +23,15 @@ export default function StationDashboard() {
   const [revenueData, setRevenueData] = useState<any[]>([])
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [growth, setGrowth] = useState(0)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   useEffect(() => {
     fetchData()
   }, [])
+  useEffect(() => {
+  buildRevenue(orders)
+}, [fromDate, toDate])
 
   const fetchData = async () => {
     try {
@@ -57,42 +62,87 @@ export default function StationDashboard() {
 
   const buildRevenue = (data: any[]) => {
 
-    const today = new Date()
-    const map: any = {}
+  let filtered = [...data]
 
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(today.getDate() - i)
-      const key = d.toISOString().split('T')[0]
-      map[key] = 0
-    }
-
-    data.forEach(o => {
-      if (!o.CreatedAt) return
-      const key = new Date(o.CreatedAt).toISOString().split('T')[0]
-
-      if (map[key] !== undefined) {
-        map[key] += o.TotalAmount || 0
-      }
-    })
-
-    const chart = Object.keys(map).map(date => ({
-      date,
-      revenue: map[date]
-    }))
-
-    setRevenueData(chart)
-
-    const total = chart.reduce((s, i) => s + i.revenue, 0)
-    setTotalRevenue(total)
-
-    const last = chart[chart.length - 1]?.revenue || 0
-    const prev = chart[chart.length - 2]?.revenue || 0
-
-    const percent = prev === 0 ? 100 : ((last - prev) / prev) * 100
-    setGrowth(percent)
+  // FILTER DATE
+  if (fromDate) {
+    filtered = filtered.filter(o =>
+      new Date(o.CreatedAt) >= new Date(fromDate)
+    )
   }
 
+  if (toDate) {
+    const end = new Date(toDate)
+    end.setHours(23, 59, 59, 999)
+
+    filtered = filtered.filter(o =>
+      new Date(o.CreatedAt) <= end
+    )
+  }
+
+  // ===== DATE RANGE =====
+
+  const start = fromDate
+    ? new Date(fromDate)
+    : (() => {
+        const d = new Date()
+        d.setDate(d.getDate() - 6)
+        return d
+      })()
+
+  const end = toDate
+    ? new Date(toDate)
+    : new Date()
+
+  const map: any = {}
+
+  // INIT ALL DAYS = 0
+  const current = new Date(start)
+
+  while (current <= end) {
+
+    const key = current.toISOString().split('T')[0]
+
+    map[key] = 0
+
+    current.setDate(current.getDate() + 1)
+  }
+
+  // ADD REVENUE
+  filtered.forEach(o => {
+
+    if (!o.CreatedAt) return
+
+    const key = new Date(o.CreatedAt)
+      .toISOString()
+      .split('T')[0]
+
+    if (map[key] !== undefined) {
+      map[key] += o.TotalAmount || 0
+    }
+  })
+
+  const chart = Object.keys(map).map(date => ({
+    date,
+    revenue: map[date]
+  }))
+
+  setRevenueData(chart)
+
+  const total = chart.reduce((s, i) => s + i.revenue, 0)
+
+  setTotalRevenue(total)
+
+  const last = chart[chart.length - 1]?.revenue || 0
+  const prev = chart[chart.length - 2]?.revenue || 0
+
+  const percent =
+    prev === 0
+      ? 100
+      : ((last - prev) / prev) * 100
+
+  setGrowth(percent)
+}
   const pieData = [
     { name: 'Pending', value: stats.pending || 0 },
     { name: 'Approved', value: stats.approved || 0 },
@@ -192,7 +242,29 @@ export default function StationDashboard() {
 
         {/* LINE */}
         <div className="chart-card">
-          <h3>Doanh thu 7 ngày gần nhất</h3>
+          <div className="chart-header">
+
+  <h3>Phân tích doanh thu</h3>
+
+  <div className="date-filter">
+
+    <input
+      type="date"
+      value={fromDate}
+      onChange={(e) => setFromDate(e.target.value)}
+    />
+
+    <span>-</span>
+
+    <input
+      type="date"
+      value={toDate}
+      onChange={(e) => setToDate(e.target.value)}
+    />
+
+  </div>
+
+</div>
 
           <div className="kpi-mini">
             <div>
