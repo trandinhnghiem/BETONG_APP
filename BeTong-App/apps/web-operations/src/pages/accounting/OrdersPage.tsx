@@ -190,13 +190,7 @@ export default function AccountingOrdersPage() {
       </button>
     </div>
 
-  ) : (
-
-    <div className="current-status">
-      {order.orderStatus}
-    </div>
-
-  )}
+  ) : null}
 </td>
 
                 </tr>
