@@ -62,7 +62,9 @@ export default function StationDashboard() {
 
   const buildRevenue = (data: any[]) => {
 
-  let filtered = [...data]
+  let filtered = data.filter(
+  o => o.OrderStatus === 'Completed'
+)
 
   // FILTER DATE
   if (fromDate) {
