@@ -24,7 +24,10 @@ export default function AccountingReportsPage() {
   return (
     <div className="reports-page section">
       <div className="section-header">
-        <h2>Báo cáo & Xuất dữ liệu</h2>
+        <div className="header-content">
+          <h1>Báo cáo & Xuất dữ liệu</h1>
+          <p>Xuất dữ liệu đơn hàng và báo cáo thống kê</p>
+        </div>
         <div></div>
       </div>
 

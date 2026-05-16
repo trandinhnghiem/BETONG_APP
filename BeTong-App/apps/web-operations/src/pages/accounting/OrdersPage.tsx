@@ -117,8 +117,10 @@ export default function AccountingOrdersPage() {
   return (
     <div className="orders-container">
       <div className="orders-header">
-        <h1>📋 Đơn hàng - Kế toán</h1>
-        
+        <div className="header-content">
+          <h1>📋 Đơn hàng - Kế toán</h1>
+          <p>Danh sách đơn hàng, phê duyệt và gửi trạm</p>
+        </div>
       </div>
 
       {loading ? (

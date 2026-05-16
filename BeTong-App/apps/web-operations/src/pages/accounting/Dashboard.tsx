@@ -120,8 +120,8 @@ export default function AccountingDashboard() {
 
   return (
     <div className="accounting-dashboard">
-      <div className="dashboard-header">
-        <div className="header-content">
+      <div className="page-header">
+        <div>
           <h1>Bộ phận Kế toán Dashboard</h1>
           <p>Quản lý đơn hàng và phê duyệt trước khi gửi trạm</p>
         </div>
