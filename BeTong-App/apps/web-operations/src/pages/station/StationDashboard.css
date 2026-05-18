@@ -4,8 +4,9 @@
   background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
 }
 
-/* HEADER */
-.dashboard-header {
+/* ================= HEADER ================= */
+
+.station-dashboard-header {
   background: white;
   padding: 24px;
   border-radius: 16px;
@@ -13,7 +14,7 @@
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
-.header-content h1 {
+.station-header-content h1 {
   font-size: 2rem;
   font-weight: 700;
   background: linear-gradient(135deg, #ff6b6b, #ee5a52);
@@ -21,18 +22,19 @@
   -webkit-text-fill-color: transparent;
 }
 
-.header-content p {
+.station-header-content p {
   color: #7f8c8d;
 }
 
-/* KPI */
-.stats-grid {
+/* ================= KPI ================= */
+
+.station-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
   gap: 20px;
 }
 
-.stat-card {
+.station-stat-card {
   display: flex;
   gap: 14px;
   align-items: center;
@@ -43,71 +45,66 @@
   transition: 0.3s;
 }
 
-.stat-card:hover {
+.station-stat-card:hover {
   transform: translateY(-6px);
 }
 
-.stat-icon {
-  background: rgba(255,255,255,0.2);
-  padding: 10px;
-  border-radius: 10px;
+.station-stat-card--primary {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
 }
 
-/* COLORS */
-.stat-card--primary { background: linear-gradient(135deg, #ff6b6b, #ee5a52); }
-.stat-card--warning { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.stat-card--info { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-.stat-card--success { background: linear-gradient(135deg, #43e97b, #38f9d7); }
-.stat-card--accent { background: linear-gradient(135deg, #fa709a, #fee140); }
+.station-stat-card--warning {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+}
 
-/* CHART */
-.chart-grid {
+.station-stat-card--info {
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+.station-stat-card--success {
+  background: linear-gradient(135deg, #43e97b, #38f9d7);
+}
+
+.station-stat-card--accent {
+  background: linear-gradient(135deg, #fa709a, #fee140);
+}
+
+/* ================= CHART ================= */
+
+.station-chart-grid {
   margin-top: 30px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
 
-.chart-card {
+.station-chart-card {
   background: white;
   padding: 20px;
   border-radius: 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.1);
 }
 
-.chart-card h3 {
+.station-chart-card h3 {
   margin-bottom: 10px;
 }
 
-.kpi-mini {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.kpi-mini .up { color: #27ae60; }
-.kpi-mini .down { color: #e74c3c; }
-
-/* LOADING */
-.loading {
-  text-align: center;
-  padding: 50px;
-}
-.chart-header {
+.station-chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
 
-.date-filter {
+/* ================= DATE FILTER ================= */
+
+.station-date-filter {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.date-filter input {
+.station-date-filter input {
   border: none;
   background: rgba(255,255,255,0.2);
   padding: 8px 12px;
@@ -117,7 +114,85 @@
   backdrop-filter: blur(10px);
 }
 
-.date-filter span {
-  color: #666;
+/* ================= KPI MINI ================= */
+
+.station-kpi-mini {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
   font-weight: bold;
+}
+
+.station-kpi-mini .up {
+  color: #27ae60;
+}
+
+.station-kpi-mini .down {
+  color: #e74c3c;
+}
+
+/* ================= LOADING ================= */
+
+.station-loading {
+  text-align: center;
+  padding: 50px;
+}
+
+/* ================= NOTIFICATION ================= */
+
+.notification-marquee {
+  width: 100%;
+  overflow: hidden;
+
+  background: linear-gradient(90deg, #ff4d4f, #ff7875);
+
+  color: white;
+
+  padding: 14px 0;
+
+  border-radius: 14px;
+
+  margin-bottom: 20px;
+
+  box-shadow: 0 4px 15px rgba(255, 77, 79, 0.3);
+
+  position: relative;
+}
+
+.notification-marquee-text {
+  display: inline-block;
+
+  white-space: nowrap;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  padding-left: 100%;
+
+  animation: stationMarqueeMove 60s linear 1 forwards;
+}
+
+@keyframes stationMarqueeMove {
+
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-220%);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+
+  .station-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .station-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }

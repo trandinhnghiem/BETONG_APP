@@ -43,14 +43,35 @@ export default function StationOrdersPage() {
     }
   }
 
-  const updateStatus = async (orderId: number, status: string) => {
-    try {
-      await apiClient.post(`/api/orders/${orderId}/status`, { status })
-      fetchOrders()
-    } catch (err) {
-      alert('Lỗi cập nhật')
-    }
+  const updateStatus = async (
+  orderId: number,
+  status: string
+) => {
+
+  try {
+
+    // chống bấm nhiều lần
+    const confirmed = window.confirm(
+      `Xác nhận chuyển sang trạng thái "${status}" ?`
+    )
+
+    if (!confirmed) return
+
+    await apiClient.post(
+      `/api/orders/${orderId}/status`,
+      { status }
+    )
+
+    // reload lại data mới
+    await fetchOrders()
+
+  } catch (err) {
+
+    console.error(err)
+
+    alert('Lỗi cập nhật')
   }
+}
 
   const getStatusClass = (status: string) => {
     return status.replace(/\s/g, '')
@@ -104,7 +125,7 @@ export default function StationOrdersPage() {
                 <td>
                   <div className="actions">
 
-                    {order.orderStatus === 'Approved' && (
+                    {String(order.orderStatus).trim() === 'Approved' && (
                       <button onClick={() => updateStatus(order.id, 'Sent')}>
                         🚚 Giao
                       </button>
