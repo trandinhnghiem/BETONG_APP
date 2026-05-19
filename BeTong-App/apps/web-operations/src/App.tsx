@@ -13,6 +13,7 @@ import AdminSettingsPage from './pages/admin/SettingsPage'
 import AccountingDashboard from './pages/accounting/Dashboard'
 import AccountingOrdersPage from './pages/accounting/OrdersPage'
 import AccountingReportsPage from './pages/accounting/ReportsPage'
+import AccountingStationsPage from './pages/accounting/StationsPage'
 
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
 import CoordinatorOrdersPage from './pages/coordinator/OrdersPage'
@@ -98,6 +99,15 @@ function App() {
             element={
               <ProtectedRoute requiredRole="Accounting">
                 <AccountingReportsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/accounting/stations"
+            element={
+              <ProtectedRoute requiredRole="Accounting">
+                <AccountingStationsPage />
               </ProtectedRoute>
             }
           />

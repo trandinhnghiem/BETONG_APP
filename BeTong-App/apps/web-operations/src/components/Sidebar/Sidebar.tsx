@@ -68,6 +68,7 @@ const displayName =
           { to: '/accounting', label: 'Tổng quan', icon: FiHome },
           { to: '/accounting/orders', label: 'Đơn hàng', icon: FiShoppingCart },
           { to: '/accounting/reports', label: 'Báo cáo', icon: FiFileText },
+          { to: '/accounting/stations', label: 'Quản lý trạm', icon: FiMapPin },
         ]
 
       case 'Coordinator':
