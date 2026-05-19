@@ -157,6 +157,7 @@
 ========================= */
 
 @media (max-width: 768px) {
+
   .header {
     padding: 12px 14px;
   }
@@ -181,7 +182,9 @@
 
     justify-content: center;
   }
+
 }
+
 /* =========================
    LEFT AREA
 ========================= */
@@ -229,6 +232,7 @@
 ========================= */
 
 @keyframes marquee-slide {
+
   0% {
     transform: translateX(0);
   }
@@ -236,6 +240,7 @@
   100% {
     transform: translateX(-100%);
   }
+
 }
 
 .notification-wrapper {
@@ -298,6 +303,11 @@
   background: #f8faff;
 }
 
+.notification-item.unread {
+  background: #eef5ff;
+  border-left: 4px solid #1677ff;
+}
+
 .notification-dot {
   width: 10px;
   height: 10px;
@@ -334,4 +344,50 @@
   font-size: 12px;
 
   color: #9ca3af;
+}
+
+/* =========================
+   SHAKE BELL
+========================= */
+
+.shake {
+  animation: shakeBell 0.6s infinite;
+}
+
+@keyframes shakeBell {
+
+  0% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(15deg);
+  }
+
+  50% {
+    transform: rotate(-15deg);
+  }
+
+  75% {
+    transform: rotate(15deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+
+}
+
+/* =========================
+   EMPTY
+========================= */
+
+.notification-empty {
+
+  padding: 20px;
+
+  text-align: center;
+
+  color: #999;
+
 }

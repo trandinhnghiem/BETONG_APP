@@ -51,6 +51,8 @@ export default function CoordinatorReportsPage() {
       const res = await apiClient.get(
         '/api/orders/coordinator-report'
       )
+      console.log('RAW RESPONSE:', res)
+      console.log('DATA:', res.data)
 
       const data = res.data || []
 

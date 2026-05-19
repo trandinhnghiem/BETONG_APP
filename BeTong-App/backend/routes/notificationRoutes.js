@@ -1,49 +1,72 @@
 const express = require('express')
-const { authMiddleware } = require('../middlewares/auth')
-const NotificationModel = require('../models/Notification')
-
 const router = express.Router()
+const sql = require('mssql')
 
-router.use(authMiddleware)
+const { getConnection } = require('../config/database')
 
-// Get notifications for current user
+
+// ================= GET NOTIFICATIONS =================
 router.get('/', async (req, res) => {
+
   try {
-    const { limit = 50, offset = 0 } = req.query
-    const notifications = await NotificationModel.findByReceiver(
-      req.user.Id,
-      parseInt(limit),
-      parseInt(offset)
-    )
-    res.json(notifications)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+
+    const { stationId } = req.query
+
+    const pool = await getConnection()
+
+    const result = await pool.request()
+      .input('stationId', sql.Int, stationId)
+      .query(`
+        SELECT *
+        FROM Notifications
+        WHERE StationId = @stationId
+        ORDER BY CreatedAt DESC
+      `)
+
+    res.json(result.recordset)
+
+  } catch (err) {
+
+    console.error(err)
+
+    res.status(500).json({
+      error: err.message
+    })
+
   }
+
 })
 
-// Get unread notifications
-router.get('/unread', async (req, res) => {
-  try {
-    const { limit = 10 } = req.query
-    const notifications = await NotificationModel.findUnread(req.user.Id, parseInt(limit))
-    res.json(notifications)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
 
-// Mark notification as read
-router.put('/:notificationId/read', async (req, res) => {
+// ================= MARK AS READ =================
+router.put('/:id/read', async (req, res) => {
+
   try {
-    const success = await NotificationModel.markAsRead(parseInt(req.params.notificationId))
-    if (success) {
-      res.json({ message: 'Notification marked as read' })
-    } else {
-      res.status(404).json({ error: 'Notification not found' })
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+
+    const pool = await getConnection()
+
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        UPDATE Notifications
+        SET IsRead = 1
+        WHERE Id = @id
+      `)
+
+    res.json({
+      success: true
+    })
+
+  } catch (err) {
+
+    console.error(err)
+
+    res.status(500).json({
+      error: err.message
+    })
+
   }
+
 })
 
 module.exports = router
