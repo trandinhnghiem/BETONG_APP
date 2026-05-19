@@ -220,3 +220,123 @@
     grid-template-columns: 1fr;
   }
 }
+/* =========================
+   NOTIFICATION BELL
+========================= */
+
+.notification-bell {
+
+  position: relative;
+
+  font-size: 32px;
+
+  cursor: pointer;
+
+  transition: 0.3s;
+
+}
+
+.notification-bell.active {
+
+  color: #ff4d4f;
+
+  animation:
+    bellShake 0.6s infinite;
+
+}
+
+.notification-dot {
+
+  position: absolute;
+
+  top: -5px;
+
+  right: -8px;
+
+  width: 20px;
+
+  height: 20px;
+
+  border-radius: 50%;
+
+  background: red;
+
+  color: white;
+
+  font-size: 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+@keyframes bellShake {
+
+  0% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(15deg);
+  }
+
+  50% {
+    transform: rotate(-15deg);
+  }
+
+  75% {
+    transform: rotate(10deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* =========================
+   MARQUEE
+========================= */
+
+.notification-marquee {
+
+  width: 100%;
+
+  overflow: hidden;
+
+  background: #ff4d4f;
+
+  color: white;
+
+  border-radius: 10px;
+
+  margin-bottom: 20px;
+
+  padding: 10px 0;
+}
+
+.notification-marquee-text {
+
+  display: inline-block;
+
+  white-space: nowrap;
+
+  padding-left: 100%;
+
+  animation:
+    marqueeMove 12s linear;
+
+  font-weight: 600;
+}
+
+@keyframes marqueeMove {
+
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-120%);
+  }
+}

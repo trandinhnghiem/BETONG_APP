@@ -106,6 +106,7 @@ export default function StationDashboard() {
     }
 
     socket.on('order_approved', handleApproved)
+    
 
     return () => {
       socket.off(
@@ -291,15 +292,38 @@ export default function StationDashboard() {
 
       {/* HEADER */}
       <div className="page-header">
-        <div>
-          <h1>Dashboard Trạm</h1>
 
-          <p>
-            Phân tích đơn hàng &
-            doanh thu theo thời gian thực
-          </p>
+          <div>
+            <h1>Dashboard Trạm</h1>
+
+            <p>
+              Phân tích đơn hàng &
+              doanh thu theo thời gian thực
+            </p>
+          </div>
+
+          <div
+            className={`notification-bell ${
+              hasNotification ? 'active' : ''
+            }`}
+            onClick={() => {
+
+              setHasNotification(false)
+
+              setMarquee('')
+
+            }}
+          >
+            🔔
+
+            {hasNotification && (
+              <span className="notification-dot">
+                1
+              </span>
+            )}
+          </div>
+
         </div>
-      </div>
 
       {/* MARQUEE */}
       {marquee && (

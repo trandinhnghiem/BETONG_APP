@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './LoginPage.css'
+import socket from '../../socket'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -45,12 +46,26 @@ export default function LoginPage() {
           JSON.stringify(response.data.user)
         )
         // lưu stationId nếu có
-        if (response.data.user.stationId) {
-          localStorage.setItem('stationId', response.data.user.stationId)
-        } else {
-          localStorage.removeItem('stationId')
-        }
+       if (response.data.user.stationId) {
 
+          localStorage.setItem(
+            'stationId',
+            response.data.user.stationId
+          )
+
+          // =========================
+          // JOIN SOCKET ROOM
+          // =========================
+          socket.emit(
+            'join_station',
+            response.data.user.stationId
+          )
+
+        } else {
+
+          localStorage.removeItem('stationId')
+
+        }
         // Điều hướng theo role
         const role = response.data.user.role
         if (role === 'Admin') {

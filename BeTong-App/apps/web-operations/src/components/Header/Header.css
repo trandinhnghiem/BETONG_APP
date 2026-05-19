@@ -391,3 +391,16 @@
   color: #999;
 
 }
+.notification-item.read {
+  opacity: 0.6;
+}
+
+.notification-item.unread {
+  background: #f8fbff;
+}
+
+.notification-empty {
+  padding: 20px;
+  text-align: center;
+  color: #94a3b8;
+}

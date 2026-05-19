@@ -1,28 +1,18 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { FiLogOut, FiBell } from 'react-icons/fi'
 
-import {
-  FiLogOut,
-  FiBell
-} from 'react-icons/fi'
-
-import apiClient from '../../services/api'
 import socket from '../../socket'
+import apiClient from '../../services/api'
 
 import './Header.css'
 
-interface NotificationType {
-
+interface NotificationItem {
   Id: number
-
   Title: string
-
   Message: string
-
   IsRead: boolean
-
   CreatedAt: string
-
 }
 
 export default function Header() {
@@ -30,100 +20,84 @@ export default function Header() {
   const navigate = useNavigate()
 
   const [showNotifications, setShowNotifications] =
-    useState<boolean>(false)
+    useState(false)
 
   const [notifications, setNotifications] =
-    useState<NotificationType[]>([])
-
-  const [hasNew, setHasNew] =
-    useState<boolean>(false)
-
-  const stationId =
-    localStorage.getItem('stationId')
+    useState<NotificationItem[]>([])
 
   // =========================
   // LOAD NOTIFICATIONS
   // =========================
   useEffect(() => {
 
-    if (!stationId) return
-
     loadNotifications()
+
+    const stationId =
+      localStorage.getItem('stationId')
+
+    if (stationId) {
+
+      socket.emit(
+        'join_station',
+        stationId
+      )
+
+    }
+
+    // =========================
+    // REALTIME SOCKET
+    // =========================
+    socket.on(
+      'order_approved',
+      (newNotification: NotificationItem) => {
+
+        setNotifications(prev => [
+          newNotification,
+          ...prev
+        ])
+
+      }
+    )
+
+    return () => {
+
+      socket.off('order_approved')
+
+    }
 
   }, [])
 
+  // =========================
+  // LOAD API
+  // =========================
   const loadNotifications = async () => {
 
     try {
 
-      const res = await apiClient.get(
-        `/api/notifications?stationId=${stationId}`
-      )
+      const stationId =
+        localStorage.getItem('stationId')
 
-      setNotifications(res.data)
+      if (!stationId) return
 
-      const unread =
-        res.data.some(
-          (n: NotificationType) => !n.IsRead
+      const response =
+        await apiClient.get(
+          `/api/notifications?stationId=${stationId}`
         )
 
-      setHasNew(unread)
+      setNotifications(response.data)
 
-    } catch (err) {
+    } catch (error) {
 
-      console.error(err)
+      console.error(error)
 
     }
 
   }
 
   // =========================
-  // SOCKET REALTIME
+  // READ NOTIFICATION
   // =========================
-  useEffect(() => {
-
-    if (!stationId) return
-
-    socket.emit(
-      'join_station',
-      stationId
-    )
-
-    const handleApproved = (
-      data: NotificationType
-    ) => {
-
-      setNotifications(prev => [
-        data,
-        ...prev
-      ])
-
-      setHasNew(true)
-
-    }
-
-    socket.on(
-      'order_approved',
-      handleApproved
-    )
-
-    return () => {
-
-      socket.off(
-        'order_approved',
-        handleApproved
-      )
-
-    }
-
-  }, [])
-
-  // =========================
-  // MARK READ
-  // =========================
-  const markAsRead = async (
-    id: number
-  ) => {
+  const markAsRead = async (id: number) => {
 
     try {
 
@@ -131,26 +105,20 @@ export default function Header() {
         `/api/notifications/${id}/read`
       )
 
-      const updated =
-        notifications.map(n =>
-          n.Id === id
+      setNotifications(prev =>
+        prev.map(item =>
+          item.Id === id
             ? {
-                ...n,
+                ...item,
                 IsRead: true
               }
-            : n
+            : item
         )
+      )
 
-      setNotifications(updated)
+    } catch (error) {
 
-      const stillUnread =
-        updated.some(n => !n.IsRead)
-
-      setHasNew(stillUnread)
-
-    } catch (err) {
-
-      console.error(err)
+      console.error(error)
 
     }
 
@@ -171,12 +139,10 @@ export default function Header() {
   }
 
   return (
-
     <header className="header">
 
       <div className="header-content">
 
-        {/* LEFT */}
         <div className="header-left">
 
           <h1>
@@ -189,11 +155,9 @@ export default function Header() {
 
               🎉 Chào mừng bạn trở lại!
               Hôm nay là {
-                new Date().toLocaleDateString(
-                  'vi-VN'
-                )
+                new Date().toLocaleDateString('vi-VN')
               }.
-              Chúc bạn một ngày làm việc hiệu quả và thành công! 🚀
+              Chúc bạn một ngày làm việc hiệu quả!
 
             </div>
 
@@ -201,13 +165,16 @@ export default function Header() {
 
         </div>
 
-        {/* RIGHT */}
         <div className="header-actions">
+
+          {/* ========================= */}
+          {/* NOTIFICATION */}
+          {/* ========================= */}
 
           <div className="notification-wrapper">
 
             <button
-              className={`notification-btn ${hasNew ? 'shake' : ''}`}
+              className="notification-btn"
               onClick={() =>
                 setShowNotifications(
                   !showNotifications
@@ -217,23 +184,15 @@ export default function Header() {
 
               <FiBell size={20} />
 
-              {
-                notifications.filter(
-                  n => !n.IsRead
-                ).length > 0 && (
+              <span className="notification-badge">
 
-                  <span className="notification-badge">
+                {
+                  notifications.filter(
+                    n => !n.IsRead
+                  ).length
+                }
 
-                    {
-                      notifications.filter(
-                        n => !n.IsRead
-                      ).length
-                    }
-
-                  </span>
-
-                )
-              }
+              </span>
 
             </button>
 
@@ -249,23 +208,27 @@ export default function Header() {
 
                 <div className="notification-list">
 
-                  {
-                    notifications.length === 0 && (
+                  {notifications.length === 0 && (
 
-                      <div className="notification-empty">
+                    <div
+                      className="notification-empty"
+                    >
 
-                        Không có thông báo
+                      Không có thông báo
 
-                      </div>
+                    </div>
 
-                    )
-                  }
+                  )}
 
-                  {notifications.map(item => (
+                  {notifications.map((item) => (
 
                     <div
                       key={item.Id}
-                      className={`notification-item ${!item.IsRead ? 'unread' : ''}`}
+                      className={`notification-item ${
+                        item.IsRead
+                          ? 'read'
+                          : 'unread'
+                      }`}
                       onClick={() =>
                         markAsRead(item.Id)
                       }
@@ -284,7 +247,6 @@ export default function Header() {
                         </p>
 
                         <span>
-
                           {
                             new Date(
                               item.CreatedAt
@@ -292,7 +254,6 @@ export default function Header() {
                               'vi-VN'
                             )
                           }
-
                         </span>
 
                       </div>
@@ -309,6 +270,10 @@ export default function Header() {
 
           </div>
 
+          {/* ========================= */}
+          {/* LOGOUT */}
+          {/* ========================= */}
+
           <button
             className="logout-btn"
             onClick={handleLogout}
@@ -316,7 +281,9 @@ export default function Header() {
 
             <FiLogOut size={18} />
 
-            <span>Đăng Xuất</span>
+            <span>
+              Đăng Xuất
+            </span>
 
           </button>
 
@@ -325,7 +292,5 @@ export default function Header() {
       </div>
 
     </header>
-
   )
-
 }

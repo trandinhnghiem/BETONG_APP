@@ -1,68 +1,93 @@
 const express = require('express')
+
 const router = express.Router()
-const sql = require('mssql')
 
-const { getConnection } = require('../config/database')
+const {
+  getConnection,
+  sql
+} = require('../config/database')
 
-
-// ================= GET NOTIFICATIONS =================
+// ===============================
+// GET NOTIFICATIONS
+// ===============================
 router.get('/', async (req, res) => {
 
   try {
 
-    const { stationId } = req.query
+    const stationId =
+      req.query.stationId
 
-    const pool = await getConnection()
+    if (!stationId) {
 
-    const result = await pool.request()
-      .input('stationId', sql.Int, stationId)
-      .query(`
-        SELECT *
-        FROM Notifications
-        WHERE StationId = @stationId
-        ORDER BY CreatedAt DESC
-      `)
+      return res.status(400).json({
+        error: 'stationId required'
+      })
+
+    }
+
+    const pool =
+      await getConnection()
+
+    const result =
+      await pool.request()
+        .input(
+          'StationId',
+          sql.Int,
+          stationId
+        )
+        .query(`
+          SELECT
+            *
+          FROM Notifications
+          WHERE StationId = @StationId
+          ORDER BY CreatedAt DESC
+        `)
 
     res.json(result.recordset)
 
-  } catch (err) {
+  } catch (error) {
 
-    console.error(err)
+    console.error(error)
 
     res.status(500).json({
-      error: err.message
+      error: error.message
     })
 
   }
 
 })
 
-
-// ================= MARK AS READ =================
+// ===============================
+// MARK AS READ
+// ===============================
 router.put('/:id/read', async (req, res) => {
 
   try {
 
-    const pool = await getConnection()
+    const id =
+      parseInt(req.params.id)
+
+    const pool =
+      await getConnection()
 
     await pool.request()
-      .input('id', sql.Int, req.params.id)
+      .input('Id', sql.Int, id)
       .query(`
         UPDATE Notifications
         SET IsRead = 1
-        WHERE Id = @id
+        WHERE Id = @Id
       `)
 
     res.json({
-      success: true
+      message: 'Đã đọc'
     })
 
-  } catch (err) {
+  } catch (error) {
 
-    console.error(err)
+    console.error(error)
 
     res.status(500).json({
-      error: err.message
+      error: error.message
     })
 
   }
