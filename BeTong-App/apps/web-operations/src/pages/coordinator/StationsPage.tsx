@@ -37,11 +37,40 @@ export default function CoordinatorStationsPage() {
 
       setLoading(true)
 
-      const response = await apiClient.get(
-        '/api/orders/station-management'
-      )
+      // fetch coordinator's orders and aggregate per destination station
+      const response = await apiClient.get('/api/orders/my-orders')
 
-      setStations(response.data || [])
+      const orders = response.data || []
+
+      const map: any = {}
+
+      orders.forEach((o: any) => {
+        const stationName = o.DestinationStation || 'Không xác định'
+
+        if (!map[stationName]) {
+          map[stationName] = {
+            Id: Object.keys(map).length + 1,
+            StationName: stationName,
+            TotalOrders: 0,
+            Revenue: 0,
+            PendingOrders: 0,
+            CompletedOrders: 0
+          }
+        }
+
+        map[stationName].TotalOrders += 1
+
+        if (o.OrderStatus === 'Completed') {
+          map[stationName].CompletedOrders += 1
+          map[stationName].Revenue += o.TotalAmount || 0
+        }
+
+        if (o.OrderStatus === 'Pending Approval') {
+          map[stationName].PendingOrders += 1
+        }
+      })
+
+      setStations(Object.values(map))
 
     } catch (error) {
 
