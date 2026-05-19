@@ -117,13 +117,16 @@ export default function CoordinatorOrdersPage() {
   }
 
   return (
-    <div className="orders-page">
+    <div className="orders-dashboard">
 
       {/* HEADER */}
       <div className="page-header">
-        <h1>📦 Đơn hàng của tôi</h1>
-        <p>Quản lý và theo dõi trạng thái đơn hàng</p>
+        <div>
+          <h1>Đơn hàng của tôi</h1>
+          <p>Quản lý và theo dõi trạng thái đơn hàng</p>
+        </div>
       </div>
+
 
       {/* FILTER BAR */}
       <div className="filter-bar">
