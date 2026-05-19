@@ -120,8 +120,8 @@ export default function CoordinatorDashboard() {
   return (
     <div className="coordinator-dashboard">
       {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-content">
+      <div className="page-header">
+        <div>
           <h1>Điều phối viên Dashboard</h1>
           <p>Quản lý đơn hàng và giám sát hoạt động</p>
         </div>

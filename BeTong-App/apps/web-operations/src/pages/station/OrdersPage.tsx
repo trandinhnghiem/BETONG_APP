@@ -78,11 +78,11 @@ export default function StationOrdersPage() {
   }
 
   return (
-    <div className="orders-page">
+    <div className="orders-dashboard">
 
       {/* HEADER */}
-<div className="dashboard-header">
-  <div className="header-content">
+<div className="page-header">
+  <div>
     <h1>Quản lý đơn hàng</h1>
     <p>Theo dõi và cập nhật trạng thái đơn hàng của trạm</p>
   </div>
@@ -100,8 +100,7 @@ export default function StationOrdersPage() {
           <thead>
             <tr>
               <th>Mã đơn</th>
-              <th>Điều phối</th>
-              <th>Trạm</th>
+     
               <th>Tiền</th>
               <th>Trạng thái</th>
               <th>Hành động</th>
@@ -112,8 +111,7 @@ export default function StationOrdersPage() {
             {orders.map(order => (
               <tr key={order.id}>
                 <td>{order.orderCode}</td>
-                <td>{order.coordinatorName}</td>
-                <td>{order.destinationStation}</td>
+
                 <td>{order.totalAmount.toLocaleString()} đ</td>
 
                 <td>

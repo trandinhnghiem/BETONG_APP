@@ -1,4 +1,4 @@
-.orders-page {
+.orders-dashboard {
   padding: 0px;
   background: linear-gradient(135deg, #f5f7fa 0%, #eef3fb 100%);
   min-height: 100vh;
@@ -416,4 +416,12 @@
 .action-confirm:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+.orders-table thead th {
+  background: #f1f5f9;
+  color: #000;
+  font-weight: 700;
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #dbe2ea;
 }

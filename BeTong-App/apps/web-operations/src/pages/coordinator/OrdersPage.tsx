@@ -55,12 +55,13 @@ export default function CoordinatorOrdersPage() {
   }
 
   return (
-    <div className="orders-container">
-
-      <div className="orders-header">
-        <h1>📦 Đơn hàng của tôi</h1>
+     <div className="orders-dashboard">
+      <div className="page-header">
+        <div>
+          <h1>Đơn hàng của tôi</h1>
+          <p>Danh sách đơn hàng, phê duyệt và gửi trạm</p>
+        </div>
       </div>
-
       {loading ? (
         <div className="loading">Đang tải...</div>
       ) : orders.length === 0 ? (
