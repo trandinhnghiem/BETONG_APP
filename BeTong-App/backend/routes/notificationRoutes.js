@@ -1,97 +1,49 @@
 const express = require('express')
+const { authMiddleware } = require('../middlewares/auth')
+const NotificationModel = require('../models/Notification')
 
 const router = express.Router()
-
-const {
-  getConnection,
-  sql
-} = require('../config/database')
 
 // ===============================
 // GET NOTIFICATIONS
 // ===============================
-router.get('/', async (req, res) => {
-
+router.get('/', authMiddleware, async (req, res) => {
   try {
+    const limit = parseInt(req.query.limit) || 50
+    const offset = parseInt(req.query.offset) || 0
 
-    const stationId =
-      req.query.stationId
+    const notifications = await NotificationModel.findByReceiver(
+      req.user.Id,
+      limit,
+      offset
+    )
 
-    if (!stationId) {
-
-      return res.status(400).json({
-        error: 'stationId required'
-      })
-
-    }
-
-    const pool =
-      await getConnection()
-
-    const result =
-      await pool.request()
-        .input(
-          'StationId',
-          sql.Int,
-          stationId
-        )
-        .query(`
-          SELECT
-            *
-          FROM Notifications
-          WHERE StationId = @StationId
-          ORDER BY CreatedAt DESC
-        `)
-
-    res.json(result.recordset)
-
+    res.json(notifications)
   } catch (error) {
-
     console.error(error)
-
-    res.status(500).json({
-      error: error.message
-    })
-
+    res.status(500).json({ error: error.message })
   }
-
 })
 
 // ===============================
 // MARK AS READ
 // ===============================
-router.put('/:id/read', async (req, res) => {
-
+router.put('/:id/read', authMiddleware, async (req, res) => {
   try {
+    const id = parseInt(req.params.id)
+    const notification = await NotificationModel.findById(id)
 
-    const id =
-      parseInt(req.params.id)
+    if (!notification || notification.ReceiverId !== req.user.Id) {
+      return res.status(404).json({ error: 'Notification not found' })
+    }
 
-    const pool =
-      await getConnection()
+    await NotificationModel.markAsRead(id)
 
-    await pool.request()
-      .input('Id', sql.Int, id)
-      .query(`
-        UPDATE Notifications
-        SET IsRead = 1
-        WHERE Id = @Id
-      `)
-
-    res.json({
-      message: 'Đã đọc'
-    })
-
+    res.json({ message: 'Đã đọc' })
   } catch (error) {
-
     console.error(error)
-
-    res.status(500).json({
-      error: error.message
-    })
-
+    res.status(500).json({ error: error.message })
   }
-
 })
 
 module.exports = router

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const UserModel = require('../models/User')
+const NotificationService = require('../services/notificationService')
 
 class AuthController {
   static async login(req, res) {
@@ -83,6 +84,32 @@ class AuthController {
         { expiresIn: '24h' }
       )
 
+      const io = req.app.get('io')
+      const newUserRole = role || 'Coordinator'
+      const message = `Tài khoản ${fullName} (${username}) đã được tạo.`
+
+      try {
+        await NotificationService.notifyRoleUsers(
+          io,
+          'Admin',
+          'UserCreated',
+          'Tài khoản mới',
+          message,
+          null
+        )
+
+        await NotificationService.sendUserNotification(
+          io,
+          newUser.id,
+          'Welcome',
+          'Tài khoản mới đã được tạo',
+          `Xin chào ${fullName}, tài khoản của bạn đã được kích hoạt với quyền ${newUserRole}.`,
+          null
+        )
+      } catch (notifyError) {
+        console.error('Failed to send user creation notifications:', notifyError)
+      }
+
       res.status(201).json({
         token,
         user: {
@@ -90,8 +117,7 @@ class AuthController {
           username,
           email,
           fullName,
-          role: role || 'Coordinator'
-          ,
+          role: newUserRole,
           stationId: newUser.stationId || newUser.StationId || null
         }
       })

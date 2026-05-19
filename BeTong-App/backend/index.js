@@ -32,11 +32,19 @@ io.on('connection', (socket) => {
   console.log('✅ Client connected:', socket.id)
 
   socket.on('join_station', (stationId) => {
-
     socket.join(`station_${stationId}`)
-
     console.log(`✅ Joined room station_${stationId}`)
+  })
 
+  socket.on('join_user', (userId) => {
+    socket.join(`user_${userId}`)
+    console.log(`✅ Joined room user_${userId}`)
+  })
+
+  socket.on('join_role', (role) => {
+    if (!role) return
+    socket.join(`role_${role}`)
+    console.log(`✅ Joined room role_${role}`)
   })
 
   socket.on('disconnect', () => {

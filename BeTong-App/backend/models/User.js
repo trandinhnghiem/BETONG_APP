@@ -102,6 +102,19 @@ class UserModel {
     return result.recordset
   }
 
+  static async findByStationId(stationId) {
+    const pool = await getConnection()
+    const result = await pool
+      .request()
+      .input('stationId', sql.Int, stationId)
+      .query(`
+        SELECT Id, Username, Email, FullName, Phone, Role, StationId, IsActive
+        FROM Users
+        WHERE StationId = @stationId AND IsActive = 1
+      `)
+    return result.recordset
+  }
+
   static async verifyPassword(password, hash) {
     return await bcrypt.compare(password, hash)
   }

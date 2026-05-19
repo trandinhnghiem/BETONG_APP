@@ -45,26 +45,20 @@ export default function LoginPage() {
           'user',
           JSON.stringify(response.data.user)
         )
-        // lưu stationId nếu có
-       if (response.data.user.stationId) {
 
+        socket.emit('join_user', String(response.data.user.id))
+        socket.emit('join_role', response.data.user.role)
+
+        // lưu stationId nếu có
+        if (response.data.user.stationId) {
           localStorage.setItem(
             'stationId',
             response.data.user.stationId
           )
 
-          // =========================
-          // JOIN SOCKET ROOM
-          // =========================
-          socket.emit(
-            'join_station',
-            response.data.user.stationId
-          )
-
+          socket.emit('join_station', response.data.user.stationId)
         } else {
-
           localStorage.removeItem('stationId')
-
         }
         // Điều hướng theo role
         const role = response.data.user.role

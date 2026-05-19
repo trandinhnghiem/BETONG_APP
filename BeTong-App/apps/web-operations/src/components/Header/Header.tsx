@@ -35,19 +35,10 @@ export default function Header() {
   // LOAD + SOCKET
   // =========================
   useEffect(() => {
-
     const loadNotifications = async () => {
       try {
-
-        const stationId = localStorage.getItem('stationId')
-        if (!stationId) return
-
-        const res = await apiClient.get(
-          `/api/notifications?stationId=${stationId}`
-        )
-
+        const res = await apiClient.get('/api/notifications')
         setNotifications(res.data)
-
       } catch (err) {
         console.error(err)
       }
@@ -55,55 +46,52 @@ export default function Header() {
 
     loadNotifications()
 
+    const userId = localStorage.getItem('userId')
+    const userRole = localStorage.getItem('userRole')
     const stationId = localStorage.getItem('stationId')
-    if (!stationId) return
 
-    socket.emit('join_station', String(stationId))
-
-    const handleApproved = (data: any) => {
-
-  if (String(data.stationId) !== String(localStorage.getItem('stationId'))) return
-
-  setNotifications(prev => [
-    {
-      Id: data.orderId || Date.now(),
-      Title: data.title,
-      Message: data.message,
-      IsRead: false,
-      CreatedAt: new Date().toISOString()
-    },
-    ...prev
-  ])
-
-  // 🔥 CHUÔNG RUNG + ĐỎ
-  setHasNotification(true)
-
-  setTimeout(() => {
-    setHasNotification(false)
-  }, 3000)
-
-  // 🔥 MARQUEE 3 LẦN CHUẨN
-  let count = 0
-  setMarquee(data.message)
-
-  const interval = setInterval(() => {
-    count++
-    if (count >= 3) {
-      clearInterval(interval)
-      setMarquee('')
+    if (userId) {
+      socket.emit('join_user', userId)
     }
-  }, 3000)
-}
+    if (userRole) {
+      socket.emit('join_role', userRole)
+    }
+    if (stationId) {
+      socket.emit('join_station', String(stationId))
+    }
 
-    socket.on('order_approved', (data) => {
-      console.log('🔔 SOCKET RECEIVED:', data)
-      handleApproved(data)
-    })
+    const handleNotification = (data: any) => {
+      const notification = {
+        Id: data.Id || Date.now(),
+        Title: data.Title || data.title || 'Thông báo mới',
+        Message: data.Message || data.message || 'Bạn có thông báo mới.',
+        IsRead: false,
+        CreatedAt: data.CreatedAt || new Date().toISOString()
+      }
+
+      setNotifications(prev => [notification, ...prev])
+      setHasNotification(true)
+      setMarquee(notification.Message)
+
+      setTimeout(() => {
+        setHasNotification(false)
+      }, 3000)
+
+      let count = 0
+      const interval = setInterval(() => {
+        count++
+        if (count >= 3) {
+          clearInterval(interval)
+          setMarquee('')
+        }
+      }, 3000)
+    }
+
+    socket.on('notification', handleNotification)
 
     return () => {
-      socket.off('order_approved', handleApproved)
+      socket.off('notification', handleNotification)
     }
-
   }, [])
 
   // =========================
