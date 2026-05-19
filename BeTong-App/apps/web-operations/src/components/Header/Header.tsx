@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FiLogOut, FiBell } from 'react-icons/fi'
 
 import socket from '../../socket'
@@ -18,124 +18,141 @@ interface NotificationItem {
 export default function Header() {
 
   const navigate = useNavigate()
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const [showNotifications, setShowNotifications] =
-    useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
-  const [notifications, setNotifications] =
-    useState<NotificationItem[]>([])
+  const [hasNotification, setHasNotification] = useState(false)
+  const [marquee, setMarquee] = useState('')
 
   // =========================
-  // LOAD NOTIFICATIONS
+  // UNREAD COUNT (FIX CHUẨN)
+  // =========================
+  const unreadCount = notifications.filter(n => !n.IsRead).length
+
+  // =========================
+  // LOAD + SOCKET
   // =========================
   useEffect(() => {
 
-    loadNotifications()
+    const loadNotifications = async () => {
+      try {
 
-    const stationId =
-      localStorage.getItem('stationId')
+        const stationId = localStorage.getItem('stationId')
+        if (!stationId) return
 
-    if (stationId) {
+        const res = await apiClient.get(
+          `/api/notifications?stationId=${stationId}`
+        )
 
-      socket.emit(
-        'join_station',
-        stationId
-      )
+        setNotifications(res.data)
 
+      } catch (err) {
+        console.error(err)
+      }
     }
 
-    // =========================
-    // REALTIME SOCKET
-    // =========================
-    socket.on(
-      'order_approved',
-      (newNotification: NotificationItem) => {
+    loadNotifications()
 
-        setNotifications(prev => [
-          newNotification,
-          ...prev
-        ])
+    const stationId = localStorage.getItem('stationId')
+    if (!stationId) return
 
-      }
-    )
+    socket.emit('join_station', String(stationId))
+
+    const handleApproved = (data: any) => {
+
+  if (String(data.stationId) !== String(localStorage.getItem('stationId'))) return
+
+  setNotifications(prev => [
+    {
+      Id: data.orderId || Date.now(),
+      Title: data.title,
+      Message: data.message,
+      IsRead: false,
+      CreatedAt: new Date().toISOString()
+    },
+    ...prev
+  ])
+
+  // 🔥 CHUÔNG RUNG + ĐỎ
+  setHasNotification(true)
+
+  setTimeout(() => {
+    setHasNotification(false)
+  }, 3000)
+
+  // 🔥 MARQUEE 3 LẦN CHUẨN
+  let count = 0
+  setMarquee(data.message)
+
+  const interval = setInterval(() => {
+    count++
+    if (count >= 3) {
+      clearInterval(interval)
+      setMarquee('')
+    }
+  }, 3000)
+}
+
+    socket.on('order_approved', (data) => {
+      console.log('🔔 SOCKET RECEIVED:', data)
+      handleApproved(data)
+    })
 
     return () => {
-
-      socket.off('order_approved')
-
+      socket.off('order_approved', handleApproved)
     }
 
   }, [])
 
   // =========================
-  // LOAD API
+  // CLICK OUTSIDE (FIX DROPDOWN)
   // =========================
-  const loadNotifications = async () => {
-
-    try {
-
-      const stationId =
-        localStorage.getItem('stationId')
-
-      if (!stationId) return
-
-      const response =
-        await apiClient.get(
-          `/api/notifications?stationId=${stationId}`
-        )
-
-      setNotifications(response.data)
-
-    } catch (error) {
-
-      console.error(error)
-
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowNotifications(false)
+      }
     }
 
-  }
+    document.addEventListener('mousedown', handleClickOutside)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // =========================
-  // READ NOTIFICATION
+  // MARK AS READ
   // =========================
   const markAsRead = async (id: number) => {
-
     try {
 
-      await apiClient.put(
-        `/api/notifications/${id}/read`
-      )
+      await apiClient.put(`/api/notifications/${id}/read`)
 
-      setNotifications(prev =>
-        prev.map(item =>
-          item.Id === id
-            ? {
-                ...item,
-                IsRead: true
-              }
-            : item
+      setNotifications(prev => {
+        const updated = prev.map(item =>
+          item.Id === id ? { ...item, IsRead: true } : item
         )
-      )
 
-    } catch (error) {
+        return [...updated]
+      })
 
-      console.error(error)
-
+    } catch (err) {
+      console.error(err)
     }
-
   }
 
   // =========================
   // LOGOUT
   // =========================
   const handleLogout = () => {
-
-    localStorage.removeItem('token')
-    localStorage.removeItem('userRole')
-    localStorage.removeItem('userId')
-    localStorage.removeItem('stationId')
-
+    localStorage.clear()
     navigate('/login')
-
   }
 
   return (
@@ -144,152 +161,84 @@ export default function Header() {
       <div className="header-content">
 
         <div className="header-left">
-
-          <h1>
-            HỆ THỐNG QUẢN LÝ KINH DOANH
-          </h1>
-
-          <div className="marquee-wrapper">
-
-            <div className="marquee-text">
-
-              🎉 Chào mừng bạn trở lại!
-              Hôm nay là {
-                new Date().toLocaleDateString('vi-VN')
-              }.
-              Chúc bạn một ngày làm việc hiệu quả!
-
-            </div>
-
-          </div>
-
+          <h1>HỆ THỐNG QUẢN LÝ KINH DOANH</h1>
         </div>
 
         <div className="header-actions">
 
-          {/* ========================= */}
           {/* NOTIFICATION */}
-          {/* ========================= */}
+          <div className="notification-wrapper" ref={dropdownRef}>
 
-          <div className="notification-wrapper">
-
-            <button
-              className="notification-btn"
-              onClick={() =>
-                setShowNotifications(
-                  !showNotifications
+            <div
+              className={`header-bell ${hasNotification ? 'ringing' : ''}`}
+              onClick={() => {
+                setShowNotifications(prev => !prev)
+                setNotifications(prev =>
+                  prev.map(n => ({ ...n, IsRead: true }))
                 )
-              }
+              }}
             >
+              <FiBell size={22} />
 
-              <FiBell size={20} />
+              {unreadCount > 0 && (
+                <span className="bell-badge">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
 
-              <span className="notification-badge">
-
-                {
-                  notifications.filter(
-                    n => !n.IsRead
-                  ).length
-                }
-
-              </span>
-
-            </button>
-
+            {/* DROPDOWN FIXED */}
             {showNotifications && (
-
               <div className="notification-dropdown">
 
                 <div className="notification-header">
-
                   <h3>Thông báo</h3>
-
                 </div>
 
                 <div className="notification-list">
 
                   {notifications.length === 0 && (
-
-                    <div
-                      className="notification-empty"
-                    >
-
+                    <div className="notification-empty">
                       Không có thông báo
-
                     </div>
-
                   )}
 
-                  {notifications.map((item) => (
-
+                  {notifications.map(item => (
                     <div
                       key={item.Id}
-                      className={`notification-item ${
-                        item.IsRead
-                          ? 'read'
-                          : 'unread'
-                      }`}
-                      onClick={() =>
-                        markAsRead(item.Id)
-                      }
+                      className={`notification-item ${item.IsRead ? 'read' : 'unread'}`}
+                      onClick={() => markAsRead(item.Id)}
                     >
-
-                      <div className="notification-dot"></div>
-
-                      <div className="notification-content">
-
-                        <h4>
-                          {item.Title}
-                        </h4>
-
-                        <p>
-                          {item.Message}
-                        </p>
-
-                        <span>
-                          {
-                            new Date(
-                              item.CreatedAt
-                            ).toLocaleString(
-                              'vi-VN'
-                            )
-                          }
-                        </span>
-
-                      </div>
-
+                      <h4>{item.Title}</h4>
+                      <p>{item.Message}</p>
                     </div>
-
                   ))}
 
                 </div>
 
               </div>
-
             )}
 
           </div>
 
-          {/* ========================= */}
           {/* LOGOUT */}
-          {/* ========================= */}
-
-          <button
-            className="logout-btn"
-            onClick={handleLogout}
-          >
-
+          <button className="logout-btn" onClick={handleLogout}>
             <FiLogOut size={18} />
-
-            <span>
-              Đăng Xuất
-            </span>
-
+            <span>Đăng Xuất</span>
           </button>
 
         </div>
 
       </div>
+
+      {/* MARQUEE */}
+      {marquee && (
+        <div className="notification-marquee">
+          <div className="notification-marquee-text">
+            {marquee}
+          </div>
+        </div>
+      )}
 
     </header>
   )

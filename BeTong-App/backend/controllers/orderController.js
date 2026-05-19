@@ -6,772 +6,269 @@ const { getConnection, sql } = require('../config/database')
 
 class OrderController {
 
+  // ================= PRODUCTS =================
+  static async getProducts(req, res) {
+    try {
+      const products = await ProductModel.findAll()
+      res.json(products)
+    } catch (err) {
+      res.status(500).json({ error: err.message })
+    }
+  }
+
+  // ================= STATIONS =================
+  static async getStations(req, res) {
+    try {
+      const stations = await StationModel.findAll()
+      res.json(stations)
+    } catch (err) {
+      res.status(500).json({ error: err.message })
+    }
+  }
+
   // ================= CREATE ORDER =================
   static async createOrder(req, res) {
-
     try {
 
-      const {
-        mixingStationId,
-        notes,
-        items
-      } = req.body
+      const { mixingStationId, notes, items } = req.body
 
-      if (!mixingStationId) {
-
-        return res.status(400).json({
-          error: 'Trạm trộn là bắt buộc'
-        })
-
+      if (!mixingStationId || !items?.length) {
+        return res.status(400).json({ error: 'Invalid data' })
       }
 
-      if (!items || items.length === 0) {
+      const pool = await getConnection()
+      const orderCode = 'ORD-' + Date.now()
 
-        return res.status(400).json({
-          error: 'Phải có ít nhất 1 mục trong đơn hàng'
-        })
+      const totalAmount = items.reduce((s, i) =>
+        s + i.quantity * i.unitPrice, 0)
 
-      }
-
-      if (!req.user) {
-
-        return res.status(401).json({
-          error: 'Unauthorized'
-        })
-
-      }
-
-      const pool =
-        await getConnection()
-
-      const coordinatorId =
-        req.user.Id
-
-      const orderCode =
-        'ORD-' + Date.now()
-
-      const totalAmount =
-        items.reduce((sum, item) => {
-
-          return sum +
-            (item.quantity * item.unitPrice)
-
-        }, 0)
-
-      const result =
-        await pool.request()
-
-          .input(
-            'OrderCode',
-            sql.NVarChar,
-            orderCode
+      const result = await pool.request()
+        .input('OrderCode', sql.NVarChar, orderCode)
+        .input('CoordinatorId', sql.Int, req.user.Id)
+        .input('SourceStationId', sql.Int, mixingStationId)
+        .input('DestinationStationId', sql.Int, mixingStationId)
+        .input('TotalAmount', sql.Decimal(18, 2), totalAmount)
+        .input('Notes', sql.NVarChar(sql.MAX), notes || '')
+        .query(`
+          INSERT INTO Orders (
+            OrderCode, CoordinatorId, SourceStationId,
+            DestinationStationId, TotalAmount, Notes,
+            OrderStatus, CreatedAt, UpdatedAt
           )
+          VALUES (
+            @OrderCode, @CoordinatorId, @SourceStationId,
+            @DestinationStationId, @TotalAmount, @Notes,
+            'Pending Approval', GETDATE(), GETDATE()
+          );
 
-          .input(
-            'CoordinatorId',
-            sql.Int,
-            coordinatorId
-          )
+          SELECT SCOPE_IDENTITY() AS OrderId;
+        `)
 
-          .input(
-            'SourceStationId',
-            sql.Int,
-            parseInt(mixingStationId)
-          )
-
-          .input(
-            'DestinationStationId',
-            sql.Int,
-            parseInt(mixingStationId)
-          )
-
-          .input(
-            'TotalAmount',
-            sql.Decimal(18, 2),
-            totalAmount
-          )
-
-          .input(
-            'Notes',
-            sql.NVarChar(sql.MAX),
-            notes || ''
-          )
-
-          .query(`
-            INSERT INTO Orders (
-
-              OrderCode,
-              CoordinatorId,
-              SourceStationId,
-              DestinationStationId,
-              TotalAmount,
-              Notes,
-              OrderStatus,
-              CreatedAt,
-              UpdatedAt
-
-            )
-            VALUES (
-
-              @OrderCode,
-              @CoordinatorId,
-              @SourceStationId,
-              @DestinationStationId,
-              @TotalAmount,
-              @Notes,
-              'Pending Approval',
-              GETDATE(),
-              GETDATE()
-
-            );
-
-            SELECT SCOPE_IDENTITY() AS OrderId;
-          `)
-
-      const orderId =
-        result.recordset[0].OrderId
+      const orderId = result.recordset[0].OrderId
 
       for (const item of items) {
-
         await pool.request()
-
-          .input(
-            'OrderId',
-            sql.Int,
-            orderId
-          )
-
-          .input(
-            'ProductId',
-            sql.Int,
-            item.productId
-          )
-
-          .input(
-            'Quantity',
-            sql.Float,
-            item.quantity
-          )
-
-          .input(
-            'UnitPrice',
-            sql.Decimal(18, 2),
-            item.unitPrice
-          )
-
+          .input('OrderId', sql.Int, orderId)
+          .input('ProductId', sql.Int, item.productId)
+          .input('Quantity', sql.Float, item.quantity)
+          .input('UnitPrice', sql.Decimal(18, 2), item.unitPrice)
           .query(`
             INSERT INTO OrderItems (
-
-              OrderId,
-              ProductId,
-              Quantity,
-              UnitPrice,
-              CreatedAt
-
+              OrderId, ProductId, Quantity, UnitPrice, CreatedAt
             )
             VALUES (
-
-              @OrderId,
-              @ProductId,
-              @Quantity,
-              @UnitPrice,
-              GETDATE()
-
+              @OrderId, @ProductId, @Quantity, @UnitPrice, GETDATE()
             )
           `)
-
       }
 
-      res.json({
-        message: 'Tạo đơn thành công',
-        orderId,
-        orderCode
-      })
+      res.json({ message: 'OK', orderId, orderCode })
 
     } catch (err) {
-
-      console.error(
-        '❌ CreateOrder Error:',
-        err
-      )
-
-      res.status(500).json({
-        error: err.message
-      })
-
+      res.status(500).json({ error: err.message })
     }
-
   }
 
-  // ================= GET PRODUCTS =================
-  static async getProducts(req, res) {
-
-    try {
-
-      const products =
-        await ProductModel.findAll()
-
-      res.json(products)
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
-  }
-
-  // ================= GET MY ORDERS =================
-  static async getMyOrders(req, res) {
-
-    try {
-
-      const orders =
-        await OrderModel.findByCoordinator(
-          req.user.Id
-        )
-
-      res.json(orders)
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
-  }
-
-  // ================= GET PENDING =================
-  static async getPendingApprovalOrders(req, res) {
-
-    try {
-
-      const orders =
-        await OrderModel.findPendingApproval()
-
-      res.json(orders)
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
-  }
-
-  // ================= GET ALL =================
-  static async getAllOrders(req, res) {
-
-    try {
-
-      const orders =
-        await OrderModel.findAll()
-
-      res.json(orders)
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
-  }
-
-  // ================= GET BY ID =================
-  static async getOrderById(req, res) {
-
-    try {
-
-      const orderId =
-        parseInt(req.params.orderId)
-
-      const order =
-        await OrderModel.findById(orderId)
-
-      if (!order) {
-
-        return res.status(404).json({
-          error: 'Order not found'
-        })
-
-      }
-
-      const items =
-        await OrderItemModel.findByOrderId(
-          orderId
-        )
-
-      res.json({
-        ...order,
-        items
-      })
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
-  }
-
-  // ================= UPDATE STATUS =================
+  // ================= UPDATE STATUS (FIX FOR ROUTE) =================
   static async updateStatus(req, res) {
+  try {
 
-    try {
+    const orderId = parseInt(req.params.orderId)
+    const { status } = req.body
 
-      const orderId =
-        parseInt(req.params.orderId)
+    const valid = [
+      'Draft',
+      'Pending Approval',
+      'Approved',
+      'Rejected',
+      'Sent',
+      'Delivered',
+      'Completed'
+    ]
 
-      const { status } = req.body
-
-      const validStatuses = [
-
-        'Draft',
-        'Pending Approval',
-        'Approved',
-        'Rejected',
-        'Uploading',
-        'Sent',
-        'Delivered',
-        'Completed'
-
-      ]
-
-      if (!validStatuses.includes(status)) {
-
-        return res.status(400).json({
-          error: 'Invalid status'
-        })
-
-      }
-
-      const success =
-        await OrderModel.updateStatus(
-          orderId,
-          status,
-          req.user.Id
-        )
-
-      if (!success) {
-
-        return res.status(404).json({
-          error: 'Order not found'
-        })
-
-      }
-
-      res.json({
-        message:
-          'Cập nhật trạng thái thành công'
-      })
-
-    } catch (error) {
-
-      console.error(
-        '❌ updateStatus ERROR:',
-        error
-      )
-
-      res.status(500).json({
-        error: error.message
-      })
-
+    if (!valid.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' })
     }
 
+    await OrderModel.updateStatus(orderId, status, req.user.Id)
+
+    const pool = await getConnection()
+
+    const order = await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .query(`
+        SELECT Id, OrderCode, DestinationStationId
+        FROM Orders WHERE Id = @OrderId
+      `)
+
+    const o = order.recordset[0]
+
+    const io = req.app.get('io')
+
+    io.to(`station_${o.DestinationStationId}`).emit('order_status_changed', {
+      orderId: o.Id,
+      orderCode: o.OrderCode,
+      status
+    })
+
+    return res.json({ message: 'Updated', status })
+
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
+}
 
   // ================= APPROVE =================
   static async approveOrder(req, res) {
+  try {
+    const orderId = parseInt(req.params.orderId)
 
-    try {
+    const pool = await getConnection()
 
-      const orderId =
-        parseInt(req.params.orderId)
+    // 1. update status
+    await OrderModel.updateStatus(orderId, 'Approved', req.user.Id)
 
-      const pool =
-        await getConnection()
+    // 2. get order
+    const result = await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .query(`
+        SELECT Id, OrderCode, DestinationStationId, OrderStatus
+        FROM Orders WHERE Id = @OrderId
+      `)
 
-      // =========================
-      // UPDATE STATUS
-      // =========================
-      await OrderModel.updateStatus(
-        orderId,
-        'Approved',
-        req.user.Id
-      )
+    const order = result.recordset[0]
+    if (!order) return res.status(404).json({ error: 'Not found' })
 
-      // =========================
-      // GET ORDER INFO
-      // =========================
-      const orderResult =
-        await pool.request()
+    // 3. socket emit (PHẢI ĐỒNG BỘ STATUS)
+    const io = req.app.get('io')
 
-          .input(
-            'OrderId',
-            sql.Int,
-            orderId
-          )
+    io.to(`station_${order.DestinationStationId}`).emit('order_approved', {
+      orderId: order.Id,
+      orderCode: order.OrderCode,
+      stationId: order.DestinationStationId,
 
-          .query(`
-            SELECT
-              Id,
-              OrderCode,
-              DestinationStationId
-            FROM Orders
-            WHERE Id = @OrderId
-          `)
+      status: 'Approved',   // 🔥 FIX QUAN TRỌNG
 
-      const order =
-        orderResult.recordset[0]
+      title: 'Đơn hàng mới',
+      message: `Đơn hàng ${order.OrderCode} đã được duyệt`,
 
-      if (!order) {
+      isRead: false,
+      createdAt: new Date()
+    })
 
-        return res.status(404).json({
-          error: 'Order not found'
-        })
+    res.json({ message: 'Approved' })
 
-      }
-
-      // =========================
-      // FIND STATION USER
-      // =========================
-      const stationUserResult =
-        await pool.request()
-
-          .input(
-            'StationId',
-            sql.Int,
-            order.DestinationStationId
-          )
-
-          .query(`
-            SELECT TOP 1 Id
-            FROM Users
-            WHERE StationId = @StationId
-            AND Role = 'Station'
-          `)
-
-      const stationUser =
-        stationUserResult.recordset[0]
-
-      if (!stationUser) {
-
-        return res.status(404).json({
-          error:
-            'Không tìm thấy user của trạm'
-        })
-
-      }
-
-      // =========================
-      // SAVE NOTIFICATION
-      // =========================
-      await pool.request()
-
-        .input(
-          'ReceiverId',
-          sql.Int,
-          stationUser.Id
-        )
-
-        .input(
-          'StationId',
-          sql.Int,
-          order.DestinationStationId
-        )
-
-        .input(
-          'NotificationType',
-          sql.NVarChar,
-          'ORDER_APPROVED'
-        )
-
-        .input(
-          'Title',
-          sql.NVarChar,
-          'Đơn hàng mới'
-        )
-
-        .input(
-          'Message',
-          sql.NVarChar,
-          `Đơn hàng ${order.OrderCode}
-           đã được kế toán duyệt`
-        )
-
-        .input(
-          'RelatedOrderId',
-          sql.Int,
-          order.Id
-        )
-
-        .query(`
-          INSERT INTO Notifications (
-
-            ReceiverId,
-            StationId,
-            NotificationType,
-            Title,
-            Message,
-            RelatedOrderId,
-            IsRead,
-            CreatedAt
-
-          )
-          VALUES (
-
-            @ReceiverId,
-            @StationId,
-            @NotificationType,
-            @Title,
-            @Message,
-            @RelatedOrderId,
-            0,
-            GETDATE()
-
-          )
-        `)
-
-      // =========================
-      // SOCKET REALTIME
-      // =========================
-      const io =
-        req.app.get('io')
-
-      io.to(
-        `station_${order.DestinationStationId}`
-      ).emit('order_approved', {
-
-        stationId:
-          order.DestinationStationId,
-
-        title: 'Đơn hàng mới',
-
-        message:
-          `Đơn hàng ${order.OrderCode}
-           đã được kế toán duyệt`
-
-      })
-
-      res.json({
-        message: 'Đã phê duyệt'
-      })
-
-    } catch (error) {
-
-      console.error(
-        'approveOrder ERROR:',
-        error
-      )
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
+}
 
   // ================= REJECT =================
   static async rejectOrder(req, res) {
-
     try {
 
-      const orderId =
-        parseInt(req.params.orderId)
+      const orderId = parseInt(req.params.orderId)
 
-      await OrderModel.updateStatus(
-        orderId,
-        'Rejected',
-        req.user.Id
-      )
+      await OrderModel.updateStatus(orderId, 'Rejected', req.user.Id)
 
-      res.json({
-        message: 'Đã từ chối'
-      })
+      res.json({ message: 'Rejected' })
 
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
+    } catch (err) {
+      res.status(500).json({ error: err.message })
     }
-
   }
 
-  // ================= CONFIRM PAYMENT =================
-  static async confirmPayment(req, res) {
-
-    try {
-
-      res.json({
-        message:
-          'Đã xác nhận thanh toán (demo)'
-      })
-
-    } catch (error) {
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
+  // ================= OTHER ROUTES KEEP SAFE =================
+  static async getMyOrders(req, res) {
+    const orders = await OrderModel.findByCoordinator(req.user.Id)
+    res.json(orders)
   }
 
-  // ================= GET STATION ORDERS =================
-  static async getStationOrders(req, res) {
-
-    try {
-
-      const pool =
-        await getConnection()
-
-      const result =
-        await pool.request()
-
-          .input(
-            'StationId',
-            sql.Int,
-            req.user.StationId
-          )
-
-          .query(`
-            SELECT *
-            FROM Orders
-            WHERE DestinationStationId = @StationId
-            ORDER BY CreatedAt DESC
-          `)
-
-      res.json(result.recordset)
-
-    } catch (error) {
-
-      console.error(error)
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
+  static async getAllOrders(req, res) {
+    const orders = await OrderModel.findAll()
+    res.json(orders)
   }
 
-  // ================= GET STATIONS =================
-  static async getStations(req, res) {
-
-    try {
-
-      const stations =
-        await StationModel.findAll()
-
-      res.json(stations)
-
-    } catch (error) {
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
+  static async getOrderById(req, res) {
+    const order = await OrderModel.findById(req.params.orderId)
+    res.json(order)
   }
 
-  // ================= EXPORT =================
-  static async exportOrdersReport(req, res) {
-
-    try {
-
-      const orders =
-        await OrderModel.findAll()
-
-      res.json(orders)
-
-    } catch (error) {
-
-      res.status(500).json({
-        error: error.message
-      })
-
-    }
-
+  static async getPendingApprovalOrders(req, res) {
+    const orders = await OrderModel.findPendingApproval()
+    res.json(orders)
   }
 
-  // ================= ACCOUNTING ORDERS =================
   static async getAccountingOrders(req, res) {
+  try {
+    const pool = await getConnection()
 
-    try {
+    const result = await pool.request().query(`
+      SELECT 
+        o.Id,
+        o.OrderCode,
+        o.TotalAmount,
+        o.OrderStatus,
+        o.CreatedAt,
 
-      const pool =
-        await getConnection()
+        s.StationName AS DestinationStation,
+        u.FullName AS CoordinatorName
 
-      const result =
-        await pool.request().query(`
-          SELECT
+      FROM Orders o
+      LEFT JOIN Stations s ON o.DestinationStationId = s.Id
+      LEFT JOIN Users u ON o.CoordinatorId = u.Id
 
-            o.Id,
-            o.OrderCode,
-            o.TotalAmount,
-            o.OrderStatus,
-            o.CreatedAt,
+      ORDER BY o.CreatedAt DESC
+    `)
 
-            s.StationName
-              AS DestinationStation,
+    res.json(result.recordset)
 
-            u.FullName
-              AS CoordinatorName
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: error.message })
+  }
+}
 
-          FROM Orders o
+  static async getStationOrders(req, res) {
+    const pool = await getConnection()
+    const result = await pool.request()
+      .input('StationId', sql.Int, req.user.StationId)
+      .query(`
+        SELECT * FROM Orders
+        WHERE DestinationStationId = @StationId
+      `)
 
-          LEFT JOIN Stations s
-            ON o.DestinationStationId = s.Id
-
-          LEFT JOIN Users u
-            ON o.CoordinatorId = u.Id
-
-          ORDER BY o.CreatedAt DESC
-        `)
-
-      res.json(result.recordset)
-
-    } catch (error) {
-
-      console.error(
-        'getAccountingOrders ERROR:',
-        error
-      )
-
-      res.status(500).json({
-        error: 'Lỗi server'
-      })
-
-    }
-
+    res.json(result.recordset)
   }
 
+  static async exportOrdersReport(req, res) {
+    const orders = await OrderModel.findAll()
+    res.json(orders)
+  }
+
+  static async confirmPayment(req, res) {
+    res.json({ message: 'Payment confirmed' })
+  }
 }
 
 module.exports = OrderController

@@ -39,9 +39,7 @@ export default function StationDashboard() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
-  // notification
-  const [hasNotification, setHasNotification] = useState(false)
-  const [marquee, setMarquee] = useState('')
+  
 
   // ================= LOAD DATA =================
   const fetchData = async () => {
@@ -79,43 +77,7 @@ export default function StationDashboard() {
   }, [fromDate, toDate, orders])
 
   // ================= SOCKET =================
-  useEffect(() => {
-
-    const stationId =
-      localStorage.getItem('stationId')
-
-    if (!stationId) return
-
-    socket.emit('join_station', stationId)
-
-    const handleApproved = (data: any) => {
-
-      console.log('📢 SOCKET:', data)
-
-      if (
-        String(data.stationId) ===
-        String(stationId)
-      ) {
-
-        setHasNotification(true)
-
-        setMarquee(`🔔 ${data.message}`)
-
-        fetchData()
-      }
-    }
-
-    socket.on('order_approved', handleApproved)
-    
-
-    return () => {
-      socket.off(
-        'order_approved',
-        handleApproved
-      )
-    }
-
-  }, [])
+  
 
   // ================= STATS =================
   const buildStats = (data: any[]) => {
@@ -302,43 +264,7 @@ export default function StationDashboard() {
             </p>
           </div>
 
-          <div
-            className={`notification-bell ${
-              hasNotification ? 'active' : ''
-            }`}
-            onClick={() => {
-
-              setHasNotification(false)
-
-              setMarquee('')
-
-            }}
-          >
-            🔔
-
-            {hasNotification && (
-              <span className="notification-dot">
-                1
-              </span>
-            )}
           </div>
-
-        </div>
-
-      {/* MARQUEE */}
-      {marquee && (
-        <div className="notification-marquee">
-          <div
-            key={marquee}
-            className="notification-marquee-text"
-            onAnimationEnd={() =>
-              setMarquee('')
-            }
-          >
-            {marquee}
-          </div>
-        </div>
-      )}
 
       {/* KPI */}
       <div className="station-stats-grid">

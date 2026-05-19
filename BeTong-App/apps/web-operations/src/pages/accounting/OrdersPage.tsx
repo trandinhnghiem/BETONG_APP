@@ -12,7 +12,14 @@ interface Order {
   createdAt: string
   coordinatorName?: string
 }
-
+const statusMap: Record<string, string> = {
+  'Pending Approval': 'Chờ duyệt',
+  'Approved': 'Đã duyệt',
+  'Rejected': 'Từ chối',
+  'Sent': 'Đang giao',
+  'Delivered': 'Đã giao',
+  'Completed': 'Hoàn thành'
+}
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,11 +41,11 @@ export default function AccountingOrdersPage() {
       setOrders(list.map((o: any) => ({
         id: o.Id,
         orderCode: o.OrderCode,
-        destinationStation: o.DestinationStation,
+        destinationStation: o.DestinationStation || '',
         totalAmount: o.TotalAmount || 0,
         orderStatus: o.OrderStatus,
         createdAt: o.CreatedAt,
-        coordinatorName: o.CoordinatorName || o.Coordinator || ''
+        coordinatorName: o.CoordinatorName || ''
       })))
     } catch (error) {
       console.error('Lỗi khi lấy danh sách đơn hàng:', error)
@@ -54,27 +61,18 @@ export default function AccountingOrdersPage() {
 
     try {
       if (action === 'approve_send') {
-        
         try {
           await apiClient.post(`/api/orders/${order.id}/approve`, {
             approvalReason: 'Phê duyệt bởi kế toán'
           })
 
-          // delay nhẹ để tránh race condition
-          await new Promise(res => setTimeout(res, 300))
-
-          await apiClient.post(`/api/orders/${order.id}/status`, {
-            status: 'Sent'
-          })
-
           fetchOrders()
           alert('Đã phê duyệt và gửi trạm')
+
         } catch (err: any) {
           console.error(err.response?.data || err)
           alert(err.response?.data?.error || 'Thao tác thất bại')
         }
-      
-        alert('Đã phê duyệt và gửi trạm')
       }
 
       if (action === 'send') {
@@ -149,8 +147,8 @@ export default function AccountingOrdersPage() {
                   <td>{order.destinationStation}</td>
                   <td className="money">{order.totalAmount.toLocaleString()} đ</td>
                   <td>
-                    <span className={`status ${order.orderStatus.replace(/\s+/g, '-')}`}>
-                      {order.orderStatus}
+                    <span className={`status status-${order.orderStatus.replace(/\s+/g, '-')}`}>
+                      {statusMap[order.orderStatus] || order.orderStatus}
                     </span>
                   </td>
                   <td>{new Date(order.createdAt).toLocaleDateString()}</td>

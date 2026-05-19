@@ -404,3 +404,64 @@
   text-align: center;
   color: #94a3b8;
 }
+.header-bell {
+  position: relative;
+  font-size: 30px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.header-bell.ringing {
+  animation: bellRing 0.5s ease-in-out infinite;
+  color: #ff3b3b !important;
+  transform-origin: top center;
+}
+
+@keyframes bellRing {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(15deg); }
+  50% { transform: rotate(-15deg); }
+  75% { transform: rotate(10deg); }
+  100% { transform: rotate(0); }
+}
+
+.bell-badge {
+  background: #ff3b3b;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.notification-marquee {
+  width: 100%;
+  overflow: hidden;
+  background: #ffeded;
+  border-top: 1px solid #ffb3b3;
+  border-bottom: 1px solid #ffb3b3;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+}
+
+.notification-marquee-text {
+  white-space: nowrap;
+  color: red;
+  font-weight: bold;
+  padding-left: 100%;
+  animation: marqueeMove 6s linear 3;
+}
+
+@keyframes marqueeMove {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}

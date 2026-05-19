@@ -425,3 +425,39 @@
   text-align: left;
   border-bottom: 1px solid #dbe2ea;
 }
+.status {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* CHỜ DUYỆT */
+.status-Pending-Approval {
+  background: #fff7e6;
+  color: #d48806;
+}
+
+/* ĐÃ DUYỆT */
+.status-Approved {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+/* ĐANG GIAO */
+.status-Sent {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+/* TỪ CHỐI */
+.status-Rejected {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+/* ĐÃ GIAO */
+.status-Delivered {
+  background: #f0f5ff;
+  color: #2f54eb;
+}
