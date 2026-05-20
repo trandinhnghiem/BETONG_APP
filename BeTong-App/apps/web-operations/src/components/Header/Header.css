@@ -57,16 +57,34 @@
 }
 
 /* =========================
-   NOTIFICATION BUTTON
+   LEFT AREA
 ========================= */
 
-.notification-btn {
+.header-left {
+  display: flex;
+  align-items: center;
+
+  gap: 20px;
+
+  flex: 1;
+
+  overflow: hidden;
+}
+
+/* =========================
+   BELL
+========================= */
+
+.notification-wrapper {
+  position: relative;
+}
+
+.header-bell {
   position: relative;
 
   width: 42px;
   height: 42px;
 
-  border: none;
   border-radius: 14px;
 
   background: #f3f6ff;
@@ -81,7 +99,7 @@
   transition: all 0.25s ease;
 }
 
-.notification-btn:hover {
+.header-bell:hover {
   background: #e7edff;
 
   transform: translateY(-2px);
@@ -89,30 +107,245 @@
   box-shadow: 0 6px 16px rgba(67, 94, 190, 0.15);
 }
 
-.notification-badge {
+/* =========================
+   RINGING EFFECT
+========================= */
+
+.header-bell.ringing {
+
+  animation: bellRing 0.7s ease-in-out infinite;
+
+  background: #ffe5e5;
+
+  color: #ff3b3b;
+
+  transform-origin: top center;
+}
+
+@keyframes bellRing {
+
+  0% {
+    transform: rotate(0deg);
+  }
+
+  20% {
+    transform: rotate(18deg);
+  }
+
+  40% {
+    transform: rotate(-18deg);
+  }
+
+  60% {
+    transform: rotate(14deg);
+  }
+
+  80% {
+    transform: rotate(-14deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* =========================
+   BADGE
+========================= */
+
+.bell-badge {
   position: absolute;
 
   top: -4px;
   right: -4px;
 
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
 
-  padding: 0 5px;
+  padding: 0 6px;
 
   border-radius: 999px;
 
-  background: #ef4444;
-  color: #ffffff;
+  background: #ff3b3b;
+  color: white;
 
-  border: 2px solid #ffffff;
+  border: 2px solid white;
 
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 
   display: flex;
   align-items: center;
   justify-content: center;
+
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================
+   DROPDOWN
+========================= */
+
+.notification-dropdown {
+  position: absolute;
+
+  top: 55px;
+  right: 0;
+
+  width: 360px;
+
+  background: white;
+
+  border-radius: 18px;
+
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+
+  overflow: hidden;
+
+  z-index: 999;
+}
+
+.notification-header {
+  padding: 18px 20px;
+
+  border-bottom: 1px solid #eef2f7;
+
+  background: #f8fbff;
+}
+
+.notification-header h3 {
+  margin: 0;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  color: #25396f;
+}
+
+.notification-list {
+  max-height: 400px;
+
+  overflow-y: auto;
+}
+
+/* =========================
+   ITEM
+========================= */
+
+.notification-item {
+  padding: 16px 20px;
+
+  border-bottom: 1px solid #f3f4f6;
+
+  transition: all 0.25s ease;
+
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: #f8faff;
+}
+
+.notification-item.unread {
+  background: #eef5ff;
+
+  border-left: 4px solid #1677ff;
+}
+
+.notification-item.read {
+  opacity: 0.6;
+}
+
+.notification-item h4 {
+  margin: 0 0 6px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  color: #25396f;
+}
+
+.notification-item p {
+  margin: 0;
+
+  font-size: 13px;
+
+  color: #6b7280;
+
+  line-height: 1.5;
+}
+
+/* =========================
+   EMPTY
+========================= */
+
+.notification-empty {
+  padding: 20px;
+
+  text-align: center;
+
+  color: #94a3b8;
+}
+
+/* =========================
+   MARQUEE
+========================= */
+
+.notification-marquee {
+
+  width: 100%;
+
+  height: 42px;
+
+  overflow: hidden;
+
+  background: #fff1f1;
+
+  border-top: 1px solid #ffb3b3;
+  border-bottom: 1px solid #ffb3b3;
+
+  display: flex;
+  align-items: center;
+}
+
+.notification-marquee-text {
+
+  white-space: nowrap;
+
+  color: #e60000;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  padding-left: 100%;
+
+  /* CHẠY LIÊN TỤC */
+  animation: marqueeMove 10s linear infinite;
+}
+
+@keyframes marqueeMove {
+
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-120%);
+  }
 }
 
 /* =========================
@@ -183,285 +416,8 @@
     justify-content: center;
   }
 
-}
-
-/* =========================
-   LEFT AREA
-========================= */
-
-.header-left {
-  display: flex;
-  align-items: center;
-
-  gap: 20px;
-
-  flex: 1;
-
-  overflow: hidden;
-}
-
-/* =========================
-   MARQUEE
-========================= */
-
-.marquee-wrapper {
-  flex: 1;
-
-  overflow: hidden;
-
-  white-space: nowrap;
-
-  position: relative;
-}
-
-.marquee-text {
-  display: inline-block;
-
-  color: #64748b;
-
-  font-size: 14px;
-  font-weight: 500;
-
-  padding-left: 100%;
-
-  animation: marquee-slide 15s linear infinite;
-}
-
-/* =========================
-   ANIMATION
-========================= */
-
-@keyframes marquee-slide {
-
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(-100%);
-  }
-
-}
-
-.notification-wrapper {
-  position: relative;
-}
-
-.notification-dropdown {
-  position: absolute;
-  top: 55px;
-  right: 0;
-
-  width: 360px;
-
-  background: white;
-
-  border-radius: 18px;
-
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-
-  overflow: hidden;
-
-  z-index: 999;
-}
-
-.notification-header {
-  padding: 18px 20px;
-
-  border-bottom: 1px solid #eef2f7;
-}
-
-.notification-header h3 {
-  margin: 0;
-
-  font-size: 16px;
-  font-weight: 700;
-
-  color: #25396f;
-}
-
-.notification-list {
-  max-height: 400px;
-
-  overflow-y: auto;
-}
-
-.notification-item {
-  display: flex;
-  gap: 14px;
-
-  padding: 16px 20px;
-
-  border-bottom: 1px solid #f3f4f6;
-
-  transition: all 0.25s ease;
-
-  cursor: pointer;
-}
-
-.notification-item:hover {
-  background: #f8faff;
-}
-
-.notification-item.unread {
-  background: #eef5ff;
-  border-left: 4px solid #1677ff;
-}
-
-.notification-dot {
-  width: 10px;
-  height: 10px;
-
-  min-width: 10px;
-
-  border-radius: 50%;
-
-  background: #435ebe;
-
-  margin-top: 6px;
-}
-
-.notification-content h4 {
-  margin: 0 0 4px;
-
-  font-size: 14px;
-  font-weight: 700;
-
-  color: #25396f;
-}
-
-.notification-content p {
-  margin: 0 0 6px;
-
-  font-size: 13px;
-
-  color: #6b7280;
-
-  line-height: 1.5;
-}
-
-.notification-content span {
-  font-size: 12px;
-
-  color: #9ca3af;
-}
-
-/* =========================
-   SHAKE BELL
-========================= */
-
-.shake {
-  animation: shakeBell 0.6s infinite;
-}
-
-@keyframes shakeBell {
-
-  0% {
-    transform: rotate(0deg);
-  }
-
-  25% {
-    transform: rotate(15deg);
-  }
-
-  50% {
-    transform: rotate(-15deg);
-  }
-
-  75% {
-    transform: rotate(15deg);
-  }
-
-  100% {
-    transform: rotate(0deg);
-  }
-
-}
-
-/* =========================
-   EMPTY
-========================= */
-
-.notification-empty {
-
-  padding: 20px;
-
-  text-align: center;
-
-  color: #999;
-
-}
-.notification-item.read {
-  opacity: 0.6;
-}
-
-.notification-item.unread {
-  background: #f8fbff;
-}
-
-.notification-empty {
-  padding: 20px;
-  text-align: center;
-  color: #94a3b8;
-}
-.header-bell {
-  position: relative;
-  font-size: 30px;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.header-bell.ringing {
-  animation: bellRing 0.5s ease-in-out infinite;
-  color: #ff3b3b !important;
-  transform-origin: top center;
-}
-
-@keyframes bellRing {
-  0% { transform: rotate(0); }
-  25% { transform: rotate(15deg); }
-  50% { transform: rotate(-15deg); }
-  75% { transform: rotate(10deg); }
-  100% { transform: rotate(0); }
-}
-
-.bell-badge {
-  background: #ff3b3b;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.notification-marquee {
-  width: 100%;
-  overflow: hidden;
-  background: #ffeded;
-  border-top: 1px solid #ffb3b3;
-  border-bottom: 1px solid #ffb3b3;
-  height: 40px;
-
-  display: flex;
-  align-items: center;
-}
-
-.notification-marquee-text {
-  white-space: nowrap;
-  color: red;
-  font-weight: bold;
-  padding-left: 100%;
-  animation: marqueeMove 6s linear 3;
-}
-
-@keyframes marqueeMove {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-100%);
+  .notification-dropdown {
+    width: 320px;
+    right: -60px;
   }
 }

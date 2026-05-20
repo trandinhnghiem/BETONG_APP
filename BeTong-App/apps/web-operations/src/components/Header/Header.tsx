@@ -18,120 +18,330 @@ interface NotificationItem {
 export default function Header() {
 
   const navigate = useNavigate()
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const dropdownRef =
+    useRef<HTMLDivElement>(null)
 
-  const [hasNotification, setHasNotification] = useState(false)
-  const [marquee, setMarquee] = useState('')
+  const [showNotifications,
+    setShowNotifications] =
+    useState(false)
+
+  const [notifications,
+    setNotifications] =
+    useState<NotificationItem[]>([])
+
+  const [notificationCount,
+    setNotificationCount] =
+    useState(0)
+
+  const [hasNotification,
+    setHasNotification] =
+    useState(false)
+
+  const [marquee,
+    setMarquee] =
+    useState('')
 
   // =========================
-  // UNREAD COUNT (FIX CHUẨN)
+  // LOAD NOTIFICATIONS
   // =========================
-  const unreadCount = notifications.filter(n => !n.IsRead).length
+  const loadNotifications =
+    async () => {
+
+    try {
+
+      const res =
+        await apiClient.get(
+          '/api/notifications'
+        )
+
+      setNotifications(res.data)
+
+      // đếm chưa đọc
+      const unread =
+        res.data.filter(
+          (n: any) => !n.IsRead
+        ).length
+
+      setNotificationCount(unread)
+
+    } catch (err) {
+
+      console.error(err)
+    }
+  }
 
   // =========================
-  // LOAD + SOCKET
+  // CHECK APPROVED ORDERS
+  // =========================
+  const checkApprovedOrders =
+    async () => {
+
+    try {
+
+      const res =
+        await apiClient.get(
+          '/api/orders/station-orders'
+        )
+
+      const approvedOrders =
+        res.data.filter(
+          (o: any) =>
+            o.OrderStatus === 'Approved'
+        )
+
+      // còn đơn approved
+      if (approvedOrders.length > 0) {
+
+        setMarquee(
+          '🔔 Có đơn hàng đang đợi bạn thực hiện'
+        )
+
+        // chuông đỏ liên tục
+        setHasNotification(true)
+
+      } else {
+
+        // hết đơn approved
+        setMarquee('')
+
+        // tắt rung chuông
+        setHasNotification(false)
+      }
+
+    } catch (err) {
+
+      console.error(err)
+    }
+  }
+
+  // =========================
+  // INIT
   // =========================
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const res = await apiClient.get('/api/notifications')
-        setNotifications(res.data)
-      } catch (err) {
-        console.error(err)
-      }
-    }
 
     loadNotifications()
 
-    const userId = localStorage.getItem('userId')
-    const userRole = localStorage.getItem('userRole')
-    const stationId = localStorage.getItem('stationId')
+    checkApprovedOrders()
 
+    const userId =
+      localStorage.getItem('userId')
+
+    const userRole =
+      localStorage.getItem('userRole')
+
+    const stationId =
+      localStorage.getItem('stationId')
+
+    // join room user
     if (userId) {
-      socket.emit('join_user', userId)
+
+      socket.emit(
+        'join_user',
+        String(userId)
+      )
     }
+
+    // join room role
     if (userRole) {
-      socket.emit('join_role', userRole)
+
+      socket.emit(
+        'join_role',
+        String(userRole)
+      )
     }
+
+    // join room station
     if (stationId) {
-      socket.emit('join_station', String(stationId))
+
+      socket.emit(
+        'join_station',
+        String(stationId)
+      )
     }
 
-    const handleNotification = (data: any) => {
-      const notification = {
-        Id: data.Id || Date.now(),
-        Title: data.Title || data.title || 'Thông báo mới',
-        Message: data.Message || data.message || 'Bạn có thông báo mới.',
-        IsRead: false,
-        CreatedAt: data.CreatedAt || new Date().toISOString()
-      }
+    // =========================
+    // SOCKET RECEIVE
+    // =========================
+    const handleApproved =
+      async (data: any) => {
 
-      setNotifications(prev => [notification, ...prev])
+      console.log(
+        '🔔 order_approved:',
+        data
+      )
+
+      // reload notifications
+      await loadNotifications()
+
+      // reload approved status
+      await checkApprovedOrders()
+
+      // rung chuông
       setHasNotification(true)
-      setMarquee(notification.Message)
 
       setTimeout(() => {
-        setHasNotification(false)
-      }, 3000)
 
-      let count = 0
-      const interval = setInterval(() => {
-        count++
-        if (count >= 3) {
-          clearInterval(interval)
-          setMarquee('')
-        }
-      }, 3000)
+        setHasNotification(false)
+
+      }, 5000)
     }
 
-    socket.on('notification', handleNotification)
+    socket.on(
+      'order_approved',
+      handleApproved
+    )
+
+    // auto check trạng thái đơn
+    const interval = setInterval(() => {
+
+      checkApprovedOrders()
+
+    }, 5000)
 
     return () => {
-      socket.off('notification', handleNotification)
+
+      socket.off(
+        'order_approved',
+        handleApproved
+      )
+
+      clearInterval(interval)
     }
+
   }, [])
 
   // =========================
-  // CLICK OUTSIDE (FIX DROPDOWN)
+  // CLICK OUTSIDE
   // =========================
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+
+    const handleClickOutside =
+      (e: MouseEvent) => {
+
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
+        !dropdownRef.current.contains(
+          e.target as Node
+        )
       ) {
+
         setShowNotifications(false)
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener(
+      'mousedown',
+      handleClickOutside
+    )
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+
+      document.removeEventListener(
+        'mousedown',
+        handleClickOutside
+      )
     }
+
   }, [])
 
   // =========================
-  // MARK AS READ
+  // MARK ALL AS READ
   // =========================
-  const markAsRead = async (id: number) => {
+  const markAllAsRead =
+    async () => {
+
     try {
 
-      await apiClient.put(`/api/notifications/${id}/read`)
+      await apiClient.put(
+        '/api/notifications/mark-all-read'
+      )
 
-      setNotifications(prev => {
-        const updated = prev.map(item =>
-          item.Id === id ? { ...item, IsRead: true } : item
-        )
+      setNotifications(prev =>
+        prev.map(item => ({
+          ...item,
+          IsRead: true
+        }))
+      )
 
-        return [...updated]
-      })
+      // reset badge
+      setNotificationCount(0)
 
     } catch (err) {
+
       console.error(err)
+    }
+  }
+
+  // =========================
+  // MARK SINGLE
+  // =========================
+  const markAsRead =
+    async (id: number) => {
+
+    try {
+
+      await apiClient.put(
+        `/api/notifications/${id}/read`
+      )
+
+      setNotifications(prev =>
+        prev.map(item => {
+
+          if (item.Id === id) {
+
+            return {
+              ...item,
+              IsRead: true
+            }
+          }
+
+          return item
+        })
+      )
+
+      // giảm badge
+      setNotificationCount(prev =>
+        prev > 0
+          ? prev - 1
+          : 0
+      )
+
+    } catch (err) {
+
+      console.error(err)
+    }
+  }
+
+  // =========================
+  // OPEN DROPDOWN
+  // =========================
+  const handleOpenNotifications =
+    async () => {
+
+    const newState =
+      !showNotifications
+
+    setShowNotifications(newState)
+
+    // tắt rung
+    setHasNotification(false)
+
+    // mở dropdown
+    if (newState) {
+
+      await markAllAsRead()
+
+      // cập nhật local luôn
+      setNotifications(prev =>
+        prev.map(item => ({
+          ...item,
+          IsRead: true
+        }))
+      )
+
+      // badge = 0 ngay
+      setNotificationCount(0)
     }
   }
 
@@ -139,7 +349,9 @@ export default function Header() {
   // LOGOUT
   // =========================
   const handleLogout = () => {
+
     localStorage.clear()
+
     navigate('/login')
   }
 
@@ -149,70 +361,121 @@ export default function Header() {
       <div className="header-content">
 
         <div className="header-left">
-          <h1>HỆ THỐNG QUẢN LÝ KINH DOANH</h1>
+
+          <h1>
+            HỆ THỐNG QUẢN LÝ KINH DOANH
+          </h1>
+
         </div>
 
         <div className="header-actions">
 
           {/* NOTIFICATION */}
-          <div className="notification-wrapper" ref={dropdownRef}>
+          <div
+            className="notification-wrapper"
+            ref={dropdownRef}
+          >
 
             <div
-              className={`header-bell ${hasNotification ? 'ringing' : ''}`}
-              onClick={() => {
-                setShowNotifications(prev => !prev)
-                setNotifications(prev =>
-                  prev.map(n => ({ ...n, IsRead: true }))
-                )
-              }}
+              className={`header-bell ${
+                hasNotification
+                  ? 'ringing'
+                  : ''
+              }`}
+              onClick={
+                handleOpenNotifications
+              }
             >
+
               <FiBell size={22} />
 
-              {unreadCount > 0 && (
+              {notificationCount > 0 && (
+
                 <span className="bell-badge">
-                  {unreadCount}
+
+                  {notificationCount}
+
                 </span>
+
               )}
+
             </div>
 
-            {/* DROPDOWN FIXED */}
+            {/* DROPDOWN */}
             {showNotifications && (
+
               <div className="notification-dropdown">
 
                 <div className="notification-header">
-                  <h3>Thông báo</h3>
+
+                  <h3>
+                    Thông báo
+                  </h3>
+
                 </div>
 
                 <div className="notification-list">
 
                   {notifications.length === 0 && (
+
                     <div className="notification-empty">
+
                       Không có thông báo
+
                     </div>
+
                   )}
 
                   {notifications.map(item => (
+
                     <div
                       key={item.Id}
-                      className={`notification-item ${item.IsRead ? 'read' : 'unread'}`}
-                      onClick={() => markAsRead(item.Id)}
+                      className={`notification-item ${
+                        item.IsRead
+                          ? 'read'
+                          : 'unread'
+                      }`}
+                      onClick={() =>
+                        markAsRead(item.Id)
+                      }
                     >
-                      <h4>{item.Title}</h4>
-                      <p>{item.Message}</p>
+
+                      <div>
+
+                        <h4>
+                          {item.Title}
+                        </h4>
+
+                        <p>
+                          {item.Message}
+                        </p>
+
+                      </div>
+
                     </div>
+
                   ))}
 
                 </div>
 
               </div>
+
             )}
 
           </div>
 
           {/* LOGOUT */}
-          <button className="logout-btn" onClick={handleLogout}>
+          <button
+            className="logout-btn"
+            onClick={handleLogout}
+          >
+
             <FiLogOut size={18} />
-            <span>Đăng Xuất</span>
+
+            <span>
+              Đăng Xuất
+            </span>
+
           </button>
 
         </div>
@@ -221,11 +484,17 @@ export default function Header() {
 
       {/* MARQUEE */}
       {marquee && (
+
         <div className="notification-marquee">
+
           <div className="notification-marquee-text">
+
             {marquee}
+
           </div>
+
         </div>
+
       )}
 
     </header>

@@ -1,7 +1,8 @@
 const express = require('express')
 const { authMiddleware } = require('../middlewares/auth')
 const NotificationModel = require('../models/Notification')
-
+const NotificationController =
+  require('../controllers/notificationController')
 const router = express.Router()
 
 // ===============================
@@ -24,7 +25,15 @@ router.get('/', authMiddleware, async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 })
+router.get(
+  '/unread-count',
+  NotificationController.getUnreadCount
+)
 
+router.put(
+  '/mark-read',
+  NotificationController.markAllRead
+)
 // ===============================
 // MARK AS READ
 // ===============================
