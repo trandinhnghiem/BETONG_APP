@@ -86,29 +86,7 @@
   color: #27ae60;
 }
 
-/* STATUS */
-.status {
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: black;
-}
 
-.status.Pending-Approval {
-  background: orange;
-}
-
-.status.Approved {
-  background: green;
-}
-
-.status.Rejected {
-  background: red;
-}
-
-.status.Sent {
-  background: blue;
-}
 
 /* BUTTON */
 .btn-send {
@@ -201,19 +179,7 @@ tr:hover {
   background: #fafafa;
 }
 
-/* STATUS */
-.status {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  background: #eee;
-}
 
-.status.approved { background: #e6fffb; color: #13c2c2; }
-.status.pending { background: #fff7e6; color: #fa8c16; }
-.status.rejected { background: #fff1f0; color: #ff4d4f; }
-.status.completed { background: #f6ffed; color: #52c41a; }
-.status.sent { background: #e6f7ff; color: #1677ff; }
 
 /* BUTTON */
 .action-btn {
@@ -233,4 +199,98 @@ tr:hover {
 .money {
   font-weight: 600;
   color: #111;
+}
+/* =========================
+   STATUS BADGE ERP
+========================= */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 125px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.3px;
+
+  border: 1px solid transparent;
+
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* DRAFT */
+.status.Draft {
+  background: #f4f763;
+  color: #5f4610;
+  border-color: #eff30a;
+}
+
+/* PENDING APPROVAL */
+.status.PendingApproval {
+  background: #fff7e6;
+  color: #d48806;
+  border-color: #ffd591;
+}
+
+/* APPROVED */
+.status.Approved {
+  background: #e6f4ff;
+  color: #1677ff;
+  border-color: #91caff;
+}
+
+/* PROCESSING */
+.status.Processing {
+  background: #f3e8ff;
+  color: #9333ea;
+  border-color: #d8b4fe;
+}
+
+/* DELIVERING */
+.status.Delivering {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #7dd3fc;
+}
+
+/* COMPLETED */
+.status.Completed {
+  background: #dcfce7;
+  color: #16a34a;
+  border-color: #86efac;
+}
+
+/* REJECTED */
+.status.Rejected {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* CANCELLED */
+.status.Cancelled {
+  background: #ffe4e6;
+  color: #e11d48;
+  border-color: #fda4af;
+}
+
+/* SENT */
+.status.Sent {
+  background: #ede9fe;
+  color: #7c3aed;
+  border-color: #c4b5fd;
+}
+
+/* DELIVERED */
+.status.Delivered {
+  background: #fef3c7;
+  color: #d97706;
+  border-color: #fcd34d;
 }

@@ -106,26 +106,7 @@ export default function CoordinatorOrdersPage() {
     }
   }
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'Draft':
-        return { backgroundColor: '#ecf0f1', color: '#7f8c8d' }
-      case 'Pending Approval':
-        return { backgroundColor: '#fff7e6', color: '#d68910' }
-      case 'Approved':
-        return { backgroundColor: '#e6f7ff', color: '#1d6fff' }
-      case 'Processing':
-        return { backgroundColor: '#fff4e6', color: '#c97c0e' }
-      case 'Delivering':
-        return { backgroundColor: '#e6fbff', color: '#0f7c8f' }
-      case 'Completed':
-        return { backgroundColor: '#e6ffed', color: '#239a38' }
-      case 'Cancelled':
-        return { backgroundColor: '#ffe6e6', color: '#c0392b' }
-      default:
-        return { backgroundColor: '#f0f0f0', color: '#333' }
-    }
-  }
+  
 
   return (
     <div className="orders-dashboard">
@@ -195,7 +176,9 @@ export default function CoordinatorOrdersPage() {
                   </td>
 
                   <td>
-                    <span className="status" style={getStatusStyle(o.orderStatus)}>
+                    <span
+                      className={`status ${o.orderStatus.replace(/\s/g, '')}`}
+                    >
                       {o.orderStatus}
                     </span>
                   </td>

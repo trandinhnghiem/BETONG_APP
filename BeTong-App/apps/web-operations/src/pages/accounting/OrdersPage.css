@@ -426,38 +426,99 @@
   border-bottom: 1px solid #dbe2ea;
 }
 .status {
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 14px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.3px;
+
+  border: 1px solid transparent;
+
+  min-width: 120px;
 }
 
-/* CHỜ DUYỆT */
+/* =========================
+   CHỜ DUYỆT
+========================= */
+
 .status-Pending-Approval {
   background: #fff7e6;
   color: #d48806;
+  border-color: #ffd591;
+
+  box-shadow: 0 2px 8px rgba(212, 136, 6, 0.15);
 }
 
-/* ĐÃ DUYỆT */
+/* =========================
+   ĐÃ DUYỆT
+========================= */
+
 .status-Approved {
   background: #f6ffed;
-  color: #52c41a;
+  color: #389e0d;
+  border-color: #b7eb8f;
+
+  box-shadow: 0 2px 8px rgba(56, 158, 13, 0.15);
 }
 
-/* ĐANG GIAO */
-.status-Sent {
+/* =========================
+   ĐANG XỬ LÝ
+========================= */
+
+.status-Processing {
+  background: #fff1f0;
+  color: #cf1322;
+  border-color: #ffa39e;
+
+  box-shadow: 0 2px 8px rgba(207, 19, 34, 0.15);
+}
+
+/* =========================
+   ĐANG GIAO
+========================= */
+
+.status-Delivering {
   background: #e6f4ff;
   color: #1677ff;
+  border-color: #91caff;
+
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.15);
 }
 
-/* TỪ CHỐI */
+/* =========================
+   HOÀN THÀNH
+========================= */
+
+.status-Completed {
+  background: #f6ffed;
+  color: #237804;
+  border-color: #95de64;
+
+  box-shadow: 0 2px 8px rgba(35, 120, 4, 0.15);
+}
+
+/* =========================
+   ĐÃ HỦY
+========================= */
+
+.status-Cancelled {
+  background: #fff1f0;
+  color: #ff4d4f;
+  border-color: #ffb3b3;
+
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
+}
 .status-Rejected {
   background: #fff1f0;
   color: #ff4d4f;
-}
+  border-color: #ffb3b3;
 
-/* ĐÃ GIAO */
-.status-Delivered {
-  background: #f0f5ff;
-  color: #2f54eb;
+  box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
 }

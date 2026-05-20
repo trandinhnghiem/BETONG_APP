@@ -96,37 +96,109 @@
   background: #f9f9f9;
 }
 
-/* STATUS BADGE */
+/* =========================
+   STATUS BADGE
+========================= */
+
 .status {
-  padding: 5px 10px;
-  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 120px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+
+  letter-spacing: 0.3px;
+
+  border: 1px solid transparent;
+
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
+
+/* =========================
+   PENDING
+========================= */
 
 .status.PendingApproval {
-  background: #fff3cd;
-  color: #856404;
+  background: #fff7e6;
+  color: #d48806;
+  border-color: #ffd591;
 }
+
+/* =========================
+   APPROVED
+========================= */
 
 .status.Approved {
-  background: #d4edda;
-  color: #155724;
+  background: #e6f4ff;
+  color: #1677ff;
+  border-color: #91caff;
 }
 
-.status.Sent {
-  background: #cce5ff;
-  color: #004085;
+/* =========================
+   PROCESSING
+========================= */
+
+.status.Processing {
+  background: #f3e8ff;
+  color: #9333ea;
+  border-color: #d8b4fe;
 }
 
-.status.Delivered {
-  background: #ffeeba;
-  color: #856404;
+/* =========================
+   DELIVERING
+========================= */
+
+.status.Delivering {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #7dd3fc;
 }
+
+/* =========================
+   COMPLETED
+========================= */
 
 .status.Completed {
-  background: #e2e3e5;
-  color: #383d41;
+  background: #dcfce7;
+  color: #16a34a;
+  border-color: #86efac;
+}
+
+/* =========================
+   REJECTED
+========================= */
+
+.status.Rejected {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* =========================
+   SENT
+========================= */
+
+.status.Sent {
+  background: #ede9fe;
+  color: #7c3aed;
+  border-color: #c4b5fd;
+}
+
+/* =========================
+   DELIVERED
+========================= */
+
+.status.Delivered {
+  background: #fef3c7;
+  color: #d97706;
+  border-color: #fcd34d;
 }
 
 /* ACTION BUTTON */
