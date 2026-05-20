@@ -159,6 +159,77 @@
   color: #27ae60;
 }
 
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+}
+
+.status.Draft {
+  background: #f0f0f0;
+  color: #4b5563;
+  border-color: #d1d5db;
+}
+
+.status.PendingApproval {
+  background: #fff7d6;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.status.Approved {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.status.Processing {
+  background: #fff4e6;
+  color: #ca6702;
+  border-color: #ffbb86;
+}
+
+.status.Delivering {
+  background: #e0f2fe;
+  color: #0c4a6e;
+  border-color: #7dd3fc;
+}
+
+.status.Completed {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.status.Cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.action-confirm,
+.action-btn {
+  background: #1677ff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.action-confirm:hover,
+.action-btn:hover {
+  opacity: 0.9;
+}
+
 .status-badge {
   display: inline-block;
   padding: 4px 8px;

@@ -92,6 +92,22 @@ export default function CoordinatorOrdersPage() {
     setToDate('')
   }
 
+  const statusMap: Record<string, string> = {
+    'Draft': 'Đơn tạm',
+    'Pending Approval': 'Chờ duyệt',
+    'Approved': 'Đã duyệt',
+    'Processing': 'Đang xử lý',
+    'Delivering': 'Đang giao hàng',
+    'Completed': 'Hoàn thành',
+    'Cancelled': 'Đã hủy',
+    'Rejected': 'Từ chối',
+    'Sent': 'Đã gửi',
+    'Delivered': 'Đã giao'
+  }
+
+  const getStatusLabel = (status: string) => statusMap[status] || status
+  const getStatusClass = (status: string) => status.replace(/\s/g, '')
+
   const sendOrderToStation = async (id: number) => {
     try {
       await apiClient.post(`/api/orders/${id}/status`, {
@@ -131,13 +147,13 @@ export default function CoordinatorOrdersPage() {
 
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="All">Tất cả trạng thái</option>
-          <option value="Draft">Nháp</option>
+          <option value="Draft">Đơn tạm</option>
           <option value="Pending Approval">Chờ duyệt</option>
           <option value="Approved">Đã duyệt</option>
           <option value="Processing">Đang xử lý</option>
-          <option value="Delivering">Đang giao</option>
+          <option value="Delivering">Đang giao hàng</option>
           <option value="Completed">Hoàn thành</option>
-          <option value="Cancelled">Hủy</option>
+          <option value="Cancelled">Đã hủy</option>
         </select>
 
         <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -177,9 +193,9 @@ export default function CoordinatorOrdersPage() {
 
                   <td>
                     <span
-                      className={`status ${o.orderStatus.replace(/\s/g, '')}`}
+                      className={`status ${getStatusClass(o.orderStatus)}`}
                     >
-                      {o.orderStatus}
+                      {getStatusLabel(o.orderStatus)}
                     </span>
                   </td>
 

@@ -13,13 +13,21 @@ interface Order {
   coordinatorName?: string
 }
 const statusMap: Record<string, string> = {
+  'Draft': 'Đơn tạm',
   'Pending Approval': 'Chờ duyệt',
   'Approved': 'Đã duyệt',
   'Processing': 'Đang xử lý',
-  'Delivering': 'Đang giao',
+  'Delivering': 'Đang giao hàng',
   'Completed': 'Hoàn thành',
-  'Cancelled': 'Đã hủy'
+  'Cancelled': 'Đã hủy',
+  'Rejected': 'Từ chối',
+  'Sent': 'Đã gửi',
+  'Delivered': 'Đã giao'
 }
+
+const getStatusLabel = (status: string) => statusMap[status] || status
+const getStatusClass = (status: string) => status.replace(/\s+/g, '')
+
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -141,8 +149,8 @@ export default function AccountingOrdersPage() {
                   <td>{order.destinationStation}</td>
                   <td className="money">{order.totalAmount.toLocaleString()} đ</td>
                   <td>
-                    <span className={`status status-${order.orderStatus.replace(/\s+/g, '-')}`}>
-                      {statusMap[order.orderStatus] || order.orderStatus}
+                    <span className={`status ${getStatusClass(order.orderStatus)}`}>
+                      {getStatusLabel(order.orderStatus)}
                     </span>
                   </td>
                   <td>{new Date(order.createdAt).toLocaleDateString()}</td>

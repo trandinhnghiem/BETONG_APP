@@ -73,9 +73,21 @@ export default function StationOrdersPage() {
   }
 }
 
-  const getStatusClass = (status: string) => {
-    return status.replace(/\s/g, '')
+  const statusMap: Record<string, string> = {
+    'Draft': 'Đơn tạm',
+    'Pending Approval': 'Chờ duyệt',
+    'Approved': 'Đã duyệt',
+    'Processing': 'Đang xử lý',
+    'Delivering': 'Đang giao hàng',
+    'Completed': 'Hoàn thành',
+    'Cancelled': 'Đã hủy',
+    'Rejected': 'Từ chối',
+    'Sent': 'Đã gửi',
+    'Delivered': 'Đã giao'
   }
+
+  const getStatusLabel = (status: string) => statusMap[status] || status
+  const getStatusClass = (status: string) => status.replace(/\s/g, '')
 
   return (
     <div className="orders-dashboard">
@@ -116,7 +128,7 @@ export default function StationOrdersPage() {
 
                 <td>
                   <span className={`status ${getStatusClass(order.orderStatus)}`}>
-                    {order.orderStatus}
+                    {getStatusLabel(order.orderStatus)}
                   </span>
                 </td>
 

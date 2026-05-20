@@ -227,70 +227,58 @@ tr:hover {
 
 /* DRAFT */
 .status.Draft {
-  background: #f4f763;
-  color: #5f4610;
-  border-color: #eff30a;
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #d1d5db;
 }
 
 /* PENDING APPROVAL */
 .status.PendingApproval {
-  background: #fff7e6;
-  color: #d48806;
-  border-color: #ffd591;
+  background: #fff7d6;
+  color: #b45309;
+  border-color: #fde68a;
 }
 
 /* APPROVED */
 .status.Approved {
-  background: #e6f4ff;
-  color: #1677ff;
-  border-color: #91caff;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
 }
 
 /* PROCESSING */
 .status.Processing {
-  background: #f3e8ff;
-  color: #9333ea;
-  border-color: #d8b4fe;
+  background: #fff4e6;
+  color: #ca6702;
+  border-color: #ffbb86;
 }
 
 /* DELIVERING */
 .status.Delivering {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: #e0f7ff;
+  color: #0c4a6e;
   border-color: #7dd3fc;
 }
 
 /* COMPLETED */
 .status.Completed {
   background: #dcfce7;
-  color: #16a34a;
+  color: #15803d;
   border-color: #86efac;
-}
-
-/* REJECTED */
-.status.Rejected {
-  background: #fee2e2;
-  color: #dc2626;
-  border-color: #fca5a5;
 }
 
 /* CANCELLED */
 .status.Cancelled {
-  background: #ffe4e6;
-  color: #e11d48;
-  border-color: #fda4af;
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
-/* SENT */
-.status.Sent {
-  background: #ede9fe;
-  color: #7c3aed;
-  border-color: #c4b5fd;
-}
-
-/* DELIVERED */
+/* LEGACY / UNUSED STATES */
+.status.Rejected,
+.status.Sent,
 .status.Delivered {
-  background: #fef3c7;
-  color: #d97706;
-  border-color: #fcd34d;
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #d1d5db;
 }
