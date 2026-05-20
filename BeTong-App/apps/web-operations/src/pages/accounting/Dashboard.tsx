@@ -62,7 +62,7 @@ export default function AccountingDashboard() {
       const totalOrders = parsedOrders.length
       const pendingOrders = parsedOrders.filter((order) => order.orderStatus === 'Pending Approval').length
       const completedOrders = parsedOrders.filter((order) => order.orderStatus === 'Completed').length
-      const inTransitOrders = parsedOrders.filter((order) => ['Sent', 'Delivered', 'Uploading', 'Approved', 'In Transit'].includes(order.orderStatus)).length
+      const inTransitOrders = parsedOrders.filter((order) => ['Approved', 'Processing', 'Delivering'].includes(order.orderStatus)).length
       const monthlyRevenue = parsedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
 
       setStats({
@@ -90,13 +90,31 @@ export default function AccountingDashboard() {
     }
   }
 
+  const statusMap: Record<string, string> = {
+    'Draft': 'Đơn tạm',
+    'Pending Approval': 'Chờ duyệt',
+    'Approved': 'Đã duyệt',
+    'Processing': 'Đang xử lý',
+    'Delivering': 'Đang giao hàng',
+    'Completed': 'Hoàn thành',
+    'Cancelled': 'Đã hủy',
+    'Rejected': 'Từ chối',
+    'Sent': 'Đã gửi',
+    'Delivered': 'Đã giao'
+  }
+
+  const getStatusLabel = (status: string) => statusMap[status] || status
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved': return '#f39c12'
-      case 'Pending Approval': return '#e74c3c'
-      case 'In Transit': return '#3498db'
-      case 'Completed': return '#27ae60'
-      default: return '#95a5a6'
+      case 'Draft': return '#f3f4f6'
+      case 'Pending Approval': return '#fff7d6'
+      case 'Approved': return '#dbeafe'
+      case 'Processing': return '#fff4e6'
+      case 'Delivering': return '#e0f7ff'
+      case 'Completed': return '#dcfce7'
+      case 'Cancelled': return '#fee2e2'
+      default: return '#d1d5db'
     }
   }
 
@@ -243,9 +261,9 @@ export default function AccountingDashboard() {
                 <div className="order-status">
                   <span
                     className="status-badge"
-                    style={{ backgroundColor: getStatusColor(order.orderStatus) }}
+                    style={{ backgroundColor: getStatusColor(order.orderStatus), color: order.orderStatus === 'Draft' ? '#4b5563' : 'white' }}
                   >
-                    {order.orderStatus}
+                    {getStatusLabel(order.orderStatus)}
                   </span>
                   <div className="order-date">
                     {new Date(order.createdAt).toLocaleDateString('vi-VN')}
