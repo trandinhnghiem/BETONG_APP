@@ -124,7 +124,13 @@ export default function CoordinatorCreateOrderPage() {
       setLoading(true)
       const response = await apiClient.post('/api/orders', {
         mixingStationId: Number(form.mixingStationId),
+
+        customerName: form.customerName,
+        address: form.address,
+        phone: form.phone,
+
         notes: buildNotes(),
+
         items: [{
           productId: Number(form.concreteType),
           quantity: Number(form.volume),

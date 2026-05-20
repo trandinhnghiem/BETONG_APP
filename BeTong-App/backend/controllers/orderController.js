@@ -29,66 +29,104 @@ class OrderController {
 
   // ================= CREATE ORDER =================
   static async createOrder(req, res) {
-    try {
+  try {
 
-      const { mixingStationId, notes, items } = req.body
+    const {
+      mixingStationId,
+      notes,
+      items,
+      customerName,
+      address,
+      phone
+    } = req.body
 
-      if (!mixingStationId || !items?.length) {
-        return res.status(400).json({ error: 'Invalid data' })
-      }
+    if (!mixingStationId || !items?.length) {
+      return res.status(400).json({ error: 'Invalid data' })
+    }
 
-      const pool = await getConnection()
-      const orderCode = 'ORD-' + Date.now()
+    const pool = await getConnection()
+    const orderCode = 'ORD-' + Date.now()
 
-      const totalAmount = items.reduce((s, i) =>
-        s + i.quantity * i.unitPrice, 0)
+    const totalAmount = items.reduce((s, i) =>
+      s + i.quantity * i.unitPrice, 0)
 
-      const result = await pool.request()
-        .input('OrderCode', sql.NVarChar, orderCode)
-        .input('CoordinatorId', sql.Int, req.user.Id)
-        .input('SourceStationId', sql.Int, mixingStationId)
-        .input('DestinationStationId', sql.Int, mixingStationId)
-        .input('TotalAmount', sql.Decimal(18, 2), totalAmount)
-        .input('Notes', sql.NVarChar(sql.MAX), notes || '')
+    const result = await pool.request()
+      .input('OrderCode', sql.NVarChar, orderCode)
+      .input('CoordinatorId', sql.Int, req.user.Id)
+      .input('SourceStationId', sql.Int, mixingStationId)
+      .input('DestinationStationId', sql.Int, mixingStationId)
+
+      // ⭐ CUSTOMER INFO
+      .input('CustomerName', sql.NVarChar, customerName)
+      .input('Address', sql.NVarChar, address)
+      .input('Phone', sql.NVarChar, phone)
+
+      .input('TotalAmount', sql.Decimal(18, 2), totalAmount)
+      .input('Notes', sql.NVarChar(sql.MAX), notes || '')
+
+      .query(`
+        INSERT INTO Orders (
+          OrderCode,
+          CoordinatorId,
+          SourceStationId,
+          DestinationStationId,
+          CustomerName,
+          Address,
+          Phone,
+          TotalAmount,
+          Notes,
+          OrderStatus,
+          CreatedAt,
+          UpdatedAt
+        )
+        VALUES (
+          @OrderCode,
+          @CoordinatorId,
+          @SourceStationId,
+          @DestinationStationId,
+          @CustomerName,
+          @Address,
+          @Phone,
+          @TotalAmount,
+          @Notes,
+          'Draft',
+          GETDATE(),
+          GETDATE()
+        );
+
+        SELECT SCOPE_IDENTITY() AS OrderId;
+      `)
+
+    const orderId = result.recordset[0].OrderId
+
+    // ORDER ITEMS
+    for (const item of items) {
+      await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .input('ProductId', sql.Int, item.productId)
+        .input('Quantity', sql.Float, item.quantity)
+        .input('UnitPrice', sql.Decimal(18, 2), item.unitPrice)
         .query(`
-          INSERT INTO Orders (
-            OrderCode, CoordinatorId, SourceStationId,
-            DestinationStationId, TotalAmount, Notes,
-            OrderStatus, CreatedAt, UpdatedAt
+          INSERT INTO OrderItems (
+            OrderId, ProductId, Quantity, UnitPrice, CreatedAt
           )
           VALUES (
-            @OrderCode, @CoordinatorId, @SourceStationId,
-            @DestinationStationId, @TotalAmount, @Notes,
-            'Draft', GETDATE(), GETDATE()
-          );
-
-          SELECT SCOPE_IDENTITY() AS OrderId;
+            @OrderId, @ProductId, @Quantity, @UnitPrice, GETDATE()
+          )
         `)
-
-      const orderId = result.recordset[0].OrderId
-
-      for (const item of items) {
-        await pool.request()
-          .input('OrderId', sql.Int, orderId)
-          .input('ProductId', sql.Int, item.productId)
-          .input('Quantity', sql.Float, item.quantity)
-          .input('UnitPrice', sql.Decimal(18, 2), item.unitPrice)
-          .query(`
-            INSERT INTO OrderItems (
-              OrderId, ProductId, Quantity, UnitPrice, CreatedAt
-            )
-            VALUES (
-              @OrderId, @ProductId, @Quantity, @UnitPrice, GETDATE()
-            )
-          `)
-      }
-
-      res.status(201).json({ message: 'Order created', orderId, orderCode })
-
-    } catch (err) {
-      res.status(500).json({ error: err.message })
     }
+
+    res.status(201).json({
+      message: 'Order created',
+      orderId,
+      orderCode
+    })
+
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
   }
+}
 
   // ================= UPDATE STATUS (FIX FOR ROUTE) =================
   static async updateStatus(req, res) {

@@ -33,6 +33,7 @@ import {
 import apiClient from '../../services/api'
 import './Dashboard.css'
 
+
 interface DashboardStats {
   totalUsers: number
   totalOrders: number
@@ -864,10 +865,15 @@ export default function AdminDashboard() {
                   <span>Tạo người dùng</span>
                 </button>
 
-                <button className="quick-action-btn secondary">
-                  <FiFileText size={24} />
-                  <span>Xuất báo cáo</span>
-                </button>
+                <button
+                    className="quick-action-btn secondary"
+                    onClick={() =>
+                      navigate('/admin/reports')
+                    }
+                  >
+                    <FiFileText size={24} />
+                    <span>Xuất báo cáo</span>
+                  </button>
 
                 <button
                   className="quick-action-btn success"

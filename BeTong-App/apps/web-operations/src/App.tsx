@@ -10,6 +10,8 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsersPage from './pages/admin/UsersPage'
 import AdminSettingsPage from './pages/admin/SettingsPage'
 import Statistics from './pages/admin/Statistics'
+import ReportsPage
+from './pages/admin/Reports/ReportsPage'
 import AccountingDashboard from './pages/accounting/Dashboard'
 import AccountingOrdersPage from './pages/accounting/OrdersPage'
 import AccountingReportsPage from './pages/accounting/ReportsPage'
@@ -55,6 +57,10 @@ function App() {
                 <AdminDashboard />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/admin/reports"
+            element={<ReportsPage />}
           />
 
           <Route
