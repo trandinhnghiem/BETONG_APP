@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react'
-import { FiPlus, FiShoppingCart, FiClock, FiCheckCircle, FiTruck, FiTrendingUp, FiPackage, FiMapPin, FiBarChart2 } from 'react-icons/fi'
+import {
+  FiPlus,
+  FiShoppingCart,
+  FiClock,
+  FiCheckCircle,
+  FiTruck,
+  FiTrendingUp,
+  FiPackage,
+  FiMapPin,
+  FiBarChart2
+} from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './Dashboard.css'
@@ -32,6 +42,7 @@ export default function AccountingDashboard() {
     monthlyRevenue: 0,
     activeStations: 0
   })
+
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,14 +52,19 @@ export default function AccountingDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
+
       const [ordersResponse, stationsResponse] = await Promise.all([
         apiClient.get('/api/orders'),
         apiClient.get('/api/orders/stations')
       ])
 
-      const ordersData = Array.isArray(ordersResponse.data) ? ordersResponse.data : []
-      console.log(ordersResponse.data)
-      const stationsData = Array.isArray(stationsResponse.data) ? stationsResponse.data : []
+      const ordersData = Array.isArray(ordersResponse.data)
+        ? ordersResponse.data
+        : []
+
+      const stationsData = Array.isArray(stationsResponse.data)
+        ? stationsResponse.data
+        : []
 
       const parsedOrders = ordersData.map((order: any) => ({
         id: order.Id,
@@ -60,10 +76,23 @@ export default function AccountingDashboard() {
       }))
 
       const totalOrders = parsedOrders.length
-      const pendingOrders = parsedOrders.filter((order) => order.orderStatus === 'Pending Approval').length
-      const completedOrders = parsedOrders.filter((order) => order.orderStatus === 'Completed').length
-      const inTransitOrders = parsedOrders.filter((order) => ['Approved', 'Processing', 'Delivering'].includes(order.orderStatus)).length
-      const monthlyRevenue = parsedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+
+      const pendingOrders = parsedOrders.filter(
+        (order) => order.orderStatus === 'Pending Approval'
+      ).length
+
+      const completedOrders = parsedOrders.filter(
+        (order) => order.orderStatus === 'Completed'
+      ).length
+
+      const inTransitOrders = parsedOrders.filter((order) =>
+        ['Approved', 'Processing', 'Delivering'].includes(order.orderStatus)
+      ).length
+
+      const monthlyRevenue = parsedOrders.reduce(
+        (sum, order) => sum + (order.totalAmount || 0),
+        0
+      )
 
       setStats({
         totalOrders,
@@ -73,9 +102,11 @@ export default function AccountingDashboard() {
         monthlyRevenue,
         activeStations: stationsData.length
       })
+
       setRecentOrders(parsedOrders.slice(0, 4))
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+
       setStats({
         totalOrders: 0,
         pendingOrders: 0,
@@ -84,6 +115,7 @@ export default function AccountingDashboard() {
         monthlyRevenue: 0,
         activeStations: 0
       })
+
       setRecentOrders([])
     } finally {
       setLoading(false)
@@ -91,30 +123,44 @@ export default function AccountingDashboard() {
   }
 
   const statusMap: Record<string, string> = {
-    'Draft': 'Đơn tạm',
+    Draft: 'Đơn tạm',
     'Pending Approval': 'Chờ duyệt',
-    'Approved': 'Đã duyệt',
-    'Processing': 'Đang xử lý',
-    'Delivering': 'Đang giao hàng',
-    'Completed': 'Hoàn thành',
-    'Cancelled': 'Đã hủy',
-    'Rejected': 'Từ chối',
-    'Sent': 'Đã gửi',
-    'Delivered': 'Đã giao'
+    Approved: 'Đã duyệt',
+    Processing: 'Đang xử lý',
+    Delivering: 'Đang giao hàng',
+    Completed: 'Hoàn thành',
+    Cancelled: 'Đã hủy',
+    Rejected: 'Từ chối',
+    Sent: 'Đã gửi',
+    Delivered: 'Đã giao'
   }
 
-  const getStatusLabel = (status: string) => statusMap[status] || status
+  const getStatusLabel = (status: string) =>
+    statusMap[status] || status
 
-  const getStatusColor = (status: string) => {
+  const getStatusClass = (status: string) => {
     switch (status) {
-      case 'Draft': return '#f3f4f6'
-      case 'Pending Approval': return '#fff7d6'
-      case 'Approved': return '#dbeafe'
-      case 'Processing': return '#fff4e6'
-      case 'Delivering': return '#e0f7ff'
-      case 'Completed': return '#dcfce7'
-      case 'Cancelled': return '#fee2e2'
-      default: return '#d1d5db'
+      case 'Pending Approval':
+        return 'status-warning'
+
+      case 'Approved':
+        return 'status-info'
+
+      case 'Processing':
+        return 'status-processing'
+
+      case 'Delivering':
+        return 'status-delivering'
+
+      case 'Completed':
+        return 'status-success'
+
+      case 'Cancelled':
+      case 'Rejected':
+        return 'status-danger'
+
+      default:
+        return 'status-default'
     }
   }
 
@@ -143,11 +189,16 @@ export default function AccountingDashboard() {
           <h1>Bộ phận Kế toán Dashboard</h1>
           <p>Quản lý đơn hàng và phê duyệt trước khi gửi trạm</p>
         </div>
+
         <div className="header-actions">
-          <Link to="/accounting/orders" className="action-btn primary">
+          <Link
+            to="/accounting/orders"
+            className="action-btn primary"
+          >
             <FiPlus size={16} />
             Quản lý đơn
           </Link>
+
           <button className="action-btn secondary">
             <FiBarChart2 size={16} />
             Báo cáo
@@ -155,16 +206,19 @@ export default function AccountingDashboard() {
         </div>
       </div>
 
+      {/* STATS */}
       <div className="stats-grid">
         <div className="stat-card stat-card--primary">
           <div className="stat-icon">
             <FiShoppingCart size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Tổng đơn hàng</h3>
             <div className="stat-value">{stats.totalOrders}</div>
             <div className="stat-subtitle">Tháng này</div>
           </div>
+
           <div className="stat-decoration">
             <div className="decoration-circle"></div>
           </div>
@@ -174,13 +228,15 @@ export default function AccountingDashboard() {
           <div className="stat-icon">
             <FiClock size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Chờ duyệt</h3>
             <div className="stat-value">{stats.pendingOrders}</div>
             <div className="stat-subtitle">Cần xử lý</div>
           </div>
+
           <div className="stat-decoration">
-            <div className="decoration-triangle"></div>
+            <div className="decoration-circle"></div>
           </div>
         </div>
 
@@ -188,11 +244,13 @@ export default function AccountingDashboard() {
           <div className="stat-icon">
             <FiTruck size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Đang vận chuyển</h3>
             <div className="stat-value">{stats.inTransitOrders}</div>
             <div className="stat-subtitle">Trong lộ trình</div>
           </div>
+
           <div className="stat-decoration">
             <div className="decoration-circle"></div>
           </div>
@@ -202,13 +260,15 @@ export default function AccountingDashboard() {
           <div className="stat-icon">
             <FiCheckCircle size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Hoàn thành</h3>
             <div className="stat-value">{stats.completedOrders}</div>
             <div className="stat-subtitle">Đã giao</div>
           </div>
+
           <div className="stat-decoration">
-            <div className="decoration-triangle"></div>
+            <div className="decoration-circle"></div>
           </div>
         </div>
 
@@ -216,11 +276,15 @@ export default function AccountingDashboard() {
           <div className="stat-icon">
             <FiTrendingUp size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Doanh thu</h3>
-            <div className="stat-value">{formatCurrency(stats.monthlyRevenue)}</div>
+            <div className="stat-value">
+              {formatCurrency(stats.monthlyRevenue)}
+            </div>
             <div className="stat-subtitle">Tháng này</div>
           </div>
+
           <div className="stat-decoration">
             <div className="decoration-circle"></div>
           </div>
@@ -230,43 +294,64 @@ export default function AccountingDashboard() {
           <div className="stat-icon">
             <FiMapPin size={24} />
           </div>
+
           <div className="stat-content">
             <h3>Trạm hoạt động</h3>
             <div className="stat-value">{stats.activeStations}</div>
             <div className="stat-subtitle">Đang online</div>
           </div>
+
           <div className="stat-decoration">
-            <div className="decoration-triangle"></div>
+            <div className="decoration-circle"></div>
           </div>
         </div>
       </div>
 
+      {/* CONTENT */}
       <div className="dashboard-grid">
+        {/* RECENT ORDERS */}
         <div className="dashboard-card">
           <div className="card-header">
             <h2>Đơn hàng gần đây</h2>
-            <Link to="/accounting/orders" className="view-all-btn">Xem tất cả</Link>
+
+            <Link
+              to="/accounting/orders"
+              className="view-all-btn"
+            >
+              Xem tất cả
+            </Link>
           </div>
 
           <div className="orders-list">
             {recentOrders.map((order) => (
               <div key={order.id} className="order-item">
                 <div className="order-info">
-                  <div className="order-code">{order.orderCode}</div>
+                  <div className="order-code">
+                    {order.orderCode}
+                  </div>
+
                   <div className="order-details">
-                    <span className="order-amount">{formatCurrency(order.totalAmount)}</span>
-                    <span className="order-station">{order.destinationStation}</span>
+                    <span className="order-amount">
+                      {formatCurrency(order.totalAmount)}
+                    </span>
+
+                    <span className="order-station">
+                      {order.destinationStation}
+                    </span>
                   </div>
                 </div>
+
                 <div className="order-status">
                   <span
-                    className="status-badge"
-                    style={{ backgroundColor: getStatusColor(order.orderStatus), color: order.orderStatus === 'Draft' ? '#4b5563' : 'white' }}
+                    className={`status-badge ${getStatusClass(order.orderStatus)}`}
                   >
                     {getStatusLabel(order.orderStatus)}
                   </span>
+
                   <div className="order-date">
-                    {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                    {new Date(order.createdAt).toLocaleDateString(
+                      'vi-VN'
+                    )}
                   </div>
                 </div>
               </div>
@@ -274,18 +359,25 @@ export default function AccountingDashboard() {
           </div>
         </div>
 
+        {/* QUICK ACTIONS */}
         <div className="dashboard-card">
           <div className="card-header">
             <h2>Thao tác nhanh</h2>
           </div>
 
           <div className="quick-actions-grid">
-            <Link to="/accounting/orders" className="quick-action-btn primary">
+            <Link
+              to="/accounting/orders"
+              className="quick-action-btn primary"
+            >
               <FiPlus size={24} />
               <span>Quản lý đơn</span>
             </Link>
 
-            <Link to="/accounting/orders" className="quick-action-btn secondary">
+            <Link
+              to="/accounting/orders"
+              className="quick-action-btn secondary"
+            >
               <FiPackage size={24} />
               <span>Đơn chờ duyệt</span>
             </Link>
