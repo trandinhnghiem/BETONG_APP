@@ -869,7 +869,10 @@ export default function AdminDashboard() {
                   <span>Xuất báo cáo</span>
                 </button>
 
-                <button className="quick-action-btn success">
+                <button
+                  className="quick-action-btn success"
+                  onClick={() => navigate('/admin/statistics')}
+                >
                   <FiBarChart2 size={24} />
                   <span>Xem thống kê</span>
                 </button>

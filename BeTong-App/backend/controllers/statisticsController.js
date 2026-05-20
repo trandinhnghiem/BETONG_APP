@@ -1,80 +1,236 @@
-const { getConnection } = require('../config/database')
-// sửa đúng path theo project của bạn
+const { getConnection } =
+  require('../config/database')
 
-exports.getStatistics = async (req, res) => {
-  try {
+exports.getStatistics =
+  async (req, res) => {
 
-    const pool = await getConnection()
+    try {
 
-    // ======================
-    // DOANH THU THEO THÁNG
-    // ======================
+      const pool =
+        await getConnection()
 
-    const revenueResult = await pool
-      .request()
-      .query(`
-        SELECT
-          MONTH(CreatedAt) as month,
-          SUM(TotalAmount) as revenue
-        FROM Orders
-        GROUP BY MONTH(CreatedAt)
-        ORDER BY month
+      // ======================
+      // FILTER
+      // ======================
+
+      const type = req.query.type
+
+      const from = req.query.from
+
+      const to = req.query.to
+
+      let whereClause = ''
+
+      // FILTER PRESET
+
+      if (type === '7days') {
+
+        whereClause = `
+          WHERE CreatedAt >=
+          DATEADD(DAY, -7, GETDATE())
+        `
+
+      } else if (type === '30days') {
+
+        whereClause = `
+          WHERE CreatedAt >=
+          DATEADD(DAY, -30, GETDATE())
+        `
+
+      } else if (type === '1year') {
+
+        whereClause = `
+          WHERE CreatedAt >=
+          DATEADD(YEAR, -1, GETDATE())
+        `
+      }
+
+      // FILTER CUSTOM DATE
+
+      if (from && to) {
+
+        whereClause = `
+          WHERE CAST(CreatedAt AS DATE)
+          BETWEEN '${from}'
+          AND '${to}'
+        `
+      }
+
+      // ======================
+      // REVENUE CHART
+      // ======================
+
+      const revenueResult =
+        await pool.request().query(`
+
+          SELECT
+            CAST(CreatedAt AS DATE)
+              as date,
+
+            SUM(TotalAmount)
+              as revenue
+
+          FROM Orders
+
+          ${whereClause}
+
+          GROUP BY
+            CAST(CreatedAt AS DATE)
+
+          ORDER BY date
+
       `)
 
-    // ======================
-    // TRẠNG THÁI ĐƠN
-    // ======================
+      // ======================
+      // STATUS PIE
+      // ======================
 
-    const statusResult = await pool
-      .request()
-      .query(`
-        SELECT
-          OrderStatus,
-          COUNT(*) as total
-        FROM Orders
-        GROUP BY OrderStatus
+      const statusResult =
+        await pool.request().query(`
+
+          SELECT
+            OrderStatus,
+
+            COUNT(*) as total
+
+          FROM Orders
+
+          ${whereClause}
+
+          GROUP BY OrderStatus
+
       `)
 
-    // ======================
-    // FORMAT DATA
-    // ======================
+      // ======================
+      // SUMMARY
+      // ======================
 
-    const salesData =
-      revenueResult.recordset.map(item => ({
-        month: `T${item.month}`,
-        revenue: Number(item.revenue || 0)
-      }))
+      const summaryResult =
+        await pool.request().query(`
 
-    const statusData =
-      statusResult.recordset.map(item => ({
-        name: item.OrderStatus,
-        value: item.total,
-        color:
-          item.OrderStatus === 'Completed'
-            ? '#43e97b'
-            : item.OrderStatus === 'Pending'
-            ? '#4facfe'
-            : '#f5576c'
-      }))
+          SELECT
 
-    res.json({
+            SUM(TotalAmount)
+              as revenue,
+
+            COUNT(*) as orders,
+
+            COUNT(DISTINCT CustomerName)
+              as customers
+
+          FROM Orders
+
+          ${whereClause}
+
+      `)
+
+      // ======================
+      // FORMAT SALES DATA
+      // ======================
+
+      const salesData =
+        revenueResult.recordset.map(
+          item => ({
+
+            month:
+              new Date(item.date)
+                .toLocaleDateString(
+                  'vi-VN',
+                  {
+                    day: '2-digit',
+                    month: '2-digit'
+                  }
+                ),
+
+            revenue:
+              Number(item.revenue || 0),
+
+            date: item.date
+
+          })
+        )
+
+      // ======================
+      // FORMAT STATUS DATA
+      // ======================
+
+      const statusData =
+        statusResult.recordset.map(
+          item => ({
+
+            name: item.OrderStatus,
+
+            value: item.total,
+
+            color:
+
+              item.OrderStatus ===
+              'Completed'
+
+                ? '#22c55e'
+
+              : item.OrderStatus ===
+                'Pending'
+
+                ? '#3b82f6'
+
+              : item.OrderStatus ===
+                'Rejected'
+
+                ? '#ef4444'
+
+              : '#f59e0b'
+
+          })
+        )
+
+      // ======================
+      // SUMMARY DATA
+      // ======================
+
+      const summary =
+        summaryResult.recordset[0]
+
+      // ======================
+      // RESPONSE
+      // ======================
+
+      res.json({
+
         salesData,
+
         statusData,
 
         summary: {
-            revenue: 250000000,
-            orders: 120,
-            customers: 55,
-            growth: 18
+
+          revenue:
+            Number(
+              summary.revenue || 0
+            ),
+
+          orders:
+            Number(
+              summary.orders || 0
+            ),
+
+          customers:
+            Number(
+              summary.customers || 0
+            ),
+
+          growth: 18
         }
-        })
+      })
 
-  } catch (err) {
+    } catch (err) {
 
-    console.error('Statistics Error:', err)
+      console.error(
+        'Statistics Error:',
+        err
+      )
 
-    res.status(500).json({
-      message: 'Lỗi server'
-    })
-  }
+      res.status(500).json({
+        message: 'Lỗi server'
+      })
+    }
 }

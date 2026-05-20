@@ -107,13 +107,13 @@
 }
 
 .stats-card h4 {
-  color: #6b7280;
+  color: rgba(255,255,255,0.8);
   margin-bottom: 12px;
   font-size: 15px;
 }
 
 .stats-card h2 {
-  color: #111827;
+  color: white;
   font-size: 32px;
 }
 
@@ -131,6 +131,13 @@
 
   border:
     1px solid rgba(255,255,255,0.3);
+
+  border-radius: 28px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.06);
 }
 
 .statistics-card h2 {
@@ -167,9 +174,14 @@
 }
 
 .statistics-header h1 {
-  font-size: 42px;
-  font-weight: 800;
-  color: #111827;
+  color: #2c3e50;
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .statistics-header p {
