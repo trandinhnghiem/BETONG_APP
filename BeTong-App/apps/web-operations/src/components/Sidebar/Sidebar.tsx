@@ -21,38 +21,39 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [systemInfo, setSystemInfo] = useState({
-  companyName: 'BÊ TÔNG TÂY ĐÔ',
-  systemName: 'CRM / ERP SYSTEM'
-})
+    companyName: 'BÊ TÔNG TÂY ĐÔ',
+    systemName: 'CRM / ERP SYSTEM'
+  })
 
   const userRole = localStorage.getItem('userRole')
-  const userData = JSON.parse(
-  localStorage.getItem('user') || '{}'
-)
 
-const displayName =
-  userData.FullName ||
-  userData.fullName ||
-  userData.Username ||
-  userData.username ||
-  userRole
+  const userData = JSON.parse(
+    localStorage.getItem('user') || '{}'
+  )
+
+  const displayName =
+    userData.FullName ||
+    userData.fullName ||
+    userData.Username ||
+    userData.username ||
+    userRole
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
   useEffect(() => {
-  const savedSettings = localStorage.getItem('systemSettings')
+    const savedSettings = localStorage.getItem('systemSettings')
 
-  if (savedSettings) {
-    const parsed = JSON.parse(savedSettings)
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings)
 
-    setSystemInfo({
-      companyName: parsed.companyName,
-      systemName: parsed.systemName
-    })
-  }
-}, [])
+      setSystemInfo({
+        companyName: parsed.companyName,
+        systemName: parsed.systemName
+      })
+    }
+  }, [])
 
   const getNavItems = () => {
     switch (userRole) {
@@ -97,18 +98,18 @@ const displayName =
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="logo-section">
-        <div className="logo-icon">
-          <img
-            src={companyLogo}
-            alt="Logo"
-            className="company-logo"
-          />
-        </div>
+          <div className="logo-icon">
+            <img
+              src={companyLogo}
+              alt="Logo"
+              className="company-logo"
+            />
+          </div>
 
-        <div className="logo-text">
-          <h2>{systemInfo.companyName}</h2>
-          <p>{systemInfo.systemName}</p>
-        </div>
+          <div className="logo-text">
+            <h2>{systemInfo.companyName}</h2>
+            <p>{systemInfo.systemName}</p>
+          </div>
         </div>
 
         <div className="sidebar-controls">
@@ -152,22 +153,22 @@ const displayName =
       </div>
 
       <div className="sidebar-footer">
-  <div className="user-box">
+        <div className="user-box">
+          <div className="user-avatar">
+            {displayName?.split(' ')[1]?.charAt(0) || 'U'}
+          </div>
 
-    <div className="user-avatar">
-      {displayName?.split(' ')[1]?.charAt(0) || 'U'}
-    </div>
+          <div className="user-info">
+            <h4 title={displayName}>
+              {displayName}
+            </h4>
 
-    <div className="user-info">
-      <h4>{displayName}</h4>
-
-      <span className="status-badge online">
-        Hoạt động
-      </span>
-    </div>
-
-  </div>
-</div>
+            <span className="status-badge online">
+              Hoạt động
+            </span>
+          </div>
+        </div>
+      </div>
     </aside>
   )
 }

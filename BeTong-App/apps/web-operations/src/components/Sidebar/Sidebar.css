@@ -17,28 +17,13 @@
 }
 
 [data-theme='dark'] {
-  /* nền xanh navy đậm */
   --sidebar-bg: rgb(2, 40, 80);
-
-  /* chữ trắng xanh nhẹ */
   --sidebar-text: #e2e8f0;
-
-  /* chữ phụ */
   --sidebar-muted: #8ea3c7;
-
-  /* xanh primary sáng nổi bật */
   --sidebar-primary: #4f7cff;
-
-  /* border xanh đậm */
   --sidebar-border: #1b2a4a;
-
-  /* hover xanh navy */
   --sidebar-hover: #16213e;
-
-  /* shadow xanh */
   --sidebar-shadow: 0 10px 30px rgba(15, 23, 47, 0.45);
-
-  /* background content */
   --content-bg: #081120;
 }
 
@@ -341,7 +326,7 @@
 
   background: var(--sidebar-hover);
 
-  padding: 10px;
+  padding: 12px;
 
   border-radius: 16px;
 
@@ -363,32 +348,71 @@
 
   color: white;
   font-weight: 700;
+
+  flex-shrink: 0;
 }
 
 .user-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  min-width: 0;
+  flex: 1;
+
   overflow: hidden;
   transition: all 0.3s ease;
 }
 
 .user-info h4 {
-  margin: 0;
+  margin: 0 0 6px 0;
 
   color: var(--sidebar-text);
 
   font-size: 14px;
-}
+  font-weight: 700;
 
-.user-info p {
-  margin: 2px 0 0;
+  line-height: 1.2;
 
-  color: var(--sidebar-muted);
-
-  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar.collapsed .user-info {
   opacity: 0;
   width: 0;
+}
+
+/* =========================
+   STATUS BADGE
+========================= */
+
+.status-badge.online {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: fit-content;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  background: #22c55e;
+
+  color: white;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  line-height: 1;
+
+  white-space: nowrap;
+
+  box-shadow: none;
+
+  text-transform: none;
 }
 
 /* =========================
@@ -439,14 +463,4 @@
   .user-box {
     justify-content: center;
   }
-}
-
-.status-badge.online {
-  background: #22c55e; /* xanh lá gọn nhẹ */
-
-  color: white;
-
-  box-shadow: none;
-
-  text-transform: none; /* không in hoa */
 }
