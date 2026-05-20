@@ -146,7 +146,7 @@ export default function Statistics() {
       <div className="statistics-header">
 
         <div>
-          <h1>Business Analytics</h1>
+          <h1>Quản lý thống kê</h1>
 
           <p>
             Theo dõi doanh thu,
@@ -332,65 +332,73 @@ export default function Statistics() {
           </h2>
 
           <ResponsiveContainer
-            width="100%"
-            height={450}
-          >
+  width="100%"
+  height={450}
+>
 
-            <AreaChart data={salesData}>
+  <AreaChart data={salesData}>
 
-              <defs>
+    <defs>
 
-                <linearGradient
-                  id="colorRevenue"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
+      <linearGradient
+        id="colorRevenue"
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="1"
+      >
 
-                  <stop
-                    offset="5%"
-                    stopColor="#ffffff"
-                    stopOpacity={0.4}
-                  />
+        <stop
+          offset="5%"
+          stopColor="#435ebe"
+          stopOpacity={0.35}
+        />
 
-                  <stop
-                    offset="95%"
-                    stopColor="#ffffff"
-                    stopOpacity={0}
-                  />
+        <stop
+          offset="95%"
+          stopColor="#435ebe"
+          stopOpacity={0}
+        />
 
-                </linearGradient>
+      </linearGradient>
 
-              </defs>
+    </defs>
 
-              <CartesianGrid
-                strokeDasharray="3 3"
-                opacity={0.1}
-              />
+    <CartesianGrid
+      strokeDasharray="3 3"
+      opacity={0.08}
+    />
 
-              <XAxis
-                dataKey="month"
-                stroke="#94a3b8"
-              />
+    <XAxis
+      dataKey="month"
+      stroke="#94a3b8"
+    />
 
-              <YAxis
-                stroke="#94a3b8"
-              />
+    <YAxis
+      stroke="#94a3b8"
+    />
 
-              <Tooltip />
+    <Tooltip
+      contentStyle={{
+        borderRadius: '16px',
+        border: 'none',
+        boxShadow:
+          '0 10px 30px rgba(0,0,0,0.1)'
+      }}
+    />
 
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#ffffff"
-                strokeWidth={4}
-                fill="url(#colorRevenue)"
-              />
+    <Area
+      type="monotone"
+      dataKey="revenue"
+      stroke="#435ebe"
+      strokeWidth={4}
+      fill="url(#colorRevenue)"
+      dot={false}
+    />
 
-            </AreaChart>
+  </AreaChart>
 
-          </ResponsiveContainer>
+</ResponsiveContainer>
 
         </div>
 

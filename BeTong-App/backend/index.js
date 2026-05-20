@@ -58,6 +58,9 @@ const authRoutes = require('./routes/authRoutes')
 const orderRoutes = require('./routes/orderRoutes')
 const notificationRoutes = require('./routes/notificationRoutes')
 const userRoutes = require('./routes/userRoutes')
+const statisticsRoutes = require('./routes/statisticsRoutes')
+
+app.use('/api/statistics', statisticsRoutes)
 
 // Import database
 const { getConnection } = require('./config/database')
