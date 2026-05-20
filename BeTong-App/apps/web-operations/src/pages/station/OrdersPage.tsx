@@ -124,20 +124,20 @@ export default function StationOrdersPage() {
                   <div className="actions">
 
                     {String(order.orderStatus).trim() === 'Approved' && (
-                      <button onClick={() => updateStatus(order.id, 'Sent')}>
-                        🚚 Giao
+                      <button onClick={() => updateStatus(order.id, 'Processing')}>
+                        ⚙️ Xử lý
                       </button>
                     )}
 
-                    {order.orderStatus === 'Sent' && (
-                      <button onClick={() => updateStatus(order.id, 'Delivered')}>
-                        ✅ Đã giao
+                    {order.orderStatus === 'Processing' && (
+                      <button onClick={() => updateStatus(order.id, 'Delivering')}>
+                        🚚 Giao hàng
                       </button>
                     )}
 
-                    {order.orderStatus === 'Delivered' && (
+                    {order.orderStatus === 'Delivering' && (
                       <button onClick={() => updateStatus(order.id, 'Completed')}>
-                        ✔ Hoàn thành
+                        ✅ Hoàn thành
                       </button>
                     )}
 

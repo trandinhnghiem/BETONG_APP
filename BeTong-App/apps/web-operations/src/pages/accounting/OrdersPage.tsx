@@ -15,10 +15,10 @@ interface Order {
 const statusMap: Record<string, string> = {
   'Pending Approval': 'Chờ duyệt',
   'Approved': 'Đã duyệt',
-  'Rejected': 'Từ chối',
-  'Sent': 'Đang giao',
-  'Delivered': 'Đã giao',
-  'Completed': 'Hoàn thành'
+  'Processing': 'Đang xử lý',
+  'Delivering': 'Đang giao',
+  'Completed': 'Hoàn thành',
+  'Cancelled': 'Đã hủy'
 }
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -60,14 +60,14 @@ export default function AccountingOrdersPage() {
     if (!action) return
 
     try {
-      if (action === 'approve_send') {
+      if (action === 'approve') {
         try {
-          await apiClient.post(`/api/orders/${order.id}/approve`, {
-            approvalReason: 'Phê duyệt bởi kế toán'
+          await apiClient.post(`/api/orders/${order.id}/status`, {
+            status: 'Approved'
           })
 
           fetchOrders()
-          alert('Đã phê duyệt và gửi trạm')
+          alert('Đã phê duyệt đơn hàng')
 
         } catch (err: any) {
           console.error(err.response?.data || err)
@@ -75,28 +75,22 @@ export default function AccountingOrdersPage() {
         }
       }
 
-      if (action === 'send') {
-        if (order.orderStatus !== 'Approved') {
-          alert('Đơn phải được phê duyệt trước khi gửi trạm!')
-          return
-        }
-
-        await apiClient.post(`/api/orders/${order.id}/status`, {
-          status: 'Sent'
-        })
-
-        alert('Đã gửi trạm')
-      }
-
       if (action === 'reject') {
-        const reason = prompt('Nhập lý do từ chối:')
-        if (!reason) return
+        try {
+          const reason = prompt('Nhập lý do từ chối:')
+          if (!reason) return
 
-        await apiClient.post(`/api/orders/${order.id}/reject`, {
-          rejectionReason: reason
-        })
+          await apiClient.post(`/api/orders/${order.id}/status`, {
+            status: 'Cancelled'
+          })
 
-        alert('Đã từ chối đơn')
+          fetchOrders()
+          alert('Đã từ chối đơn hàng')
+
+        } catch (err: any) {
+          console.error(err.response?.data || err)
+          alert(err.response?.data?.error || 'Thao tác thất bại')
+        }
       }
 
       // reset action đã chọn
@@ -169,8 +163,8 @@ export default function AccountingOrdersPage() {
         }
       >
         <option value="">-- Chọn --</option>
-        <option value="approve_send">
-          Phê duyệt & Gửi trạm
+        <option value="approve">
+          Phê duyệt
         </option>
 
         <option value="reject">

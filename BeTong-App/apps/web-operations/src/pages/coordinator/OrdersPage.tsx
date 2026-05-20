@@ -101,18 +101,29 @@ export default function CoordinatorOrdersPage() {
       fetchOrders()
       alert('Đã gửi kế toán')
     } catch (err) {
+      console.error(err)
       alert('Gửi thất bại')
     }
   }
 
-  const getStatusClass = (status: string) => {
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'Approved': return 'status approved'
-      case 'Pending Approval': return 'status pending'
-      case 'Rejected': return 'status rejected'
-      case 'Completed': return 'status completed'
-      case 'Sent': return 'status sent'
-      default: return 'status'
+      case 'Draft':
+        return { backgroundColor: '#ecf0f1', color: '#7f8c8d' }
+      case 'Pending Approval':
+        return { backgroundColor: '#fff7e6', color: '#d68910' }
+      case 'Approved':
+        return { backgroundColor: '#e6f7ff', color: '#1d6fff' }
+      case 'Processing':
+        return { backgroundColor: '#fff4e6', color: '#c97c0e' }
+      case 'Delivering':
+        return { backgroundColor: '#e6fbff', color: '#0f7c8f' }
+      case 'Completed':
+        return { backgroundColor: '#e6ffed', color: '#239a38' }
+      case 'Cancelled':
+        return { backgroundColor: '#ffe6e6', color: '#c0392b' }
+      default:
+        return { backgroundColor: '#f0f0f0', color: '#333' }
     }
   }
 
@@ -139,12 +150,13 @@ export default function CoordinatorOrdersPage() {
 
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="All">Tất cả trạng thái</option>
+          <option value="Draft">Nháp</option>
           <option value="Pending Approval">Chờ duyệt</option>
           <option value="Approved">Đã duyệt</option>
-          <option value="Sent">Đã gửi</option>
-          <option value="Delivered">Đã giao</option>
+          <option value="Processing">Đang xử lý</option>
+          <option value="Delivering">Đang giao</option>
           <option value="Completed">Hoàn thành</option>
-          <option value="Rejected">Từ chối</option>
+          <option value="Cancelled">Hủy</option>
         </select>
 
         <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
@@ -183,7 +195,7 @@ export default function CoordinatorOrdersPage() {
                   </td>
 
                   <td>
-                    <span className={getStatusClass(o.orderStatus)}>
+                    <span className="status" style={getStatusStyle(o.orderStatus)}>
                       {o.orderStatus}
                     </span>
                   </td>
@@ -193,8 +205,7 @@ export default function CoordinatorOrdersPage() {
                   </td>
 
                   <td>
-                    {(o.orderStatus === 'Approved' ||
-                      o.orderStatus === 'Pending Approval') && (
+                    {o.orderStatus === 'Draft' && (
                       <button
                         className="action-btn"
                         onClick={() => sendOrderToStation(o.id)}

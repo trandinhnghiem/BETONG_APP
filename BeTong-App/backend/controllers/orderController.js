@@ -59,7 +59,7 @@ class OrderController {
           VALUES (
             @OrderCode, @CoordinatorId, @SourceStationId,
             @DestinationStationId, @TotalAmount, @Notes,
-            'Pending Approval', GETDATE(), GETDATE()
+            'Draft', GETDATE(), GETDATE()
           );
 
           SELECT SCOPE_IDENTITY() AS OrderId;
@@ -83,32 +83,7 @@ class OrderController {
           `)
       }
 
-      const io = req.app.get('io')
-
-      const createdMessage = `Đơn hàng ${orderCode} mới đã được tạo, đang chờ duyệt.`
-      try {
-        await NotificationService.notifyRoleUsers(
-          io,
-          'Accounting',
-          'NewOrder',
-          'Đơn hàng mới cần duyệt',
-          createdMessage,
-          orderId
-        )
-
-        await NotificationService.notifyRoleUsers(
-          io,
-          'Admin',
-          'NewOrder',
-          'Đơn hàng mới vừa được tạo',
-          createdMessage,
-          orderId
-        )
-      } catch (notifyError) {
-        console.error('Failed to send new order notifications:', notifyError)
-      }
-
-      res.json({ message: 'OK', orderId, orderCode })
+      res.status(201).json({ message: 'Order created', orderId, orderCode })
 
     } catch (err) {
       res.status(500).json({ error: err.message })
@@ -117,181 +92,124 @@ class OrderController {
 
   // ================= UPDATE STATUS (FIX FOR ROUTE) =================
   static async updateStatus(req, res) {
-  try {
-
-    const orderId = parseInt(req.params.orderId)
-    const { status } = req.body
-
-    const valid = [
-      'Draft',
-      'Pending Approval',
-      'Approved',
-      'Rejected',
-      'Sent',
-      'Delivered',
-      'Completed'
-    ]
-
-    if (!valid.includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' })
-    }
-
-    await OrderModel.updateStatus(orderId, status, req.user.Id)
-
-    const pool = await getConnection()
-
-    const order = await pool.request()
-      .input('OrderId', sql.Int, orderId)
-      .query(`
-        SELECT Id, OrderCode, DestinationStationId, CoordinatorId
-        FROM Orders WHERE Id = @OrderId
-      `)
-
-    const o = order.recordset[0]
-
-    const io = req.app.get('io')
-    const statusMessage = `Đơn hàng ${o.OrderCode} đã chuyển sang trạng thái ${status}.`
-
     try {
-      await NotificationService.notifyStationUsers(
-        io,
-        o.DestinationStationId,
-        'OrderStatusChanged',
-        'Trạng thái đơn hàng đã thay đổi',
-        statusMessage,
-        o.Id
-      )
-
-      if (status === 'Completed') {
-        await NotificationService.notifyRoleUsers(
-          io,
-          'Accounting',
-          'RevenueUpdate',
-          'Doanh thu mới',
-          `Đơn hàng ${o.OrderCode} đã hoàn tất và cần đối soát doanh thu.`,
-          o.Id
-        )
-      }
-
-      if (status === 'Rejected' && o.CoordinatorId) {
-        await NotificationService.sendUserNotification(
-          io,
-          o.CoordinatorId,
-          'OrderRejected',
-          'Đơn hàng bị từ chối',
-          `Đơn hàng ${o.OrderCode} đã bị từ chối.`,
-          o.Id
-        )
-      }
-    } catch (notifyError) {
-      console.error('Failed to send status update notifications:', notifyError)
-    }
-
-    return res.json({ message: 'Updated', status })
-
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-}
-
-  // ================= APPROVE =================
-  static async approveOrder(req, res) {
-  try {
-    const orderId = parseInt(req.params.orderId)
-
-    const pool = await getConnection()
-
-    // 1. update status
-    await OrderModel.updateStatus(orderId, 'Approved', req.user.Id)
-
-    // 2. get order
-    const result = await pool.request()
-      .input('OrderId', sql.Int, orderId)
-      .query(`
-        SELECT Id, OrderCode, DestinationStationId, CoordinatorId, OrderStatus
-        FROM Orders WHERE Id = @OrderId
-      `)
-
-    const order = result.recordset[0]
-    if (!order) return res.status(404).json({ error: 'Not found' })
-
-    const io = req.app.get('io')
-
-    const message = `Đơn hàng ${order.OrderCode} đã được duyệt.`
-
-    try {
-      await NotificationService.notifyStationUsers(
-        io,
-        order.DestinationStationId,
-        'OrderApproved',
-        'Đơn hàng đã duyệt',
-        message,
-        order.Id
-      )
-
-      if (order.CoordinatorId) {
-        await NotificationService.sendUserNotification(
-          io,
-          order.CoordinatorId,
-          'OrderApproved',
-          'Đơn hàng của bạn đã duyệt',
-          message,
-          order.Id
-        )
-      }
-    } catch (notifyError) {
-      console.error('Failed to send approval notifications:', notifyError)
-    }
-
-    res.json({ message: 'Approved' })
-
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-}
-
-  // ================= REJECT =================
-  static async rejectOrder(req, res) {
-    try {
-
       const orderId = parseInt(req.params.orderId)
+      const { status } = req.body
 
-      await OrderModel.updateStatus(orderId, 'Rejected', req.user.Id)
+      const allowedStatuses = [
+        'Draft',
+        'Pending Approval',
+        'Approved',
+        'Processing',
+        'Delivering',
+        'Completed',
+        'Cancelled'
+      ]
 
-    const pool = await getConnection()
-    const result = await pool.request()
-      .input('OrderId', sql.Int, orderId)
-      .query(`
-        SELECT Id, OrderCode, CoordinatorId
-        FROM Orders WHERE Id = @OrderId
-      `)
-
-    const order = result.recordset[0]
-    const message = order
-      ? `Đơn hàng ${order.OrderCode} đã bị từ chối.`
-      : 'Đơn hàng đã bị từ chối.'
-
-    if (order?.CoordinatorId) {
-      try {
-        const io = req.app.get('io')
-        await NotificationService.sendUserNotification(
-          io,
-          order.CoordinatorId,
-          'OrderRejected',
-          'Đơn hàng bị từ chối',
-          message,
-          order.Id
-        )
-      } catch (notifyError) {
-        console.error('Failed to send rejection notification:', notifyError)
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' })
       }
-    }
 
-    res.json({ message: 'Rejected' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+      const order = await OrderModel.findById(orderId)
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' })
+      }
+
+      const currentStatus = order.OrderStatus
+      const transitions = {
+        Draft: ['Pending Approval'],
+        'Pending Approval': ['Approved', 'Cancelled'],
+        Approved: ['Processing'],
+        Processing: ['Delivering'],
+        Delivering: ['Completed'],
+        Completed: [],
+        Cancelled: []
+      }
+
+      if (!transitions[currentStatus]?.includes(status)) {
+        return res.status(400).json({ error: `Invalid transition from ${currentStatus} to ${status}` })
+      }
+
+      const roleAllowed = {
+        Coordinator: {
+          Draft: ['Pending Approval']
+        },
+        Accounting: {
+          'Pending Approval': ['Approved', 'Cancelled']
+        },
+        Station: {
+          Approved: ['Processing'],
+          Processing: ['Delivering'],
+          Delivering: ['Completed']
+        }
+      }
+
+      const allowedByRole = roleAllowed[req.user.Role]?.[currentStatus] || []
+      if (!allowedByRole.includes(status)) {
+        return res.status(403).json({ error: 'You are not allowed to perform this status transition' })
+      }
+
+      const updated = await OrderModel.updateStatus(orderId, status, req.user.Id)
+      if (!updated) {
+        return res.status(500).json({ error: 'Failed to update status' })
+      }
+
+      const io = req.app.get('io')
+      const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
+
+      try {
+        if (status === 'Pending Approval') {
+          await NotificationService.notifyRoleUsers(
+            io,
+            'Accounting',
+            'OrderPendingApproval',
+            'Đơn hàng mới chờ duyệt',
+            statusMessage,
+            order.Id
+          )
+        }
+
+        if (status === 'Approved') {
+          await NotificationService.notifyStationUsers(
+            io,
+            order.DestinationStationId,
+            'OrderApproved',
+            'Đơn hàng đã được duyệt',
+            statusMessage,
+            order.Id
+          )
+        }
+
+        if (status === 'Cancelled' && order.CoordinatorId) {
+          await NotificationService.sendUserNotification(
+            io,
+            order.CoordinatorId,
+            'OrderCancelled',
+            'Đơn hàng đã bị hủy',
+            statusMessage,
+            order.Id
+          )
+        }
+
+        if (status === 'Completed') {
+          await NotificationService.notifyRoleUsers(
+            io,
+            'Accounting',
+            'OrderCompleted',
+            'Đơn hàng hoàn thành',
+            statusMessage,
+            order.Id
+          )
+        }
+      } catch (notifyError) {
+        console.error('Failed to send status update notifications:', notifyError)
+      }
+
+      return res.json({ message: 'Updated', status })
+    } catch (err) {
+      res.status(500).json({ error: err.message })
+    }
   }
-}
 
   // ================= OTHER ROUTES KEEP SAFE =================
   static async getMyOrders(req, res) {
@@ -351,6 +269,7 @@ class OrderController {
       .query(`
         SELECT * FROM Orders
         WHERE DestinationStationId = @StationId
+        ORDER BY CreatedAt DESC
       `)
 
     res.json(result.recordset)

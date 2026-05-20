@@ -91,45 +91,21 @@ class OrderModel {
 
   // ================= UPDATE STATUS =================
   static async updateStatus(orderId, status, userId) {
-  const pool = await getConnection()
+    const pool = await getConnection()
 
-  // Nếu gửi trạm
-  if (status === 'Sent') {
-
-    const cur = await pool.request()
+    const result = await pool.request()
       .input('OrderId', sql.Int, orderId)
-      .query('SELECT OrderStatus FROM Orders WHERE Id = @OrderId')
+      .input('Status', sql.NVarChar, status)
+      .input('UpdatedAt', sql.DateTime, new Date())
+      .query(`
+        UPDATE Orders
+        SET OrderStatus = @Status,
+            UpdatedAt = @UpdatedAt
+        WHERE Id = @OrderId
+      `)
 
-    const currentStatus = cur.recordset[0]?.OrderStatus
-
-    // ❌ chưa duyệt mà gửi → auto reject
-    if (currentStatus !== 'Approved') {
-      const rej = await pool.request()
-        .input('OrderId', sql.Int, orderId)
-        .input('Reason', sql.NVarChar(sql.MAX), 'Auto reject: chưa duyệt mà gửi trạm')
-        .query(`
-          UPDATE Orders
-          SET OrderStatus = 'Rejected',
-              RejectionReason = @Reason
-          WHERE Id = @OrderId
-        `)
-
-      return rej.rowsAffected[0] > 0
-    }
+    return result.rowsAffected[0] > 0
   }
-
-  // ✅ UPDATE BÌNH THƯỜNG (AN TOÀN)
-  const result = await pool.request()
-    .input('OrderId', sql.Int, orderId)
-    .input('Status', sql.NVarChar, status)
-    .query(`
-      UPDATE Orders
-      SET OrderStatus = @Status
-      WHERE Id = @OrderId
-    `)
-
-  return result.rowsAffected[0] > 0
-}
 
   // ================= PENDING APPROVAL =================
   static async findPendingApproval(limit = 50, offset = 0) {
