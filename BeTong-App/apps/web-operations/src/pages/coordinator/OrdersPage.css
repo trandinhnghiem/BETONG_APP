@@ -273,6 +273,11 @@ tr:hover {
   color: #b91c1c;
   border-color: #fecaca;
 }
+.status.Rejected {
+  background: #ff4d4f !important;
+  color: white !important;
+  border-color: #ff4d4f !important;
+}
 
 /* LEGACY / UNUSED STATES */
 .status.Rejected,
