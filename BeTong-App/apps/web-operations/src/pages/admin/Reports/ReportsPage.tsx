@@ -21,84 +21,80 @@ export default function ReportsPage() {
     }
   }
 
-  // FILTER + SEARCH
-  const filteredReports = useMemo(() => {
-    return reports.filter((item) => {
+  const filtered = useMemo(() => {
+    return reports.filter((r) => {
 
-      const matchSearch =
-        item.OrderCode?.toLowerCase().includes(search.toLowerCase()) ||
-        item.CustomerName?.toLowerCase().includes(search.toLowerCase())
+      const okSearch =
+        r.OrderCode?.toLowerCase().includes(search.toLowerCase()) ||
+        r.CustomerName?.toLowerCase().includes(search.toLowerCase())
 
-      const matchStatus =
-        statusFilter === 'ALL' ||
-        item.OrderStatus === statusFilter
+      const okStatus =
+        statusFilter === 'ALL' || r.OrderStatus === statusFilter
 
-      return matchSearch && matchStatus
+      return okSearch && okStatus
     })
   }, [reports, search, statusFilter])
 
-  // EXPORT EXCEL
-  const exportExcel = async () => {
-    try {
-      const res = await apiClient.get('/api/reports/export/excel', {
-        responseType: 'blob'
-      })
+  const totalRevenue = filtered.reduce(
+    (s, i) => s + Number(i.TotalAmount || 0),
+    0
+  )
 
-      const url = window.URL.createObjectURL(new Blob([res.data]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', 'report.xlsx')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+  const completed = filtered.filter(i => i.OrderStatus === 'Completed').length
+  const rejected = filtered.filter(i => i.OrderStatus === 'Rejected').length
+  const pending = filtered.filter(i => i.OrderStatus === 'Pending').length
 
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  // EXPORT PDF
-  const exportPDF = async () => {
-    try {
-      const res = await apiClient.get('/api/reports/export/pdf', {
-        responseType: 'blob'
-      })
-
-      const url = window.URL.createObjectURL(new Blob([res.data]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', 'report.pdf')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-
-    } catch (err) {
-      console.error(err)
+  const mapStatus = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'Hoàn thành'
+      case 'Rejected': return 'Bị từ chối'
+      case 'Pending': return 'Chờ xử lý'
+      case 'Approved': return 'Đã duyệt'
+      default: return status
     }
   }
 
   return (
-    <div className="reports-page">
+    <div className="admin-report">
 
       {/* HEADER */}
-      <div className="reports-header">
+      <div className="admin-report__header">
         <div>
-          <h1>📊 Xuất báo cáo</h1>
-          <p>Quản lý doanh thu & đơn hàng hệ thống</p>
-        </div>
-
-        <div className="report-actions">
-          <button className="excel" onClick={exportExcel}>⬇ Excel</button>
-          <button className="pdf" onClick={exportPDF}>🧾 PDF</button>
+          <h1>Báo cáo hệ thống</h1>
+          <p>Quản lý doanh thu và đơn hàng</p>
         </div>
       </div>
 
+      {/* KPI */}
+      <div className="admin-report__kpi">
+
+        <div className="admin-report__card">
+          <span>Tổng đơn</span>
+          <h2>{filtered.length}</h2>
+        </div>
+
+        <div className="admin-report__card admin-report__card--green">
+          <span>Doanh thu</span>
+          <h2>{totalRevenue.toLocaleString('vi-VN')}đ</h2>
+        </div>
+
+        <div className="admin-report__card admin-report__card--blue">
+          <span>Hoàn thành</span>
+          <h2>{completed}</h2>
+        </div>
+
+        <div className="admin-report__card admin-report__card--red">
+          <span>Bị từ chối</span>
+          <h2>{rejected}</h2>
+        </div>
+
+      </div>
+
       {/* FILTER */}
-      <div className="report-filters">
+      <div className="admin-report__filter">
 
         <input
-          type="text"
-          placeholder="🔍 Tìm mã đơn / khách hàng..."
+          placeholder="Tìm mã đơn / khách hàng..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -110,16 +106,16 @@ export default function ReportsPage() {
           <option value="ALL">Tất cả</option>
           <option value="Pending">Chờ xử lý</option>
           <option value="Completed">Hoàn thành</option>
-          <option value="Cancelled">Đã hủy</option>
+          <option value="Rejected">Bị từ chối</option>
+          <option value="Approved">Đã duyệt</option>
         </select>
 
       </div>
 
       {/* TABLE */}
-      <div className="reports-table">
+      <div className="table-card-adminreports">
 
         <table>
-
           <thead>
             <tr>
               <th>Mã đơn</th>
@@ -131,24 +127,20 @@ export default function ReportsPage() {
           </thead>
 
           <tbody>
-
-            {filteredReports.map((item) => (
-
+            {filtered.map((item) => (
               <tr key={item.Id}>
 
                 <td>{item.OrderCode}</td>
 
-                <td>
-                  {item.CustomerName || 'Khách lẻ'}
-                </td>
+                <td>{item.CustomerName || 'Khách lẻ'}</td>
 
-                <td>
+                <td className="money">
                   {Number(item.TotalAmount).toLocaleString('vi-VN')}đ
                 </td>
 
                 <td>
                   <span className={`status ${item.OrderStatus}`}>
-                    {item.OrderStatus}
+                    {mapStatus(item.OrderStatus)}
                   </span>
                 </td>
 
@@ -157,11 +149,8 @@ export default function ReportsPage() {
                 </td>
 
               </tr>
-
             ))}
-
           </tbody>
-
         </table>
 
       </div>

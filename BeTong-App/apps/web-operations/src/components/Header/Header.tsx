@@ -48,6 +48,12 @@ export default function Header() {
   const loadNotifications =
     async () => {
 
+    const token =
+      localStorage.getItem('token')
+
+    // chưa login thì bỏ qua
+    if (!token) return
+
     try {
 
       const res =
@@ -57,7 +63,6 @@ export default function Header() {
 
       setNotifications(res.data)
 
-      // đếm chưa đọc
       const unread =
         res.data.filter(
           (n: any) => !n.IsRead
@@ -65,9 +70,12 @@ export default function Header() {
 
       setNotificationCount(unread)
 
-    } catch (err) {
+    } catch (err: any) {
 
-      console.error(err)
+      // tránh spam lỗi 403
+      if (err?.response?.status !== 403) {
+        console.error(err)
+      }
     }
   }
 
@@ -76,6 +84,17 @@ export default function Header() {
   // =========================
   const checkApprovedOrders =
     async () => {
+
+    const token =
+      localStorage.getItem('token')
+
+    const userRole =
+      localStorage.getItem('userRole')
+
+    // chưa login hoặc không phải trạm
+    if (!token || userRole !== 'Station') {
+      return
+    }
 
     try {
 
@@ -90,28 +109,27 @@ export default function Header() {
             o.OrderStatus === 'Approved'
         )
 
-      // còn đơn approved
       if (approvedOrders.length > 0) {
 
         setMarquee(
-          '🔔 Có đơn hàng đang đợi bạn thực hiện'
+          '🔔 Có đơn hàng đang chờ trạm xử lý'
         )
 
-        // chuông đỏ liên tục
         setHasNotification(true)
 
       } else {
 
-        // hết đơn approved
         setMarquee('')
 
-        // tắt rung chuông
         setHasNotification(false)
       }
 
-    } catch (err) {
+    } catch (err: any) {
 
-      console.error(err)
+      // bỏ qua lỗi 403
+      if (err?.response?.status !== 403) {
+        console.error(err)
+      }
     }
   }
 
@@ -119,6 +137,12 @@ export default function Header() {
   // INIT
   // =========================
   useEffect(() => {
+
+    const token =
+      localStorage.getItem('token')
+
+    // chưa đăng nhập thì không gọi API
+    if (!token) return
 
     loadNotifications()
 
@@ -171,13 +195,10 @@ export default function Header() {
         data
       )
 
-      // reload notifications
       await loadNotifications()
 
-      // reload approved status
       await checkApprovedOrders()
 
-      // rung chuông
       setHasNotification(true)
 
       setTimeout(() => {
@@ -192,7 +213,6 @@ export default function Header() {
       handleApproved
     )
 
-    // auto check trạng thái đơn
     const interval = setInterval(() => {
 
       checkApprovedOrders()
@@ -264,7 +284,6 @@ export default function Header() {
         }))
       )
 
-      // reset badge
       setNotificationCount(0)
 
     } catch (err) {
@@ -300,7 +319,6 @@ export default function Header() {
         })
       )
 
-      // giảm badge
       setNotificationCount(prev =>
         prev > 0
           ? prev - 1
@@ -319,20 +337,22 @@ export default function Header() {
   const handleOpenNotifications =
     async () => {
 
+    const token =
+      localStorage.getItem('token')
+
+    if (!token) return
+
     const newState =
       !showNotifications
 
     setShowNotifications(newState)
 
-    // tắt rung
     setHasNotification(false)
 
-    // mở dropdown
     if (newState) {
 
       await markAllAsRead()
 
-      // cập nhật local luôn
       setNotifications(prev =>
         prev.map(item => ({
           ...item,
@@ -340,7 +360,6 @@ export default function Header() {
         }))
       )
 
-      // badge = 0 ngay
       setNotificationCount(0)
     }
   }
@@ -473,7 +492,7 @@ export default function Header() {
             <FiLogOut size={18} />
 
             <span>
-              Đăng Xuất
+              Đăng xuất
             </span>
 
           </button>
