@@ -274,7 +274,8 @@ export default function Header() {
     try {
 
       await apiClient.put(
-        '/api/notifications/mark-all-read'
+        '/api/notifications/mark-read',
+        {}
       )
 
       setNotifications(prev =>
