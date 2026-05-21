@@ -66,97 +66,92 @@ export default function AccountingReportsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-useEffect(() => {
-  loadOrders(
-    defaultStart.toISOString().slice(0, 10),
-    today.toISOString().slice(0, 10)
-  )
-}, [])
-
-const loadOrders = async (
-  start?: string,
-  end?: string
-) => {
-  try {
-    setLoading(true)
-    setError(null)
-
-    const response = await apiClient.get(
-      '/api/orders/export'
+  useEffect(() => {
+    loadOrders(
+      defaultStart.toISOString().slice(0, 10),
+      today.toISOString().slice(0, 10)
     )
+  }, [])
 
-    const rawData = Array.isArray(response.data)
-      ? response.data
-      : response.data?.data || []
+  const loadOrders = async (
+    start?: string,
+    end?: string
+  ) => {
+    try {
+      setLoading(true)
+      setError(null)
 
-    let parsed: OrderRow[] = rawData.map((o: any) => ({
-      Id: o.Id ?? o.id,
-      OrderCode: o.OrderCode ?? o.orderCode ?? '',
-      SourceStation: o.SourceStation ?? '',
-      DestinationStation: o.DestinationStation ?? '',
-      TotalAmount: o.TotalAmount ?? o.totalAmount ?? 0,
-      OrderStatus: o.OrderStatus ?? o.orderStatus ?? '',
-      CreatedAt: o.CreatedAt ?? o.createdAt ?? ''
-    }))
+      const response = await apiClient.get(
+        '/api/orders/export'
+      )
 
-    // =========================
-    // FILTER FRONTEND
-    // =========================
+      const rawData = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || []
 
-    if (start || end) {
-      parsed = parsed.filter(order => {
-        if (!order.CreatedAt) return false
+      let parsed: OrderRow[] = rawData.map((o: any) => ({
+        Id: o.Id ?? o.id,
+        OrderCode: o.OrderCode ?? o.orderCode ?? '',
+        SourceStation: o.SourceStation ?? '',
+        DestinationStation: o.DestinationStation ?? '',
+        TotalAmount: o.TotalAmount ?? o.totalAmount ?? 0,
+        OrderStatus: o.OrderStatus ?? o.orderStatus ?? '',
+        CreatedAt: o.CreatedAt ?? o.createdAt ?? ''
+      }))
 
-        const orderDate = new Date(order.CreatedAt)
+      if (start || end) {
+        parsed = parsed.filter(order => {
+          if (!order.CreatedAt) return false
 
-        if (isNaN(orderDate.getTime())) {
-          return false
-        }
+          const orderDate = new Date(order.CreatedAt)
 
-        // reset time
-        orderDate.setHours(0, 0, 0, 0)
+          if (isNaN(orderDate.getTime())) {
+            return false
+          }
 
-        let valid = true
+          orderDate.setHours(0, 0, 0, 0)
 
-        if (start) {
-          const startDateObj = new Date(start)
-          startDateObj.setHours(0, 0, 0, 0)
+          let valid = true
 
-          valid =
-            valid &&
-            orderDate >= startDateObj
-        }
+          if (start) {
+            const startDateObj = new Date(start)
+            startDateObj.setHours(0, 0, 0, 0)
 
-        if (end) {
-          const endDateObj = new Date(end)
-          endDateObj.setHours(23, 59, 59, 999)
+            valid =
+              valid &&
+              orderDate >= startDateObj
+          }
 
-          valid =
-            valid &&
-            orderDate <= endDateObj
-        }
+          if (end) {
+            const endDateObj = new Date(end)
+            endDateObj.setHours(23, 59, 59, 999)
 
-        return valid
-      })
+            valid =
+              valid &&
+              orderDate <= endDateObj
+          }
+
+          return valid
+        })
+      }
+
+      console.log('FILTERED DATA:', parsed)
+
+      setOrders(parsed)
+    } catch (err: any) {
+      console.error(err)
+
+      setOrders([])
+
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Không thể tải dữ liệu báo cáo'
+      )
+    } finally {
+      setLoading(false)
     }
-
-    console.log('FILTERED DATA:', parsed)
-
-    setOrders(parsed)
-  } catch (err: any) {
-    console.error(err)
-
-    setOrders([])
-
-    setError(
-      err?.response?.data?.message ||
-        err?.message ||
-        'Không thể tải dữ liệu báo cáo'
-    )
-  } finally {
-    setLoading(false)
   }
-}
 
   const handleFilter = async () => {
     await loadOrders(startDate, endDate)
@@ -205,55 +200,55 @@ const loadOrders = async (
   }, [orders])
 
   const chartData = useMemo(() => {
-  const grouped = new Map<string, number>()
+    const grouped = new Map<string, number>()
 
-  orders.forEach(order => {
-    if (!order.CreatedAt) return
+    orders.forEach(order => {
+      if (!order.CreatedAt) return
 
-    const date = new Date(order.CreatedAt)
+      const date = new Date(order.CreatedAt)
 
-    if (isNaN(date.getTime())) return
+      if (isNaN(date.getTime())) return
 
-    const key = date.toISOString().slice(0, 10)
+      const key = date.toISOString().slice(0, 10)
 
-    grouped.set(
-      key,
-      (grouped.get(key) || 0) + 1
+      grouped.set(
+        key,
+        (grouped.get(key) || 0) + 1
+      )
+    })
+
+    const sortedEntries = Array.from(
+      grouped.entries()
+    ).sort(
+      (a, b) =>
+        new Date(a[0]).getTime() -
+        new Date(b[0]).getTime()
     )
-  })
 
-  const sortedEntries = Array.from(
-    grouped.entries()
-  ).sort(
-    (a, b) =>
-      new Date(a[0]).getTime() -
-      new Date(b[0]).getTime()
-  )
+    const labels = sortedEntries.map(item =>
+      new Date(item[0]).toLocaleDateString('vi-VN')
+    )
 
-  const labels = sortedEntries.map(item =>
-    new Date(item[0]).toLocaleDateString('vi-VN')
-  )
+    const values = sortedEntries.map(
+      item => item[1]
+    )
 
-  const values = sortedEntries.map(
-    item => item[1]
-  )
+    return {
+      labels,
 
-  return {
-    labels,
-
-    datasets: [
-      {
-        label: 'Số đơn hàng',
-        data: values,
-        backgroundColor: '#4f46e5',
-        borderRadius: 12,
-        borderSkipped: false,
-        maxBarThickness: 48,
-        hoverBackgroundColor: '#4338ca'
-      }
-    ]
-  }
-}, [orders])
+      datasets: [
+        {
+          label: 'Số đơn hàng',
+          data: values,
+          backgroundColor: '#4f46e5',
+          borderRadius: 12,
+          borderSkipped: false,
+          maxBarThickness: 48,
+          hoverBackgroundColor: '#4338ca'
+        }
+      ]
+    }
+  }, [orders])
 
   const chartOptions: any = {
     responsive: true,
@@ -304,6 +299,34 @@ const loadOrders = async (
     }).format(amount)
   }
 
+  const mapStatus = (status?: string) => {
+    switch (status) {
+      case 'Completed':
+        return 'Hoàn thành'
+
+      case 'Pending Approval':
+        return 'Chờ duyệt'
+
+      case 'Approved':
+        return 'Đã duyệt'
+
+      case 'Sent':
+        return 'Đã gửi'
+
+      case 'Delivered':
+        return 'Đã giao'
+
+      case 'Uploading':
+        return 'Đang tải lên'
+
+      case 'In Transit':
+        return 'Đang vận chuyển'
+
+      default:
+        return status || '-'
+    }
+  }
+
   const getStatusClass = (status?: string) => {
     switch (status) {
       case 'Completed':
@@ -350,7 +373,7 @@ const loadOrders = async (
           SourceStation: item.SourceStation,
           DestinationStation: item.DestinationStation,
           TotalAmount: item.TotalAmount,
-          OrderStatus: item.OrderStatus,
+          OrderStatus: mapStatus(item.OrderStatus),
           CreatedAt: item.CreatedAt
             ? new Date(
                 item.CreatedAt
@@ -643,7 +666,9 @@ const loadOrders = async (
                             order.OrderStatus
                           )}`}
                         >
-                          {order.OrderStatus}
+                          {mapStatus(
+                            order.OrderStatus
+                          )}
                         </span>
                       </td>
 
