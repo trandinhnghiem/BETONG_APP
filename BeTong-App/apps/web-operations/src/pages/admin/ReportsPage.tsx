@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import apiClient from '../../../services/api'
+import apiClient from '../../services/api'
 import './ReportsPage.css'
 
 export default function ReportsPage() {
