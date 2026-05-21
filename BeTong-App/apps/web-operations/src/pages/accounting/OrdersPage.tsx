@@ -12,6 +12,7 @@ interface Order {
   createdAt: string
   coordinatorName?: string
 }
+
 const statusMap: Record<string, string> = {
   'Draft': 'Đơn tạm',
   'Pending Approval': 'Chờ duyệt',
@@ -26,13 +27,15 @@ const statusMap: Record<string, string> = {
 }
 
 const getStatusLabel = (status: string) => statusMap[status] || status
-const getStatusClass = (status: string) => status.replace(/\s+/g, '')
+
+// FIX CHUẨN
+const getStatusClass = (status: string) =>
+  status.replace(/\s+/g, '')
 
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  // 🔥 lưu action đã chọn cho từng order
   const [selectedActions, setSelectedActions] = useState<{ [key: number]: string }>({})
 
   useEffect(() => {
@@ -46,15 +49,17 @@ export default function AccountingOrdersPage() {
       const response = await apiClient.get('/api/orders/accounting-orders')
       const list = Array.isArray(response.data) ? response.data : []
 
-      setOrders(list.map((o: any) => ({
-        id: o.Id,
-        orderCode: o.OrderCode,
-        destinationStation: o.DestinationStation || '',
-        totalAmount: o.TotalAmount || 0,
-        orderStatus: o.OrderStatus,
-        createdAt: o.CreatedAt,
-        coordinatorName: o.CoordinatorName || ''
-      })))
+      setOrders(
+        list.map((o: any) => ({
+          id: o.Id,
+          orderCode: o.OrderCode,
+          destinationStation: o.DestinationStation || '',
+          totalAmount: o.TotalAmount || 0,
+          orderStatus: o.OrderStatus,
+          createdAt: o.CreatedAt,
+          coordinatorName: o.CoordinatorName || ''
+        }))
+      )
     } catch (error) {
       console.error('Lỗi khi lấy danh sách đơn hàng:', error)
       setOrders([])
@@ -63,7 +68,6 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  // 🔥 xử lý action
   const handleAction = async (order: Order, action: string) => {
     if (!action) return
 
@@ -88,8 +92,10 @@ export default function AccountingOrdersPage() {
           const reason = prompt('Nhập lý do từ chối:')
           if (!reason) return
 
+          // FIX QUAN TRỌNG:
+          // đổi sang Rejected
           await apiClient.post(`/api/orders/${order.id}/status`, {
-            status: 'Cancelled'
+            status: 'Rejected'
           })
 
           fetchOrders()
@@ -101,7 +107,6 @@ export default function AccountingOrdersPage() {
         }
       }
 
-      // reset action đã chọn
       setSelectedActions(prev => ({
         ...prev,
         [order.id]: ''
@@ -122,6 +127,7 @@ export default function AccountingOrdersPage() {
           <p>Danh sách đơn hàng, phê duyệt và gửi trạm</p>
         </div>
       </div>
+
       {loading ? (
         <div className="loading">Đang tải...</div>
       ) : orders.length === 0 ? (
@@ -145,55 +151,66 @@ export default function AccountingOrdersPage() {
               {orders.map(order => (
                 <tr key={order.id}>
                   <td className="code">{order.orderCode}</td>
+
                   <td>{order.coordinatorName}</td>
+
                   <td>{order.destinationStation}</td>
-                  <td className="money">{order.totalAmount.toLocaleString()} đ</td>
+
+                  <td className="money">
+                    {order.totalAmount.toLocaleString()} đ
+                  </td>
+
                   <td>
-                    <span className={`status ${getStatusClass(order.orderStatus)}`}>
+                    <span
+                      className={`status ${getStatusClass(order.orderStatus)}`}
+                    >
                       {getStatusLabel(order.orderStatus)}
                     </span>
                   </td>
-                  <td>{new Date(order.createdAt).toLocaleDateString()}</td>
 
-                  {/* ✅ ACTION MỚI */}
                   <td>
-  {order.orderStatus === 'Pending Approval' ? (
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </td>
 
-    <div className="action-group">
-      <select
-        className="action-select"
-        value={selectedActions[order.id] || ''}
-        onChange={(e) =>
-          setSelectedActions({
-            ...selectedActions,
-            [order.id]: e.target.value
-          })
-        }
-      >
-        <option value="">-- Chọn --</option>
-        <option value="approve">
-          Phê duyệt
-        </option>
+                  <td>
+                    {order.orderStatus === 'Pending Approval' ? (
+                      <div className="action-group">
+                        <select
+                          className="action-select"
+                          value={selectedActions[order.id] || ''}
+                          onChange={(e) =>
+                            setSelectedActions({
+                              ...selectedActions,
+                              [order.id]: e.target.value
+                            })
+                          }
+                        >
+                          <option value="">-- Chọn --</option>
 
-        <option value="reject">
-          Từ chối
-        </option>
-      </select>
+                          <option value="approve">
+                            Phê duyệt
+                          </option>
 
-      <button
-        className="action-confirm"
-        onClick={() =>
-          handleAction(order, selectedActions[order.id])
-        }
-        disabled={!selectedActions[order.id]}
-      >
-        Xác nhận
-      </button>
-    </div>
+                          <option value="reject">
+                            Từ chối
+                          </option>
+                        </select>
 
-  ) : null}
-</td>
-
+                        <button
+                          className="action-confirm"
+                          onClick={() =>
+                            handleAction(
+                              order,
+                              selectedActions[order.id]
+                            )
+                          }
+                          disabled={!selectedActions[order.id]}
+                        >
+                          Xác nhận
+                        </button>
+                      </div>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
