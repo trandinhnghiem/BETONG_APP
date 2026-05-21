@@ -61,9 +61,9 @@ export default function Sidebar() {
         return [
           { to: '/admin', label: 'Tổng quan', icon: FiHome },
           { to: '/admin/users', label: 'Người dùng', icon: FiUsers },
-          { to: '/admin/settings', label: 'Cài đặt', icon: FiSettings },
           { to: '/admin/reports', label: 'Báo cáo', icon: FiFileText },
           { to: '/admin/statistics', label: 'Thống kê', icon: FiBarChart2 },
+          { to: '/admin/settings', label: 'Cài đặt', icon: FiSettings },
         ]
 
       case 'Accounting':

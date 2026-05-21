@@ -104,6 +104,7 @@ export default function UsersPage() {
       setCreating(false)
     }
   }
+
   // ================= XÓA USER (modal) =================
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user)
@@ -210,7 +211,7 @@ export default function UsersPage() {
       {/* FORM TẠO USER */}
       {showCreateForm && (
         <div className="create-form">
-          
+
           {/* HEADER */}
           <div className="create-form-header">
             <div>
@@ -355,7 +356,14 @@ export default function UsersPage() {
               onClick={() => {
                 setShowCreateForm(false)
                 setEditingUser(null)
-                setForm({ username: '', email: '', password: '', fullName: '', phone: '', role: 'Coordinator' })
+                setForm({
+                  username: '',
+                  email: '',
+                  password: '',
+                  fullName: '',
+                  phone: '',
+                  role: 'Coordinator'
+                })
               }}
             >
               Hủy
@@ -365,9 +373,9 @@ export default function UsersPage() {
               className="submit-btn"
               onClick={async () => {
                 if (editingUser) {
-                  // update
                   try {
                     setCreating(true)
+
                     await apiClient.put(`/api/users/${editingUser.Id}`, {
                       fullName: form.fullName,
                       email: form.email,
@@ -378,7 +386,16 @@ export default function UsersPage() {
 
                     setShowCreateForm(false)
                     setEditingUser(null)
-                    setForm({ username: '', email: '', password: '', fullName: '', phone: '', role: 'Coordinator' })
+
+                    setForm({
+                      username: '',
+                      email: '',
+                      password: '',
+                      fullName: '',
+                      phone: '',
+                      role: 'Coordinator'
+                    })
+
                     fetchUsers()
                   } catch (err: any) {
                     setError(err.response?.data?.error || 'Cập nhật thất bại')
@@ -386,7 +403,6 @@ export default function UsersPage() {
                     setCreating(false)
                   }
                 } else {
-                  // create
                   handleCreate()
                 }
               }}
@@ -410,15 +426,42 @@ export default function UsersPage() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Xác nhận xóa</h3>
-              <button className="close-btn" onClick={() => setShowDeleteModal(false)}>×</button>
+              <button
+                className="close-btn"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                ×
+              </button>
             </div>
 
             <div className="modal-body">
-              <p>Bạn có chắc muốn xóa tài khoản <strong>{userToDelete.FullName}</strong> (@{userToDelete.Username}) không? Hành động này không thể hoàn tác.</p>
+              <p>
+                Bạn có chắc muốn xóa tài khoản
+                <strong> {userToDelete.FullName}</strong>
+                (@{userToDelete.Username}) không?
+              </p>
 
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <button className="cancel-btn" onClick={() => setShowDeleteModal(false)}>Hủy</button>
-                <button className="submit-btn" onClick={handleDeleteConfirm}>Xóa</button>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  justifyContent: 'flex-end',
+                  marginTop: '16px'
+                }}
+              >
+                <button
+                  className="cancel-btn"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Hủy
+                </button>
+
+                <button
+                  className="submit-btn"
+                  onClick={handleDeleteConfirm}
+                >
+                  Xóa
+                </button>
               </div>
             </div>
           </div>
@@ -444,8 +487,7 @@ export default function UsersPage() {
             <h3>Không tìm thấy người dùng</h3>
 
             <p>
-              Không có người dùng nào phù hợp với bộ
-              lọc hiện tại
+              Không có người dùng nào phù hợp với bộ lọc hiện tại
             </p>
           </div>
         ) : (
@@ -453,9 +495,17 @@ export default function UsersPage() {
             <thead>
               <tr>
                 <th>Người dùng</th>
-                <th>Vai trò</th>
-                <th>Trạng thái</th>
+
+                <th className="role-column">
+                  Vai trò
+                </th>
+
+                <th className="status-column">
+                  Trạng thái
+                </th>
+
                 <th>Ngày tạo</th>
+
                 <th>Thao tác</th>
               </tr>
             </thead>
@@ -477,7 +527,7 @@ export default function UsersPage() {
                     </div>
                   </td>
 
-                  <td>
+                  <td className="role-column">
                     <span
                       className={`role-badge ${user.Role.toLowerCase()}`}
                     >
@@ -485,7 +535,7 @@ export default function UsersPage() {
                     </span>
                   </td>
 
-                  <td>
+                  <td className="status-column">
                     <span
                       className={`status-badge ${
                         user.IsActive
@@ -507,7 +557,10 @@ export default function UsersPage() {
 
                   <td>
                     <div className="user-actions">
-                      <button className="action-btn edit" onClick={() => handleEditClick(user)}>
+                      <button
+                        className="action-btn edit"
+                        onClick={() => handleEditClick(user)}
+                      >
                         <FiEdit size={16} />
                       </button>
 
