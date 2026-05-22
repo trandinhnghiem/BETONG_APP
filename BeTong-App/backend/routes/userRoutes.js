@@ -32,25 +32,79 @@ router.get('/:userId', async (req, res) => {
   }
 })
 
-// Update user (Admin only or self)
-router.put('/:userId', async (req, res) => {
+
+// Update user
+router.put('/:userId', roleMiddleware(['Admin']), async (req, res) => {
   try {
+
     const userId = parseInt(req.params.userId)
-    
-    // Check if user is admin or updating their own profile
-    if (req.user.Role !== 'Admin' && req.user.Id !== userId) {
-      return res.status(403).json({ error: 'Access denied' })
+
+    console.log('UPDATE USER ID:', userId)
+    console.log('REQUEST BODY:', req.body)
+
+    const success = await UserModel.update(
+      userId,
+      req.body
+    )
+
+    if (success) {
+
+      const updatedUser =
+        await UserModel.findById(userId)
+
+      res.json({
+        message: 'User updated successfully',
+        data: updatedUser
+      })
+
+    } else {
+
+      res.status(404).json({
+        error: 'User not found'
+      })
+
     }
 
-    const success = await UserModel.update(userId, req.body)
-    if (success) {
-      res.json({ message: 'User updated successfully' })
-    } else {
-      res.status(404).json({ error: 'User not found' })
-    }
   } catch (error) {
-    res.status(500).json({ error: error.message })
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
   }
 })
+
+// Delete user (Admin only)
+router.delete('/:userId', roleMiddleware(['Admin']), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId)
+
+    // Không cho tự xóa chính mình
+    if (req.user.Id === userId) {
+      return res.status(400).json({
+        error: 'Không thể tự xóa tài khoản của chính mình'
+      })
+    }
+
+    const success = await UserModel.delete(userId)
+
+    if (success) {
+      res.json({
+        message: 'User deleted successfully'
+      })
+    } else {
+      res.status(404).json({
+        error: 'User not found'
+      })
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    })
+  }
+})
+
 
 module.exports = router
