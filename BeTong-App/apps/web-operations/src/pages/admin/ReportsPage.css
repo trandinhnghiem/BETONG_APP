@@ -544,8 +544,8 @@
 }
 
 .status.Pending {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .status.Approved {

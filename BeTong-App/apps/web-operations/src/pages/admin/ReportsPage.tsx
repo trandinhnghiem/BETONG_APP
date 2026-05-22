@@ -86,7 +86,7 @@ export default function ReportsPage() {
   ).length
 
   const pending = filtered.filter(
-    i => i.OrderStatus === 'Pending'
+    i => i.OrderStatus === 'Pending Approval'
   ).length
 
   // =========================
@@ -101,17 +101,31 @@ export default function ReportsPage() {
       case 'Completed':
         return 'Hoàn thành'
 
-      case 'Rejected':
-        return 'Bị từ chối'
-
-      case 'Pending':
-        return 'Chờ xử lý'
+      case 'Pending Approval':
+        return 'Chờ duyệt'
 
       case 'Approved':
         return 'Đã duyệt'
 
+      case 'Sent':
+        return 'Đã gửi'
+
+      case 'Delivered':
+        return 'Đã giao'
+
+      case 'Uploading':
+        return 'Đang tải lên'
+
+      case 'In Transit':
+        return 'Đang vận chuyển'
+        
+      case 'REJECTED':
+      case 'Rejected':
+      case 'Reject':
+        return 'Từ chối'
+
       default:
-        return status
+        return status || '-'
     }
   }
 
