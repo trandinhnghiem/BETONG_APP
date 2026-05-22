@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
+import * as ExcelJS from 'exceljs'
+import { FiDownload } from 'react-icons/fi'
 
 interface Order {
   id: number
@@ -206,12 +208,142 @@ export default function CoordinatorOrdersPage() {
 
     }
   }
+    const handleExportExcel = async () => {
+
+    try {
+
+      const workbook =
+        new ExcelJS.Workbook()
+
+      const sheet =
+        workbook.addWorksheet(
+          'Coordinator Orders'
+        )
+
+      sheet.columns = [
+
+        {
+          header: 'Mã đơn',
+          key: 'orderCode',
+          width: 22
+        },
+
+        {
+          header: 'Trạm',
+          key: 'destinationStation',
+          width: 28
+        },
+
+        {
+          header: 'Tổng tiền',
+          key: 'totalAmount',
+          width: 20
+        },
+
+        {
+          header: 'Trạng thái',
+          key: 'orderStatus',
+          width: 20
+        },
+
+        {
+          header: 'Lý do từ chối',
+          key: 'rejectReason',
+          width: 40
+        },
+
+        {
+          header: 'Ngày tạo',
+          key: 'createdAt',
+          width: 25
+        }
+
+      ]
+
+      filteredOrders.forEach(order => {
+
+        sheet.addRow({
+
+          orderCode:
+            order.orderCode,
+
+          destinationStation:
+            order.destinationStation,
+
+          totalAmount:
+            `${order.totalAmount.toLocaleString()} đ`,
+
+          orderStatus:
+            getStatusLabel(
+              order.orderStatus
+            ),
+
+          rejectReason:
+            order.rejectReason || '',
+
+          createdAt:
+            new Date(
+              order.createdAt
+            ).toLocaleString('vi-VN')
+
+        })
+
+      })
+
+      sheet.getRow(1).font = {
+        bold: true
+      }
+
+      const buffer =
+        await workbook.xlsx.writeBuffer()
+
+      const blob =
+        new Blob(
+          [buffer],
+          {
+            type:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          }
+        )
+
+      const url =
+        window.URL.createObjectURL(
+          blob
+        )
+
+      const a =
+        document.createElement('a')
+
+      a.href = url
+
+      a.download =
+        'don-hang-coordinator.xlsx'
+
+      document.body.appendChild(a)
+
+      a.click()
+
+      a.remove()
+
+      window.URL.revokeObjectURL(url)
+
+    } catch (err) {
+
+      console.error(err)
+
+      alert(
+        'Xuất Excel thất bại'
+      )
+
+    }
+
+  }
 
   return (
 
     <div className="orders-dashboard">
 
-      {/* HEADER */}
+            {/* HEADER */}
       <div className="page-header">
 
         <div>
@@ -226,6 +358,17 @@ export default function CoordinatorOrdersPage() {
           </p>
 
         </div>
+
+        <button
+          className="action-btn"
+          onClick={handleExportExcel}
+        >
+
+          <FiDownload size={18} />
+
+          Xuất Excel
+
+        </button>
 
       </div>
 
