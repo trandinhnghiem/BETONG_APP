@@ -113,6 +113,9 @@ export default function ReportsPage() {
       case 'Sent':
         return 'Đã gửi'
 
+      case 'Processing':
+        return 'Đang xử lý'
+
       case 'Delivered':
         return 'Đã giao'
 
