@@ -115,6 +115,9 @@ export default function ReportsPage() {
 
       case 'Processing':
         return 'Đang xử lý'
+      
+      case 'Delivering':
+        return 'Đang giao hàng'
 
       case 'Delivered':
         return 'Đã giao'
