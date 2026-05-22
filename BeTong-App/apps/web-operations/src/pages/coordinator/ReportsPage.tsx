@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react'
 
 import {
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Tooltip,
   BarChart,
   Bar,
@@ -51,8 +48,6 @@ export default function CoordinatorReportsPage() {
       const res = await apiClient.get(
         '/api/orders/my-orders'
       )
-      console.log('RAW RESPONSE:', res)
-      console.log('DATA:', res.data)
 
       const data = res.data || []
 
@@ -126,8 +121,12 @@ export default function CoordinatorReportsPage() {
       // CHỈ TÍNH DOANH THU ĐƠN COMPLETED
 
       if (order.OrderStatus === 'Completed') {
-        map[station].revenue += order.TotalAmount || 0
+
+        map[station].revenue +=
+          order.TotalAmount || 0
+
       }
+
     })
 
     setStationData(Object.values(map))
@@ -145,7 +144,8 @@ export default function CoordinatorReportsPage() {
 
       // CHỈ TÍNH ĐƠN COMPLETED
 
-      if (order.OrderStatus !== 'Completed') return
+      if (order.OrderStatus !== 'Completed')
+        return
 
       const date = new Date(order.CreatedAt)
         .toISOString()
@@ -155,7 +155,9 @@ export default function CoordinatorReportsPage() {
         map[date] = 0
       }
 
-      map[date] += order.TotalAmount || 0
+      map[date] +=
+        order.TotalAmount || 0
+
     })
 
     const chart = Object.keys(map).map(date => ({
@@ -201,10 +203,15 @@ export default function CoordinatorReportsPage() {
   ]
 
   if (loading) {
-    return <div className="loading">Đang tải...</div>
+    return (
+      <div className="loading">
+        Đang tải...
+      </div>
+    )
   }
 
   return (
+
     <div className="coordinator-reports">
 
       {/* HEADER */}
@@ -339,42 +346,85 @@ export default function CoordinatorReportsPage() {
 
       <div className="chart-grid">
 
-        {/* PIE */}
+        {/* STATUS OVERVIEW */}
 
         <div className="chart-card">
 
-          <h3>Tỷ lệ trạng thái đơn hàng</h3>
+          <h3>
+            Thống kê trạng thái đơn hàng
+          </h3>
 
-          <ResponsiveContainer
-            width="100%"
-            height={350}
-          >
+          <div className="status-overview">
 
-            <PieChart>
+            {
+              statusData.map((item, index) => {
 
-              <Pie
-                data={statusData}
-                dataKey="value"
-                outerRadius={120}
-                label
-              >
+                const percent =
+                  orders.length
+                    ? (
+                        item.value /
+                        orders.length
+                      ) * 100
+                    : 0
 
-                {
-                  statusData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={COLORS[i]}
-                    />
-                  ))
-                }
+                return (
 
-              </Pie>
+                  <div
+                    className="status-row"
+                    key={index}
+                  >
 
-              <Tooltip />
+                    <div className="status-header">
 
-            </PieChart>
+                      <div className="status-left">
 
-          </ResponsiveContainer>
+                        <span
+                          className="status-dot"
+                          style={{
+                            background:
+                              COLORS[index]
+                          }}
+                        />
+
+                        <span className="status-name">
+                          {item.name}
+                        </span>
+
+                      </div>
+
+                      <div className="status-right">
+
+                        <strong>
+                          {item.value}
+                        </strong>
+
+                        <span>
+                          {percent.toFixed(0)}%
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <div className="status-progress">
+
+                      <div
+                        className="status-progress-fill"
+                        style={{
+                          width: `${percent}%`,
+                          background:
+                            COLORS[index]
+                        }}
+                      />
+
+                    </div>
+
+                  </div>
+                )
+              })
+            }
+
+          </div>
 
         </div>
 
@@ -471,7 +521,7 @@ export default function CoordinatorReportsPage() {
                     #{index + 1}
                   </div>
 
-                  <div>
+                  <div className="station-info">
 
                     <h4>{station.station}</h4>
 
@@ -504,11 +554,15 @@ export default function CoordinatorReportsPage() {
         <table className="report-table">
 
           <thead>
+
             <tr>
+
               <th>Trạm</th>
               <th>Số đơn</th>
               <th>Doanh thu</th>
+
             </tr>
+
           </thead>
 
           <tbody>
@@ -566,11 +620,9 @@ export default function CoordinatorReportsPage() {
                     className="progress-fill"
                     style={{
                       width: `${
-
                         orders.length
                           ? (s.value / orders.length) * 100
                           : 0
-
                       }%`
                     }}
                   />
