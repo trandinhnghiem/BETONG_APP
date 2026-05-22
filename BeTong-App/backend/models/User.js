@@ -150,6 +150,7 @@ class UserModel {
   }
 
 
+
   static async delete(id) {
 
     const pool = await getConnection()
@@ -175,6 +176,24 @@ class UserModel {
       await deleteNotificationsRequest.query(`
         DELETE FROM Notifications
         WHERE ReceiverId = @userId
+      `)
+
+      // =========================
+      // REMOVE USER FROM ORDERS
+      // =========================
+      const updateOrdersRequest =
+        new sql.Request(transaction)
+
+      updateOrdersRequest.input(
+        'userId',
+        sql.Int,
+        id
+      )
+
+      await updateOrdersRequest.query(`
+        UPDATE Orders
+        SET CoordinatorId = NULL
+        WHERE CoordinatorId = @userId
       `)
 
       // =========================
@@ -208,7 +227,6 @@ class UserModel {
     }
 
   }
-
 
   static async updateStationId(id, stationId) {
     const pool = await getConnection()
