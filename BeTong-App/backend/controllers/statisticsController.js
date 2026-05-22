@@ -56,6 +56,11 @@ exports.getStatistics =
         `
       }
 
+      const revenueWhereClause =
+        whereClause
+          ? `${whereClause} AND OrderStatus = 'Completed'`
+          : `WHERE OrderStatus = 'Completed'`
+
       // ======================
       // REVENUE CHART
       // ======================
@@ -72,7 +77,7 @@ exports.getStatistics =
 
           FROM Orders
 
-          ${whereClause}
+          ${revenueWhereClause}
 
           GROUP BY
             CAST(CreatedAt AS DATE)
@@ -105,18 +110,24 @@ exports.getStatistics =
       // SUMMARY
       // ======================
 
-      const summaryResult =
+      const summaryRevenueResult =
         await pool.request().query(`
 
           SELECT
+            SUM(TotalAmount) as revenue
 
-            SUM(TotalAmount)
-              as revenue,
+          FROM Orders
 
+          ${revenueWhereClause}
+
+      `)
+
+      const summaryCountsResult =
+        await pool.request().query(`
+
+          SELECT
             COUNT(*) as orders,
-
-            COUNT(DISTINCT CustomerName)
-              as customers
+            COUNT(DISTINCT CustomerName) as customers
 
           FROM Orders
 
@@ -188,8 +199,11 @@ exports.getStatistics =
       // SUMMARY DATA
       // ======================
 
-      const summary =
-        summaryResult.recordset[0]
+      const summaryRevenue =
+        summaryRevenueResult.recordset[0]
+
+      const summaryCounts =
+        summaryCountsResult.recordset[0]
 
       // ======================
       // RESPONSE
@@ -205,17 +219,17 @@ exports.getStatistics =
 
           revenue:
             Number(
-              summary.revenue || 0
+              summaryRevenue.revenue || 0
             ),
 
           orders:
             Number(
-              summary.orders || 0
+              summaryCounts.orders || 0
             ),
 
           customers:
             Number(
-              summary.customers || 0
+              summaryCounts.customers || 0
             ),
 
           growth: 18

@@ -73,7 +73,9 @@ export default function ReportsPage() {
   // =========================
   const totalRevenue = filtered.reduce(
     (s, i) =>
-      s + Number(i.TotalAmount || 0),
+      s + ((i.OrderStatus || i.orderStatus || '').toString().toLowerCase() === 'completed'
+        ? Number(i.TotalAmount || 0)
+        : 0),
     0
   )
 

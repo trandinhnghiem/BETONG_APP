@@ -94,6 +94,21 @@ export default function AdminDashboard() {
       return
     }
 
+    const getOrderStatus = (order: any) =>
+      (order.OrderStatus || order.orderStatus || order.Status || order.status || '')
+        .toString()
+        .toLowerCase()
+
+    const isCompletedOrder = (order: any) => getOrderStatus(order) === 'completed'
+
+    const getOrderAmount = (order: any) => Number(order.TotalAmount || order.totalAmount || 0) || 0
+
+    const completedRevenue = (orders: any[]) =>
+      orders.reduce(
+        (sum, o) => sum + (isCompletedOrder(o) ? getOrderAmount(o) : 0),
+        0
+      )
+
     const now = new Date()
     let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date
 
@@ -126,7 +141,7 @@ export default function AdminDashboard() {
             const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
             return created >= s && created <= e
           })
-          const revenue = dayOrders.reduce((sum: number, o: any) => sum + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+          const revenue = completedRevenue(dayOrders)
           points.push({ day: label, orders: dayOrders.length, revenue })
         }
 
@@ -159,7 +174,7 @@ export default function AdminDashboard() {
             const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
             return created >= s && created <= e
           })
-          const revenue = monthOrders.reduce((sum:number,o:any)=>sum+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+          const revenue = completedRevenue(monthOrders)
           return { day: label, orders: monthOrders.length, revenue }
         })
 
@@ -214,7 +229,7 @@ export default function AdminDashboard() {
           const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
           return created >= start && created <= end
         })
-        const revenue = dayOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        const revenue = completedRevenue(dayOrders)
         return { day: label, orders: dayOrders.length, revenue }
       })
 
@@ -225,7 +240,7 @@ export default function AdminDashboard() {
         const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
         return created >= previousStart && created <= previousEnd
       })
-      const prevRevenue = prevOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+      const prevRevenue = completedRevenue(prevOrders)
 
       const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
 
@@ -256,7 +271,7 @@ export default function AdminDashboard() {
           const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
           return created >= start && created <= end
         })
-        const revenue = dayOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        const revenue = completedRevenue(dayOrders)
         points.push({ day: label, orders: dayOrders.length, revenue })
       }
       const currentRevenue = points.reduce((s,p)=>s+p.revenue,0)
@@ -266,7 +281,7 @@ export default function AdminDashboard() {
         const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
         return created >= previousStart && created <= previousEnd
       })
-      const prevRevenue = prevOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+      const prevRevenue = completedRevenue(prevOrders)
       const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
 
       setSalesData(points)
@@ -288,7 +303,7 @@ export default function AdminDashboard() {
           const created = new Date(o.CreatedAt || o.createdAt || o.Created || o.created)
           return created >= start && created <= end
         })
-        const revenue = monthOrders.reduce((s: number, o: any) => s + (Number(o.TotalAmount || o.totalAmount || 0) || 0), 0)
+        const revenue = completedRevenue(monthOrders)
         return { day: label, orders: monthOrders.length, revenue }
       })
 
@@ -299,7 +314,7 @@ export default function AdminDashboard() {
       const prevStart = new Date(now.getFullYear()-1, now.getMonth(), 1)
       const prevEnd = new Date(now.getFullYear()-1, now.getMonth()+1, 0)
       const prevOrders = ordersList.filter((o:any)=>{ const c=new Date(o.CreatedAt||o.createdAt||o.Created||o.created); return c>=prevStart && c<=prevEnd })
-      const prevRevenue = prevOrders.reduce((s:number,o:any)=>s+(Number(o.TotalAmount||o.totalAmount||0)||0),0)
+      const prevRevenue = completedRevenue(prevOrders)
       const growth = prevRevenue === 0 ? 0 : Math.round(((currentRevenue - prevRevenue) / prevRevenue) * 100)
 
       setSalesData(points)
@@ -366,7 +381,8 @@ export default function AdminDashboard() {
         })
 
         const revenue = dayOrders.reduce((sum: number, o: any) => {
-          return sum + (Number(o.TotalAmount || o.totalAmount || 0) || 0)
+          const status = (o.OrderStatus || o.orderStatus || o.Status || o.status || '').toString().toLowerCase()
+          return sum + (status === 'completed' ? (Number(o.TotalAmount || o.totalAmount || 0) || 0) : 0)
         }, 0)
 
         return { day: label, orders: dayOrders.length, revenue }
