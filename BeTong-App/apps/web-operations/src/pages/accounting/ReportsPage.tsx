@@ -249,13 +249,19 @@ export default function AccountingReportsPage() {
       orders.length
 
     const totalRevenue =
-      orders.reduce(
-        (sum, item) =>
-          sum + (
-            item.TotalAmount || 0
-          ),
-        0
-      )
+      orders
+        .filter(item =>
+          ['Completed', 'Delivered'].includes(
+            item.OrderStatus || ''
+          )
+        )
+        .reduce(
+          (sum, item) =>
+            sum + (
+              item.TotalAmount || 0
+            ),
+          0
+        )
 
     const pendingOrders =
       orders.filter(

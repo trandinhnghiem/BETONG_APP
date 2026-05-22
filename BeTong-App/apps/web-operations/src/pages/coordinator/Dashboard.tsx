@@ -88,10 +88,14 @@ export default function CoordinatorDashboard() {
         ['Approved', 'Processing', 'Delivering'].includes(order.orderStatus)
       ).length
 
-      const monthlyRevenue = parsedOrders.reduce(
-        (sum, order) => sum + (order.totalAmount || 0),
-        0
-      )
+      const monthlyRevenue = parsedOrders
+        .filter((order) =>
+          ['Completed', 'Delivered'].includes(order.orderStatus)
+        )
+        .reduce(
+          (sum, order) => sum + (order.totalAmount || 0),
+          0
+        )
 
       setStats({
         totalOrders,
