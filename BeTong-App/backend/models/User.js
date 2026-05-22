@@ -45,69 +45,102 @@ class UserModel {
   let stationId = null
 
   // =========================
-  // AUTO STATION ID
+  // AUTO CREATE STATION
   // =========================
   if (userData.role === 'Station') {
 
-    const stationResult =
+    // lấy số lượng trạm hiện có
+    const stationCountResult =
       await pool.request().query(`
-        SELECT
-          ISNULL(MAX(StationId), 0) + 1
-          AS NextStationId
-        FROM Users
-        WHERE Role = 'Station'
+        SELECT COUNT(*) as total
+        FROM Stations
       `)
 
+    const nextNumber =
+      stationCountResult.recordset[0].total + 1
+
+    const stationCode =
+      `TRAM${nextNumber}`
+
+    const stationName =
+      `Trạm ${userData.fullName}`
+
+    // tạo trạm mới
+    const stationResult =
+      await pool.request()
+        .input(
+          'stationCode',
+          sql.NVarChar,
+          stationCode
+        )
+        .input(
+          'stationName',
+          sql.NVarChar,
+          stationName
+        )
+        .input(
+          'status',
+          sql.NVarChar,
+          'Active'
+        )
+        .query(`
+          INSERT INTO Stations (
+            StationCode,
+            StationName,
+            Status
+          )
+          OUTPUT INSERTED.Id
+          VALUES (
+            @stationCode,
+            @stationName,
+            @status
+          )
+        `)
+
     stationId =
-      stationResult.recordset[0].NextStationId
+      stationResult.recordset[0].Id
   }
 
+  // =========================
+  // CREATE USER
+  // =========================
   const result = await pool
     .request()
-
     .input(
       'username',
       sql.NVarChar,
       userData.username
     )
-
     .input(
       'email',
       sql.NVarChar,
       userData.email
     )
-
     .input(
       'passwordHash',
       sql.NVarChar,
       hashedPassword
     )
-
     .input(
       'fullName',
       sql.NVarChar,
       userData.fullName
     )
-
     .input(
       'phone',
       sql.NVarChar,
       userData.phone || null
     )
-
     .input(
       'role',
       sql.NVarChar,
       userData.role || 'Coordinator'
     )
-
-    // FIX CHÍNH
     .input(
       'stationId',
       sql.Int,
       stationId
     )
-
     .query(`
       INSERT INTO Users (
         Username,
@@ -118,7 +151,6 @@ class UserModel {
         Role,
         StationId
       )
-
       VALUES (
         @username,
         @email,
@@ -129,12 +161,13 @@ class UserModel {
         @stationId
       )
 
-      SELECT
-        SCOPE_IDENTITY() as id,
-        @stationId as StationId
+      SELECT SCOPE_IDENTITY() as id
     `)
 
-  return result.recordset[0]
+  return {
+    ...result.recordset[0],
+    stationId
+  }
 }
 
 
