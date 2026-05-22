@@ -279,6 +279,7 @@ export default function AccountingReportsPage() {
           'Delivered',
           'Uploading',
           'In Transit'
+
         ].includes(
           x.OrderStatus || ''
         )
@@ -444,6 +445,11 @@ export default function AccountingReportsPage() {
 
       case 'In Transit':
         return 'Đang vận chuyển'
+        
+      case 'REJECTED':
+      case 'Rejected':
+      case 'Reject':
+        return 'Từ chối'
 
       default:
         return status || '-'
@@ -467,6 +473,11 @@ export default function AccountingReportsPage() {
       case 'Sent':
       case 'Delivered':
         return 'info'
+
+      case 'REJECTED':
+      case 'Rejected':
+      case 'Reject':
+        return 'danger'
 
       default:
         return 'default'
