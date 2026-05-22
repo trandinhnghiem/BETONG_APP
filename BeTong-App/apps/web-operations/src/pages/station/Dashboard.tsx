@@ -38,6 +38,20 @@ export default function StationDashboard() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
 
+  // ================= NORMALIZE STATUS =================
+  const normalizeStatus = (status: string | undefined | null): string => {
+    if (!status) return ''
+
+    switch (status) {
+      case 'Processing':
+        return 'Sent'
+      case 'Delivering':
+        return 'Delivered'
+      default:
+        return status
+    }
+  }
+
   // ================= COLOR SYNC =================
   const STATUS_COLORS = {
     pending: '#f093fb',
@@ -53,7 +67,6 @@ export default function StationDashboard() {
       setLoading(true)
 
       const res = await apiClient.get('/api/orders/station-orders')
-
       const data = Array.isArray(res.data) ? res.data : []
 
       setOrders(data)
@@ -78,26 +91,34 @@ export default function StationDashboard() {
   // ================= STATS =================
   const buildStats = (data: any[]) => {
     setStats({
-      pending: data.filter(o => o.OrderStatus === 'Pending Approval').length,
-      approved: data.filter(o => o.OrderStatus === 'Approved').length,
-      sent: data.filter(o => o.OrderStatus === 'Sent').length,
-      delivered: data.filter(o => o.OrderStatus === 'Delivered').length,
-      completed: data.filter(o => o.OrderStatus === 'Completed').length
+      pending: data.filter(o => normalizeStatus(o.OrderStatus) === 'Pending Approval').length,
+      approved: data.filter(o => normalizeStatus(o.OrderStatus) === 'Approved').length,
+      sent: data.filter(o => normalizeStatus(o.OrderStatus) === 'Sent').length,
+      delivered: data.filter(o => normalizeStatus(o.OrderStatus) === 'Delivered').length,
+      completed: data.filter(o => normalizeStatus(o.OrderStatus) === 'Completed').length
     })
   }
 
   // ================= REVENUE =================
   const buildRevenue = (data: any[]) => {
-    let filtered = data.filter(o => o.OrderStatus === 'Completed')
+
+    let filtered = data.filter(
+      o => normalizeStatus(o.OrderStatus) === 'Completed'
+    )
 
     if (fromDate) {
-      filtered = filtered.filter(o => new Date(o.CreatedAt) >= new Date(fromDate))
+      filtered = filtered.filter(
+        o => new Date(o.CreatedAt) >= new Date(fromDate)
+      )
     }
 
     if (toDate) {
       const end = new Date(toDate)
       end.setHours(23, 59, 59, 999)
-      filtered = filtered.filter(o => new Date(o.CreatedAt) <= end)
+
+      filtered = filtered.filter(
+        o => new Date(o.CreatedAt) <= end
+      )
     }
 
     const start = fromDate
@@ -143,34 +164,34 @@ export default function StationDashboard() {
     setGrowth(prev === 0 ? 100 : ((last - prev) / prev) * 100)
   }
 
-  // ================= PIE SYNC COLOR =================
+  // ================= PIE DATA =================
   const pieData = [
-  {
-    name: 'Chờ duyệt',
-    value: stats.pending || 0,
-    color: STATUS_COLORS.pending
-  },
-  {
-    name: 'Đã duyệt',
-    value: stats.approved || 0,
-    color: STATUS_COLORS.approved
-  },
-  {
-    name: 'Đang giao',
-    value: stats.sent || 0,
-    color: STATUS_COLORS.sent
-  },
-  {
-    name: 'Đã giao',
-    value: stats.delivered || 0,
-    color: STATUS_COLORS.delivered
-  },
-  {
-    name: 'Hoàn thành',
-    value: stats.completed || 0,
-    color: STATUS_COLORS.completed
-  }
-]
+    {
+      name: 'Chờ duyệt',
+      value: stats.pending || 0,
+      color: STATUS_COLORS.pending
+    },
+    {
+      name: 'Đã duyệt',
+      value: stats.approved || 0,
+      color: STATUS_COLORS.approved
+    },
+    {
+      name: 'Đang giao',
+      value: stats.sent || 0,
+      color: STATUS_COLORS.sent
+    },
+    {
+      name: 'Đã giao',
+      value: stats.delivered || 0,
+      color: STATUS_COLORS.delivered
+    },
+    {
+      name: 'Hoàn thành',
+      value: stats.completed || 0,
+      color: STATUS_COLORS.completed
+    }
+  ]
 
   if (loading) return <div className="station-loading">Đang tải...</div>
 
@@ -236,75 +257,34 @@ export default function StationDashboard() {
       <div className="station-chart-grid">
 
         {/* PIE */}
-        {/* PIE */}
-{/* PIE */}
-<div className="station-chart-card">
-  <h3>Phân bố đơn hàng</h3>
+        <div className="station-chart-card">
+          <h3>Phân bố đơn hàng</h3>
 
-  <ResponsiveContainer width="100%" height={340}>
-    <PieChart>
+          <ResponsiveContainer width="100%" height={340}>
+            <PieChart>
 
-      <Pie
-        data={pieData}
-        dataKey="value"
-        nameKey="name"
-        cx="50%"
-        cy="45%"
-        outerRadius={120}
-        paddingAngle={0}
-        stroke="none"
-        labelLine={false}
-        label={({ percent = 0 }) =>
-          percent > 0
-            ? `${(percent * 100).toFixed(0)}%`
-            : ''
-        }
-      >
-        {pieData.map((entry, i) => (
-          <Cell
-            key={i}
-            fill={entry.color}
-            stroke="none"
-          />
-        ))}
-      </Pie>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="45%"
+                outerRadius={120}
+                stroke="none"
+                label={({ percent = 0 }) =>
+                  percent > 0 ? `${(percent * 100).toFixed(0)}%` : ''
+                }
+              >
+                {pieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
 
-      <Tooltip
-        formatter={(value: any) => [
-          `${value} đơn`,
-          'Số lượng'
-        ]}
-        contentStyle={{
-          borderRadius: '12px',
-          border: 'none',
-          boxShadow:
-            '0 6px 20px rgba(0,0,0,0.15)'
-        }}
-      />
-
-      <Legend
-        verticalAlign="bottom"
-        align="center"
-        iconType="circle"
-        formatter={(value) => (
-          <span
-            style={{
-              color: '#374151',
-              fontWeight: 600
-            }}
-          >
-            {value}
-          </span>
-        )}
-        wrapperStyle={{
-          paddingTop: '20px',
-          fontSize: '14px'
-        }}
-      />
-
-    </PieChart>
-  </ResponsiveContainer>
-</div>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
 
         {/* LINE */}
         <div className="station-chart-card">
@@ -323,105 +303,36 @@ export default function StationDashboard() {
 
           <div className="station-kpi-mini">
 
-          <div className="station-kpi-center">
-            <FiDollarSign />
+            <div className="station-kpi-center">
+              <FiDollarSign />
+              <span>{totalRevenue.toLocaleString('vi-VN')} VND</span>
+            </div>
 
-            <span>
-              {totalRevenue.toLocaleString('vi-VN')} VND
+            <span className={isUp ? 'up' : 'down'}>
+              {isUp ? '▲' : '▼'} {growth.toFixed(1)}%
             </span>
+
           </div>
 
-          <span className={isUp ? 'up' : 'down'}>
-            {isUp ? '▲' : '▼'} {growth.toFixed(1)}%
-          </span>
-
-        </div>
-
           <ResponsiveContainer width="100%" height={320}>
-  <LineChart data={revenueData}>
+            <LineChart data={revenueData}>
 
-    <defs>
-      <linearGradient
-        id="colorRevenue"
-        x1="0"
-        y1="0"
-        x2="0"
-        y2="1"
-      >
-        <stop
-          offset="5%"
-          stopColor="#1677FF"
-          stopOpacity={0.4}
-        />
+              <CartesianGrid strokeDasharray="3 3" />
 
-        <stop
-          offset="95%"
-          stopColor="#1677FF"
-          stopOpacity={0}
-        />
-      </linearGradient>
-    </defs>
+              <XAxis dataKey="date" />
+              <YAxis />
 
-    <CartesianGrid
-      strokeDasharray="3 3"
-      vertical={false}
-      opacity={0.15}
-    />
+              <Tooltip />
 
-    <XAxis
-      dataKey="date"
-      tick={{
-        fill: '#6b7280',
-        fontSize: 12
-      }}
-      axisLine={false}
-      tickLine={false}
-    />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#1677FF"
+                strokeWidth={3}
+              />
 
-    <YAxis
-      tickFormatter={(value) =>
-        Number(value).toLocaleString('vi-VN')
-      }
-      tick={{
-        fill: '#6b7280',
-        fontSize: 12
-      }}
-      axisLine={false}
-      tickLine={false}
-    />
-
-    <Tooltip
-      contentStyle={{
-        borderRadius: '14px',
-        border: 'none',
-        boxShadow:
-          '0 10px 30px rgba(0,0,0,0.12)'
-      }}
-      formatter={(value: any) =>
-        `${Number(value).toLocaleString(
-          'vi-VN'
-        )} VND`
-      }
-    />
-
-    <Line
-      type="monotone"
-      dataKey="revenue"
-      stroke="#1677FF"
-      strokeWidth={4}
-      dot={{
-        r: 5,
-        strokeWidth: 2,
-        fill: '#fff'
-      }}
-      activeDot={{
-        r: 8
-      }}
-      fill="url(#colorRevenue)"
-    />
-
-  </LineChart>
-</ResponsiveContainer>
+            </LineChart>
+          </ResponsiveContainer>
 
         </div>
 
