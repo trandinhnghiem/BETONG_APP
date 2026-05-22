@@ -320,13 +320,31 @@ class OrderController {
   static async getStationOrders(req, res) {
     const pool = await getConnection()
     const result = await pool.request()
-      .input('StationId', sql.Int, req.user.StationId)
+      .input('stationId', sql.Int, req.user.StationId)
       .query(`
-        SELECT * FROM Orders
-        WHERE DestinationStationId = @StationId
-        ORDER BY CreatedAt DESC
-      `)
+        SELECT
+          o.Id,
+          o.OrderCode,
+          o.TotalAmount,
+          o.OrderStatus,
+          o.CreatedAt,
 
+          s.StationName AS DestinationStation,
+
+          u.FullName AS CoordinatorName
+
+        FROM Orders o
+
+        LEFT JOIN Stations s
+          ON o.DestinationStationId = s.Id
+
+        LEFT JOIN Users u
+          ON o.CoordinatorId = u.Id
+
+        WHERE o.DestinationStationId = @stationId
+
+        ORDER BY o.CreatedAt DESC
+      `)
     res.json(result.recordset)
   }
 
