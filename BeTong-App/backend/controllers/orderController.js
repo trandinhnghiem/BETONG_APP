@@ -138,6 +138,7 @@ class OrderController {
         'Draft',
         'Pending Approval',
         'Approved',
+        'Rejected',
         'Processing',
         'Delivering',
         'Completed',
@@ -156,7 +157,7 @@ class OrderController {
       const currentStatus = order.OrderStatus
       const transitions = {
         Draft: ['Pending Approval'],
-        'Pending Approval': ['Approved', 'Cancelled'],
+        'Pending Approval': ['Approved', 'Rejected', 'Cancelled'],
         Approved: ['Processing'],
         Processing: ['Delivering'],
         Delivering: ['Completed'],
@@ -173,7 +174,7 @@ class OrderController {
           Draft: ['Pending Approval']
         },
         Accounting: {
-          'Pending Approval': ['Approved', 'Cancelled']
+          'Pending Approval': ['Approved', 'Rejected', 'Cancelled']
         },
         Station: {
           Approved: ['Processing'],
@@ -213,6 +214,16 @@ class OrderController {
             order.DestinationStationId,
             'OrderApproved',
             'Đơn hàng đã được duyệt',
+            statusMessage,
+            order.Id
+          )
+        }
+        if (status === 'Rejected' && order.CoordinatorId) {
+          await NotificationService.sendUserNotification(
+            io,
+            order.CoordinatorId,
+            'OrderRejected',
+            'Đơn hàng đã bị từ chối',
             statusMessage,
             order.Id
           )
