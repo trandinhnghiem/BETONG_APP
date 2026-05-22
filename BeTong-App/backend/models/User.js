@@ -36,25 +36,106 @@ class UserModel {
   }
 
   static async create(userData) {
-    const pool = await getConnection()
-    const hashedPassword = await bcrypt.hash(userData.password, 10)
-    
-    const result = await pool
-      .request()
-      .input('username', sql.NVarChar, userData.username)
-      .input('email', sql.NVarChar, userData.email)
-      .input('passwordHash', sql.NVarChar, hashedPassword)
-      .input('fullName', sql.NVarChar, userData.fullName)
-      .input('phone', sql.NVarChar, userData.phone || null)
-      .input('role', sql.NVarChar, userData.role || 'Coordinator')
-      .input('stationId', sql.Int, userData.stationId || null)
-      .query(`
-        INSERT INTO Users (Username, Email, PasswordHash, FullName, Phone, Role, StationId)
-        VALUES (@username, @email, @passwordHash, @fullName, @phone, @role, @stationId)
-        SELECT SCOPE_IDENTITY() as id
+
+  const pool = await getConnection()
+
+  const hashedPassword =
+    await bcrypt.hash(userData.password, 10)
+
+  let stationId = null
+
+  // =========================
+  // AUTO STATION ID
+  // =========================
+  if (userData.role === 'Station') {
+
+    const stationResult =
+      await pool.request().query(`
+        SELECT
+          ISNULL(MAX(StationId), 0) + 1
+          AS NextStationId
+        FROM Users
+        WHERE Role = 'Station'
       `)
-    return result.recordset[0]
+
+    stationId =
+      stationResult.recordset[0].NextStationId
   }
+
+  const result = await pool
+    .request()
+
+    .input(
+      'username',
+      sql.NVarChar,
+      userData.username
+    )
+
+    .input(
+      'email',
+      sql.NVarChar,
+      userData.email
+    )
+
+    .input(
+      'passwordHash',
+      sql.NVarChar,
+      hashedPassword
+    )
+
+    .input(
+      'fullName',
+      sql.NVarChar,
+      userData.fullName
+    )
+
+    .input(
+      'phone',
+      sql.NVarChar,
+      userData.phone || null
+    )
+
+    .input(
+      'role',
+      sql.NVarChar,
+      userData.role || 'Coordinator'
+    )
+
+    // FIX CHÍNH
+    .input(
+      'stationId',
+      sql.Int,
+      stationId
+    )
+
+    .query(`
+      INSERT INTO Users (
+        Username,
+        Email,
+        PasswordHash,
+        FullName,
+        Phone,
+        Role,
+        StationId
+      )
+
+      VALUES (
+        @username,
+        @email,
+        @passwordHash,
+        @fullName,
+        @phone,
+        @role,
+        @stationId
+      )
+
+      SELECT
+        SCOPE_IDENTITY() as id,
+        @stationId as StationId
+    `)
+
+  return result.recordset[0]
+}
 
 
 
