@@ -145,12 +145,32 @@ export default function StationDashboard() {
 
   // ================= PIE SYNC COLOR =================
   const pieData = [
-    { name: 'Pending', value: stats.pending || 0, color: STATUS_COLORS.pending },
-    { name: 'Approved', value: stats.approved || 0, color: STATUS_COLORS.approved },
-    { name: 'Sent', value: stats.sent || 0, color: STATUS_COLORS.sent },
-    { name: 'Delivered', value: stats.delivered || 0, color: STATUS_COLORS.delivered },
-    { name: 'Completed', value: stats.completed || 0, color: STATUS_COLORS.completed }
-  ]
+  {
+    name: 'Chờ duyệt',
+    value: stats.pending || 0,
+    color: STATUS_COLORS.pending
+  },
+  {
+    name: 'Đã duyệt',
+    value: stats.approved || 0,
+    color: STATUS_COLORS.approved
+  },
+  {
+    name: 'Đang giao',
+    value: stats.sent || 0,
+    color: STATUS_COLORS.sent
+  },
+  {
+    name: 'Đã giao',
+    value: stats.delivered || 0,
+    color: STATUS_COLORS.delivered
+  },
+  {
+    name: 'Hoàn thành',
+    value: stats.completed || 0,
+    color: STATUS_COLORS.completed
+  }
+]
 
   if (loading) return <div className="station-loading">Đang tải...</div>
 
@@ -216,31 +236,75 @@ export default function StationDashboard() {
       <div className="station-chart-grid">
 
         {/* PIE */}
-        <div className="station-chart-card">
-          <h3>Phân bố đơn hàng</h3>
+        {/* PIE */}
+{/* PIE */}
+<div className="station-chart-card">
+  <h3>Phân bố đơn hàng</h3>
 
-          <ResponsiveContainer width="100%" height={320}>
-            <PieChart>
+  <ResponsiveContainer width="100%" height={340}>
+    <PieChart>
 
-              <Pie
-                data={pieData}
-                dataKey="value"
-                outerRadius={120}
-                label={({ name, percent = 0 }) =>
-                  `${name} ${(percent * 100).toFixed(0)}%`
-                }
-              >
-                {pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
+      <Pie
+        data={pieData}
+        dataKey="value"
+        nameKey="name"
+        cx="50%"
+        cy="45%"
+        outerRadius={120}
+        paddingAngle={0}
+        stroke="none"
+        labelLine={false}
+        label={({ percent = 0 }) =>
+          percent > 0
+            ? `${(percent * 100).toFixed(0)}%`
+            : ''
+        }
+      >
+        {pieData.map((entry, i) => (
+          <Cell
+            key={i}
+            fill={entry.color}
+            stroke="none"
+          />
+        ))}
+      </Pie>
 
-              <Tooltip />
-              <Legend />
+      <Tooltip
+        formatter={(value: any) => [
+          `${value} đơn`,
+          'Số lượng'
+        ]}
+        contentStyle={{
+          borderRadius: '12px',
+          border: 'none',
+          boxShadow:
+            '0 6px 20px rgba(0,0,0,0.15)'
+        }}
+      />
 
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <Legend
+        verticalAlign="bottom"
+        align="center"
+        iconType="circle"
+        formatter={(value) => (
+          <span
+            style={{
+              color: '#374151',
+              fontWeight: 600
+            }}
+          >
+            {value}
+          </span>
+        )}
+        wrapperStyle={{
+          paddingTop: '20px',
+          fontSize: '14px'
+        }}
+      />
+
+    </PieChart>
+  </ResponsiveContainer>
+</div>
 
         {/* LINE */}
         <div className="station-chart-card">
@@ -258,22 +322,106 @@ export default function StationDashboard() {
           </div>
 
           <div className="station-kpi-mini">
+
+          <div className="station-kpi-center">
             <FiDollarSign />
-            <span>{totalRevenue.toLocaleString()} VND</span>
-            <span className={isUp ? 'up' : 'down'}>
-              {isUp ? '▲' : '▼'} {growth.toFixed(1)}%
+
+            <span>
+              {totalRevenue.toLocaleString('vi-VN')} VND
             </span>
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="revenue" stroke="#1677FF" />
-            </LineChart>
-          </ResponsiveContainer>
+          <span className={isUp ? 'up' : 'down'}>
+            {isUp ? '▲' : '▼'} {growth.toFixed(1)}%
+          </span>
+
+        </div>
+
+          <ResponsiveContainer width="100%" height={320}>
+  <LineChart data={revenueData}>
+
+    <defs>
+      <linearGradient
+        id="colorRevenue"
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="1"
+      >
+        <stop
+          offset="5%"
+          stopColor="#1677FF"
+          stopOpacity={0.4}
+        />
+
+        <stop
+          offset="95%"
+          stopColor="#1677FF"
+          stopOpacity={0}
+        />
+      </linearGradient>
+    </defs>
+
+    <CartesianGrid
+      strokeDasharray="3 3"
+      vertical={false}
+      opacity={0.15}
+    />
+
+    <XAxis
+      dataKey="date"
+      tick={{
+        fill: '#6b7280',
+        fontSize: 12
+      }}
+      axisLine={false}
+      tickLine={false}
+    />
+
+    <YAxis
+      tickFormatter={(value) =>
+        Number(value).toLocaleString('vi-VN')
+      }
+      tick={{
+        fill: '#6b7280',
+        fontSize: 12
+      }}
+      axisLine={false}
+      tickLine={false}
+    />
+
+    <Tooltip
+      contentStyle={{
+        borderRadius: '14px',
+        border: 'none',
+        boxShadow:
+          '0 10px 30px rgba(0,0,0,0.12)'
+      }}
+      formatter={(value: any) =>
+        `${Number(value).toLocaleString(
+          'vi-VN'
+        )} VND`
+      }
+    />
+
+    <Line
+      type="monotone"
+      dataKey="revenue"
+      stroke="#1677FF"
+      strokeWidth={4}
+      dot={{
+        r: 5,
+        strokeWidth: 2,
+        fill: '#fff'
+      }}
+      activeDot={{
+        r: 8
+      }}
+      fill="url(#colorRevenue)"
+    />
+
+  </LineChart>
+</ResponsiveContainer>
 
         </div>
 
