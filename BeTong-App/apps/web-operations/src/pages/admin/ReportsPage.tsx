@@ -98,6 +98,9 @@ export default function ReportsPage() {
 
     switch (status) {
 
+      case 'Draft':
+        return 'Đơn tạm'
+
       case 'Completed':
         return 'Hoàn thành'
 
