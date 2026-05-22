@@ -313,24 +313,69 @@ class UserModel {
       // =========================
       // DELETE USER
       // =========================
-      const deleteUserRequest =
-        new sql.Request(transaction)
+      // =========================
+// GET USER STATION ID
+// =========================
+const getUserRequest =
+  new sql.Request(transaction)
 
-      deleteUserRequest.input(
-        'userId',
-        sql.Int,
-        id
-      )
+getUserRequest.input(
+  'userId',
+  sql.Int,
+  id
+)
 
-      const result =
-        await deleteUserRequest.query(`
-          DELETE FROM Users
-          WHERE Id = @userId
-        `)
+const userResult =
+  await getUserRequest.query(`
+    SELECT StationId
+    FROM Users
+    WHERE Id = @userId
+  `)
 
-      await transaction.commit()
+const stationId =
+  userResult.recordset[0]?.StationId || null
 
-      return result.rowsAffected[0] > 0
+// =========================
+// DELETE USER
+// =========================
+const deleteUserRequest =
+  new sql.Request(transaction)
+
+deleteUserRequest.input(
+  'userId',
+  sql.Int,
+  id
+)
+
+const result =
+  await deleteUserRequest.query(`
+    DELETE FROM Users
+    WHERE Id = @userId
+  `)
+
+// =========================
+// DELETE STATION
+// =========================
+if (stationId) {
+
+  const deleteStationRequest =
+    new sql.Request(transaction)
+
+  deleteStationRequest.input(
+    'stationId',
+    sql.Int,
+    stationId
+  )
+
+  await deleteStationRequest.query(`
+    DELETE FROM Stations
+    WHERE Id = @stationId
+  `)
+}
+
+await transaction.commit()
+
+return result.rowsAffected[0] > 0
 
     } catch (error) {
 
