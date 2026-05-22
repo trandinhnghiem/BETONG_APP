@@ -205,10 +205,10 @@ export default function CoordinatorDashboard() {
             Tạo đơn hàng
           </Link>
 
-          <button className="action-btn secondary">
+          <Link to="/coordinator/reports" className="action-btn secondary">
             <FiBarChart2 size={16} />
             Báo cáo
-          </button>
+          </Link>
         </div>
       </div>
 

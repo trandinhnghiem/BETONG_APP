@@ -203,10 +203,10 @@ export default function AccountingDashboard() {
             Quản lý đơn
           </Link>
 
-          <button className="action-btn secondary">
+          <Link to="/accounting/reports" className="action-btn secondary">
             <FiBarChart2 size={16} />
             Báo cáo
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -386,15 +386,21 @@ export default function AccountingDashboard() {
               <span>Đơn chờ duyệt</span>
             </Link>
 
-            <button className="quick-action-btn success">
+            <Link
+              to="/accounting/reports"
+              className="quick-action-btn success"
+            >
               <FiBarChart2 size={24} />
               <span>Báo cáo</span>
-            </button>
+            </Link>
 
-            <button className="quick-action-btn warning">
+            <Link
+              to="/accounting/stations"
+              className="quick-action-btn warning"
+            >
               <FiMapPin size={24} />
               <span>Quản lý trạm</span>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

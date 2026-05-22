@@ -542,7 +542,9 @@ export default function AdminDashboard() {
           Cài đặt
         </button>
 
-          <button className="action-btn secondary">
+          <button className="action-btn secondary"
+            onClick={() => navigate('/admin/reports')}
+          >
             <FiBarChart2 size={16} />
             Báo cáo
           </button>
