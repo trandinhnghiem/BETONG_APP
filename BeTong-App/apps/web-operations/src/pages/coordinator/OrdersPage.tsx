@@ -33,6 +33,39 @@ export default function CoordinatorOrdersPage() {
     applyFilters()
   }, [orders, search, status, fromDate, toDate])
 
+  // =========================
+  // FIX TIME -7 HOURS
+  // =========================
+  const formatVNDateTime = (
+    dateString: string
+  ) => {
+
+    const date = new Date(dateString)
+
+    // trừ 7 tiếng
+    date.setHours(
+      date.getHours() - 7
+    )
+
+    return date.toLocaleString('vi-VN')
+
+  }
+
+  const formatVNDate = (
+    dateString: string
+  ) => {
+
+    const date = new Date(dateString)
+
+    // trừ 7 tiếng
+    date.setHours(
+      date.getHours() - 7
+    )
+
+    return date.toLocaleDateString('vi-VN')
+
+  }
+
   const fetchOrders = async () => {
 
     try {
@@ -57,7 +90,6 @@ export default function CoordinatorOrdersPage() {
         orderStatus:
           o.OrderStatus,
 
-        // ✅ THÊM
         rejectReason:
           o.RejectReason,
 
@@ -208,7 +240,11 @@ export default function CoordinatorOrdersPage() {
 
     }
   }
-    const handleExportExcel = async () => {
+
+  // =========================
+  // EXPORT EXCEL
+  // =========================
+  const handleExportExcel = async () => {
 
     try {
 
@@ -282,9 +318,9 @@ export default function CoordinatorOrdersPage() {
             order.rejectReason || '',
 
           createdAt:
-            new Date(
+            formatVNDateTime(
               order.createdAt
-            ).toLocaleString('vi-VN')
+            )
 
         })
 
@@ -343,7 +379,7 @@ export default function CoordinatorOrdersPage() {
 
     <div className="orders-dashboard">
 
-            {/* HEADER */}
+      {/* HEADER */}
       <div className="page-header">
 
         <div>
@@ -504,7 +540,7 @@ export default function CoordinatorOrdersPage() {
                     {o.totalAmount.toLocaleString()} đ
                   </td>
 
-                  {/* ✅ STATUS */}
+                  {/* STATUS */}
                   <td>
 
                     <span
@@ -557,9 +593,9 @@ export default function CoordinatorOrdersPage() {
 
                   <td>
 
-                    {new Date(
+                    {formatVNDate(
                       o.createdAt
-                    ).toLocaleDateString()}
+                    )}
 
                   </td>
 
