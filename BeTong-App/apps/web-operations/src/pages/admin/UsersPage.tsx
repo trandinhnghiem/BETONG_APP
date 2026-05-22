@@ -193,6 +193,7 @@ export default function UsersPage() {
             <option value="Admin">Quản trị</option>
             <option value="Accounting">Kế toán</option>
             <option value="Coordinator">Điều phối</option>
+            <option value="Engineer">Kỹ thuật viên công trình</option>
             <option value="Station">Trạm</option>
           </select>
 
@@ -339,6 +340,10 @@ export default function UsersPage() {
 
                 <option value="Coordinator">
                   Điều phối
+                </option>
+
+                <option value="Engineer">
+                  Kỹ thuật viên công trình
                 </option>
 
                 <option value="Station">

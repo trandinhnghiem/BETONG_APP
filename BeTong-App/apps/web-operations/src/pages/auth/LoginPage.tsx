@@ -17,6 +17,7 @@ export default function LoginPage() {
     { username: 'admin', password: 'Admin@123456', role: 'Admin' },
     { username: 'account', password: '123456', role: 'Accounting' },
     { username: 'coor', password: '123456', role: 'Coordinator' },
+    { username: 'engineer', password: '123456', role: 'Engineer' },
     { username: 'omon1', password: '123456', role: 'Station' },
     { username: 'omon2', password: '123456', role: 'Station' },
     { username: 'T82', password: '123456', role: 'Station' },
@@ -70,6 +71,8 @@ export default function LoginPage() {
           navigate('/coordinator')
         } else if (role === 'Station') {
           navigate('/station')
+        } else if (role === 'Engineer') {
+          navigate('/engineer')
         } else {
           navigate('/')
         }
