@@ -95,7 +95,8 @@ export default function AccountingOrdersPage() {
           // FIX QUAN TRỌNG:
           // đổi sang Rejected
           await apiClient.post(`/api/orders/${order.id}/status`, {
-            status: 'Rejected'
+            status: 'Rejected',
+            reason
           })
 
           fetchOrders()

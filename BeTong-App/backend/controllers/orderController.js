@@ -132,7 +132,7 @@ class OrderController {
   static async updateStatus(req, res) {
     try {
       const orderId = parseInt(req.params.orderId)
-      const { status } = req.body
+      const { status, reason } = req.body
 
       const allowedStatuses = [
         'Draft',
@@ -142,7 +142,8 @@ class OrderController {
         'Processing',
         'Delivering',
         'Completed',
-        'Cancelled'
+        'Cancelled',
+        'Rejected'
       ]
 
       if (!allowedStatuses.includes(status)) {
@@ -188,7 +189,12 @@ class OrderController {
         return res.status(403).json({ error: 'You are not allowed to perform this status transition' })
       }
 
-      const updated = await OrderModel.updateStatus(orderId, status, req.user.Id)
+      const updated = await OrderModel.updateStatus(
+        orderId,
+        status,
+        req.user.Id,
+        reason || null
+      )
       if (!updated) {
         return res.status(500).json({ error: 'Failed to update status' })
       }

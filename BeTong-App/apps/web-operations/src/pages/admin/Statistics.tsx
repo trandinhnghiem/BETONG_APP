@@ -375,8 +375,24 @@ export default function Statistics() {
     />
 
     <YAxis
-      stroke="#94a3b8"
-    />
+  stroke="#94a3b8"
+  tickFormatter={(value) => {
+
+    if (value >= 1000000000) {
+      return `${(value / 1000000000).toFixed(1)}B`
+    }
+
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`
+    }
+
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}K`
+    }
+
+    return value
+  }}
+/>
 
     <Tooltip
       contentStyle={{
