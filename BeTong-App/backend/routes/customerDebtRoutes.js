@@ -7,28 +7,29 @@ const {
 } = require('../middlewares/auth')
 
 const CustomerDebtController =
-  require('../controllers/customerDebtController')
+  require('../controllers/CustomerDebtController')
 
 const router = express.Router()
 
-const upload =
-  multer({
-    dest: 'uploads/'
-  })
+const upload = multer({
+  storage: multer.memoryStorage()
+})
 
 router.use(authMiddleware)
 
+// GET ALL
+router.get(
+  '/',
+  roleMiddleware(['Accounting', 'Coordinator']),
+  CustomerDebtController.getAll
+)
+
+// IMPORT EXCEL
 router.post(
   '/import',
   roleMiddleware(['Accounting']),
   upload.single('file'),
-  CustomerDebtController.importDebt
-)
-
-router.get(
-  '/',
-  roleMiddleware(['Accounting', 'Coordinator']),
-  CustomerDebtController.getDebts
+  CustomerDebtController.importDebts
 )
 
 module.exports = router

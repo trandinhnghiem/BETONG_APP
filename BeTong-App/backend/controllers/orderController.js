@@ -7,6 +7,7 @@ const ProductModel = require('../models/Product')
 const StationModel = require('../models/Station')
 const { getConnection, sql } = require('../config/database')
 const NotificationService = require('../services/notificationService')
+const CustomerDebtModel = require('../models/CustomerDebt')
 
 class OrderController {
 
@@ -217,7 +218,53 @@ class OrderController {
           )
         }
 
+        // =========================
+// KIỂM TRA CÔNG NỢ
+// =========================
+
+if (
+  status === 'Approved'
+) {
+
+  const debt =
+    await CustomerDebtModel
+      .findByCustomerName(
+        order.CustomerName
+      )
+
+  if (debt) {
+
+    const futureDebt =
+      Number(debt.DebtAmount || 0)
+      +
+      Number(order.TotalAmount || 0)
+
+    if (
+      futureDebt >
+      Number(debt.DebtLimit || 0)
+    ) {
+
+      await OrderModel.updateStatus(
+        orderId,
+        'Rejected',
+        req.user.Id,
+        'Vượt hạn mức công nợ'
+      )
+
+      return res.status(400).json({
+        error:
+          'Đơn vượt hạn mức công nợ'
+      })
+    }
+  }
+}
+
         if (status === 'Approved') {
+          await CustomerDebtModel
+          .increaseDebt(
+            order.CustomerName,
+            order.TotalAmount
+          )
           await NotificationService.notifyStationUsers(
             io,
             order.DestinationStationId,
@@ -295,22 +342,36 @@ class OrderController {
     const pool = await getConnection()
 
     const result = await pool.request().query(`
-      SELECT 
-        o.Id,
-        o.OrderCode,
-        o.TotalAmount,
-        o.OrderStatus,
-        o.CreatedAt,
+  SELECT 
+    o.Id,
+    o.OrderCode,
 
-        s.StationName AS DestinationStation,
-        u.FullName AS CoordinatorName
+    o.CustomerName,
 
-      FROM Orders o
-      LEFT JOIN Stations s ON o.DestinationStationId = s.Id
-      LEFT JOIN Users u ON o.CoordinatorId = u.Id
+    o.TotalAmount,
+    o.OrderStatus,
+    o.CreatedAt,
 
-      ORDER BY o.CreatedAt DESC
-    `)
+    s.StationName AS DestinationStation,
+
+    u.FullName AS CoordinatorName,
+
+    cd.DebtAmount,
+    cd.DebtLimit
+
+  FROM Orders o
+
+  LEFT JOIN Stations s
+    ON o.DestinationStationId = s.Id
+
+  LEFT JOIN Users u
+    ON o.CoordinatorId = u.Id
+
+  LEFT JOIN CustomerDebts cd
+    ON o.CustomerName = cd.CustomerName
+
+  ORDER BY o.CreatedAt DESC
+`)
 
     res.json(result.recordset)
 
