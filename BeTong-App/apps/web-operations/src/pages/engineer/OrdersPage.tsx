@@ -1,58 +1,71 @@
 import { useEffect, useState } from 'react'
-import {
-  FiCheckCircle,
-  FiRefreshCcw
-} from 'react-icons/fi'
-
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
-
 import apiClient from '../../services/api'
 import './OrdersPage.css'
+import * as ExcelJS from 'exceljs'
+import { FiDownload } from 'react-icons/fi'
 
 interface Order {
   id: number
   orderCode: string
-  coordinatorName: string
   destinationStation: string
   totalAmount: number
   orderStatus: string
+  rejectReason?: string
   createdAt: string
 }
 
-export default function StationOrdersPage() {
+export default function EngineerOrdersPage() {
 
   const [orders, setOrders] = useState<Order[]>([])
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('All')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   useEffect(() => {
     fetchOrders()
   }, [])
 
+  useEffect(() => {
+    applyFilters()
+  }, [orders, search, status, fromDate, toDate])
+
   // =========================
-  // FORMAT TIME (-7 HOURS)
+  // FIX TIME -7 HOURS
   // =========================
-  const formatDateTime = (
+  const formatVNDateTime = (
     dateString: string
   ) => {
 
-    const date =
-      new Date(dateString)
+    const date = new Date(dateString)
 
     // trừ 7 tiếng
     date.setHours(
       date.getHours() - 7
     )
 
-    return date.toLocaleString(
-      'vi-VN'
-    )
+    return date.toLocaleString('vi-VN')
 
   }
 
-  // =========================
-  // FETCH ORDERS
-  // =========================
+  const formatVNDate = (
+    dateString: string
+  ) => {
+
+    const date = new Date(dateString)
+
+    // trừ 7 tiếng
+    date.setHours(
+      date.getHours() - 7
+    )
+
+    return date.toLocaleDateString('vi-VN')
+
+  }
+
   const fetchOrders = async () => {
 
     try {
@@ -60,40 +73,36 @@ export default function StationOrdersPage() {
       setLoading(true)
 
       const res =
-        await apiClient.get(
-          '/api/orders/station-orders'
-        )
+        await apiClient.get('/api/orders/engineer-orders')
 
-      setOrders(
-        res.data.map((o: any) => ({
+      const data = res.data.map((o: any) => ({
 
-          id: o.Id,
+        id: o.Id,
 
-          orderCode:
-            o.OrderCode,
+        orderCode: o.OrderCode,
 
-          coordinatorName:
-            o.CoordinatorName,
+        destinationStation:
+          o.DestinationStation,
 
-          destinationStation:
-            o.DestinationStation,
+        totalAmount:
+          o.TotalAmount || 0,
 
-          totalAmount:
-            o.TotalAmount || 0,
+        orderStatus:
+          o.OrderStatus,
 
-          orderStatus:
-            o.OrderStatus,
+        rejectReason:
+          o.RejectReason,
 
-          createdAt:
-            o.CreatedAt
+        createdAt:
+          o.CreatedAt
 
-        }))
-      )
+      }))
+
+      setOrders(data)
 
     } catch (err) {
 
       console.error(err)
-
       setOrders([])
 
     } finally {
@@ -101,79 +110,98 @@ export default function StationOrdersPage() {
       setLoading(false)
 
     }
-
   }
 
-  // =========================
-  // UPDATE STATUS
-  // =========================
-  const updateStatus = async (
-    orderId: number,
-    status: string
-  ) => {
+  const applyFilters = () => {
 
-    try {
+    let result = [...orders]
 
-      const confirmed =
-        window.confirm(
-          `Xác nhận chuyển sang trạng thái "${status}" ?`
-        )
+    if (search) {
 
-      if (!confirmed) return
-
-      await apiClient.post(
-        `/api/orders/${orderId}/status`,
-        { status }
+      result = result.filter(o =>
+        o.orderCode
+          .toLowerCase()
+          .includes(search.toLowerCase())
       )
-
-      await fetchOrders()
-
-    } catch (err) {
-
-      console.error(err)
-
-      alert('Lỗi cập nhật')
 
     }
 
+    if (status !== 'All') {
+
+      result = result.filter(
+        o => o.orderStatus === status
+      )
+
+    }
+
+    if (fromDate) {
+
+      result = result.filter(o =>
+        new Date(o.createdAt) >=
+        new Date(fromDate)
+      )
+
+    }
+
+    if (toDate) {
+
+      const end = new Date(toDate)
+
+      end.setHours(
+        23,
+        59,
+        59,
+        999
+      )
+
+      result = result.filter(o =>
+        new Date(o.createdAt) <= end
+      )
+
+    }
+
+    setFilteredOrders(result)
   }
 
-  // =========================
-  // STATUS LABEL
-  // =========================
-  const statusMap:
-    Record<string, string> = {
+  const reset = () => {
 
-    Draft:
-      'Đơn tạm',
+    setSearch('')
+    setStatus('All')
+    setFromDate('')
+    setToDate('')
+
+  }
+
+  const statusMap: Record<string, string> = {
+
+    'Draft': 'Đơn tạm',
 
     'Pending Approval':
       'Chờ duyệt',
 
-    Approved:
+    'Approved':
       'Đã duyệt',
 
-    Processing:
+    'Processing':
       'Đang xử lý',
 
-    Delivering:
+    'Delivering':
       'Đang giao hàng',
 
-    Completed:
+    'Completed':
       'Hoàn thành',
 
-    Cancelled:
+    'Cancelled':
       'Đã hủy',
 
-    Rejected:
+    'Rejected':
       'Từ chối',
 
-    Sent:
+    'Sent':
       'Đã gửi',
 
-    Delivered:
+    'Delivered':
       'Đã giao'
-
   }
 
   const getStatusLabel = (
@@ -186,88 +214,167 @@ export default function StationOrdersPage() {
   ) =>
     status.replace(/\s/g, '')
 
-  // =========================
-  // EXPORT EXCEL
-  // =========================
-  const exportExcel = () => {
+  const sendOrderToStation = async (
+    id: number
+  ) => {
 
-    const excelData =
-      orders.map((order) => ({
+    try {
 
-        'Mã đơn':
-          order.orderCode,
-
-        'Điều phối':
-          order.coordinatorName,
-
-        'Tổng tiền':
-          order.totalAmount,
-
-        'Trạng thái':
-          getStatusLabel(
-            order.orderStatus
-          ),
-
-        'Ngày tạo':
-          formatDateTime(
-            order.createdAt
-          )
-
-      }))
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(
-        excelData
-      )
-
-    worksheet['!cols'] = [
-
-      { wch: 20 },
-
-      { wch: 25 },
-
-      { wch: 18 },
-
-      { wch: 20 },
-
-      { wch: 25 }
-
-    ]
-
-    const workbook =
-      XLSX.utils.book_new()
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      'DanhSachDonHang'
-    )
-
-    const excelBuffer =
-      XLSX.write(workbook, {
-        bookType: 'xlsx',
-        type: 'array'
-      })
-
-    const fileData =
-      new Blob(
-        [excelBuffer],
+      await apiClient.post(
+        `/api/orders/${id}/status`,
         {
-          type:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
+          status:
+            'Pending Approval'
         }
       )
 
-    saveAs(
-      fileData,
-      `don-hang-${Date.now()}.xlsx`
-    )
+      fetchOrders()
 
+      alert('Đã gửi kế toán')
+
+    } catch (err) {
+
+      console.error(err)
+
+      alert('Gửi thất bại')
+
+    }
   }
 
   // =========================
-  // UI
+  // EXPORT EXCEL
   // =========================
+  const handleExportExcel = async () => {
+
+    try {
+
+      const workbook =
+        new ExcelJS.Workbook()
+
+      const sheet =
+        workbook.addWorksheet(
+          'Engineer Orders'
+        )
+
+      sheet.columns = [
+
+        {
+          header: 'Mã đơn',
+          key: 'orderCode',
+          width: 22
+        },
+
+        {
+          header: 'Trạm',
+          key: 'destinationStation',
+          width: 28
+        },
+
+        {
+          header: 'Tổng tiền',
+          key: 'totalAmount',
+          width: 20
+        },
+
+        {
+          header: 'Trạng thái',
+          key: 'orderStatus',
+          width: 20
+        },
+
+        {
+          header: 'Lý do từ chối',
+          key: 'rejectReason',
+          width: 40
+        },
+
+        {
+          header: 'Ngày tạo',
+          key: 'createdAt',
+          width: 25
+        }
+
+      ]
+
+      filteredOrders.forEach(order => {
+
+        sheet.addRow({
+
+          orderCode:
+            order.orderCode,
+
+          destinationStation:
+            order.destinationStation,
+
+          totalAmount:
+            `${order.totalAmount.toLocaleString()} đ`,
+
+          orderStatus:
+            getStatusLabel(
+              order.orderStatus
+            ),
+
+          rejectReason:
+            order.rejectReason || '',
+
+          createdAt:
+            formatVNDateTime(
+              order.createdAt
+            )
+
+        })
+
+      })
+
+      sheet.getRow(1).font = {
+        bold: true
+      }
+
+      const buffer =
+        await workbook.xlsx.writeBuffer()
+
+      const blob =
+        new Blob(
+          [buffer],
+          {
+            type:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          }
+        )
+
+      const url =
+        window.URL.createObjectURL(
+          blob
+        )
+
+      const a =
+        document.createElement('a')
+
+      a.href = url
+
+      a.download =
+        'don-hang-engineer.xlsx'
+
+      document.body.appendChild(a)
+
+      a.click()
+
+      a.remove()
+
+      window.URL.revokeObjectURL(url)
+
+    } catch (err) {
+
+      console.error(err)
+
+      alert(
+        'Xuất Excel thất bại'
+      )
+
+    }
+
+  }
+
   return (
 
     <div className="orders-dashboard">
@@ -278,49 +385,111 @@ export default function StationOrdersPage() {
         <div>
 
           <h1>
-            Quản lý đơn hàng
+            Đơn hàng của tôi
           </h1>
 
           <p>
-            Theo dõi và cập nhật
+            Quản lý và theo dõi
             trạng thái đơn hàng
-            của trạm
           </p>
 
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px'
-          }}
+        <button
+          className="action-btn"
+          onClick={handleExportExcel}
         >
 
-          <button
-            className="refresh-btn"
-            onClick={exportExcel}
-          >
-            📥 Xuất Excel
-          </button>
+          <FiDownload size={18} />
 
-          <button
-            className="refresh-btn"
-            onClick={fetchOrders}
-          >
+          Xuất Excel
 
-            <FiRefreshCcw
-              size={16}
-            />
-
-            Làm mới
-
-          </button>
-
-        </div>
+        </button>
 
       </div>
 
-      {/* LOADING */}
+      {/* FILTER BAR */}
+      <div className="filter-bar">
+
+        <input
+          placeholder="🔍 Tìm mã đơn..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+        />
+
+        <select
+          value={status}
+          onChange={(e) =>
+            setStatus(e.target.value)
+          }
+        >
+
+          <option value="All">
+            Tất cả trạng thái
+          </option>
+
+          <option value="Draft">
+            Đơn tạm
+          </option>
+
+          <option value="Pending Approval">
+            Chờ duyệt
+          </option>
+
+          <option value="Approved">
+            Đã duyệt
+          </option>
+
+          <option value="Processing">
+            Đang xử lý
+          </option>
+
+          <option value="Delivering">
+            Đang giao hàng
+          </option>
+
+          <option value="Completed">
+            Hoàn thành
+          </option>
+
+          <option value="Cancelled">
+            Đã hủy
+          </option>
+
+          <option value="Rejected">
+            Từ chối
+          </option>
+
+        </select>
+
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) =>
+            setFromDate(e.target.value)
+          }
+        />
+
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) =>
+            setToDate(e.target.value)
+          }
+        />
+
+        <button
+          className="reset-btn"
+          onClick={reset}
+        >
+          Reset
+        </button>
+
+      </div>
+
+      {/* CONTENT */}
       {loading ? (
 
         <div className="loading">
@@ -329,160 +498,136 @@ export default function StationOrdersPage() {
 
       ) : (
 
-        <table className="orders-table">
+        <div className="table-card">
 
-          <thead>
+          <table>
 
-            <tr>
+            <thead>
 
-              <th>
-                Mã đơn
-              </th>
+              <tr>
 
-              <th>
-                Điều phối
-              </th>
+                <th>Mã đơn</th>
 
-              <th>
-                Tiền
-              </th>
+                <th>Trạm</th>
 
-              <th>
-                Ngày tạo
-              </th>
+                <th>Tổng tiền</th>
 
-              <th>
-                Trạng thái
-              </th>
+                <th>Trạng thái</th>
 
-              <th>
-                Hành động
-              </th>
+                <th>Ngày tạo</th>
 
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {orders.map((order) => (
-
-              <tr key={order.id}>
-
-                <td>
-                  {order.orderCode}
-                </td>
-
-                <td>
-                  {order.coordinatorName || '---'}
-                </td>
-
-                <td>
-                  {order.totalAmount.toLocaleString()}
-                  {' '}đ
-                </td>
-
-                <td>
-                  {formatDateTime(
-                    order.createdAt
-                  )}
-                </td>
-
-                <td>
-
-                  <span
-                    className={`
-                      status
-                      ${getStatusClass(
-                        order.orderStatus
-                      )}
-                    `}
-                  >
-
-                    {getStatusLabel(
-                      order.orderStatus
-                    )}
-
-                  </span>
-
-                </td>
-
-                <td>
-
-                  <div className="actions">
-
-                    {String(
-                      order.orderStatus
-                    ).trim() ===
-                      'Approved' && (
-
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Processing'
-                          )
-                        }
-                      >
-                        ⚙️ Xử lý
-                      </button>
-
-                    )}
-
-                    {order.orderStatus ===
-                      'Processing' && (
-
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Delivering'
-                          )
-                        }
-                      >
-                        🚚 Giao hàng
-                      </button>
-
-                    )}
-
-                    {order.orderStatus ===
-                      'Delivering' && (
-
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Completed'
-                          )
-                        }
-                      >
-
-                        <FiCheckCircle
-                          size={16}
-                        />
-
-                        Hoàn thành
-
-                      </button>
-
-                    )}
-
-                  </div>
-
-                </td>
+                <th>Hành động</th>
 
               </tr>
 
-            ))}
+            </thead>
 
-          </tbody>
+            <tbody>
 
-        </table>
+              {filteredOrders.map(o => (
+
+                <tr key={o.id}>
+
+                  <td className="code">
+                    {o.orderCode}
+                  </td>
+
+                  <td>
+                    {o.destinationStation}
+                  </td>
+
+                  <td className="money">
+                    {o.totalAmount.toLocaleString()} đ
+                  </td>
+
+                  {/* STATUS */}
+                  <td>
+
+                    <span
+
+                      className={`
+                        status
+                        ${getStatusClass(o.orderStatus)}
+                      `}
+
+                      title={
+                        o.orderStatus === 'Rejected'
+                          ? o.rejectReason ||
+                            'Không có lý do'
+                          : ''
+                      }
+
+                      onClick={() => {
+
+                        if (
+                          o.orderStatus === 'Rejected'
+                        ) {
+
+                          alert(
+                            `Lý do từ chối:\n\n${
+                              o.rejectReason ||
+                              'Không có lý do'
+                            }`
+                          )
+
+                        }
+
+                      }}
+
+                      style={{
+                        cursor:
+                          o.orderStatus === 'Rejected'
+                            ? 'pointer'
+                            : 'default'
+                      }}
+
+                    >
+
+                      {getStatusLabel(
+                        o.orderStatus
+                      )}
+
+                    </span>
+
+                  </td>
+
+                  <td>
+
+                    {formatVNDate(
+                      o.createdAt
+                    )}
+
+                  </td>
+
+                  <td>
+
+                    {o.orderStatus === 'Draft' && (
+
+                      <button
+                        className="action-btn"
+                        onClick={() =>
+                          sendOrderToStation(o.id)
+                        }
+                      >
+                        Gửi kế toán
+                      </button>
+
+                    )}
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
 
       )}
 
     </div>
-
   )
-
 }
