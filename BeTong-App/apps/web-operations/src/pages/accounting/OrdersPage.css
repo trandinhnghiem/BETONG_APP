@@ -591,3 +591,24 @@
   color: white !important;
   border-color: #ff4d4f !important;
 }
+.orders-table th,
+.orders-table td {
+  padding: 16px 14px;
+  vertical-align: middle;
+}
+
+.orders-table th {
+  white-space: nowrap;
+}
+
+.orders-table td {
+  white-space: nowrap;
+}
+
+.orders-table {
+  min-width: 1400px;
+}
+
+.orders-table td.money {
+  text-align: left !important;
+}

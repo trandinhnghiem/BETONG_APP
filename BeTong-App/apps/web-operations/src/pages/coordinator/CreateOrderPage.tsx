@@ -30,6 +30,9 @@ export default function CoordinatorCreateOrderPage() {
 
 const [selectedCustomerDebt, setSelectedCustomerDebt] =
   useState<CustomerDebt | null>(null)
+
+const [searchCustomer, setSearchCustomer] =
+  useState('')
   
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
@@ -143,6 +146,14 @@ const [selectedCustomerDebt, setSelectedCustomerDebt] =
 
   const selectedStation = stations.find(s => s.id === Number(form.mixingStationId))
   const totalAmount = (Number(form.volume) || 0) * (Number(form.price) || 0)
+  const filteredCustomers =
+  customers.filter(c =>
+    c.CustomerName
+      .toLowerCase()
+      .includes(
+        searchCustomer.toLowerCase()
+      )
+  )
 
   const buildNotes = () => {
     return [
@@ -228,8 +239,21 @@ const [selectedCustomerDebt, setSelectedCustomerDebt] =
           <h3>🏢 Thông tin khách hàng</h3>
           <div className="form-row">
             <div className="form-group">
-              <label>Tên khách hàng</label>
-              <select
+             <label>Tên khách hàng</label>
+
+<input
+  type="text"
+  placeholder="🔍 Tìm nhanh khách hàng..."
+  className="customer-search-input"
+  value={searchCustomer}
+  onChange={(e) =>
+    setSearchCustomer(
+      e.target.value
+    )
+  }
+/>
+
+<select
   name="customerName"
   value={form.customerName}
   onChange={(e) =>
@@ -245,13 +269,15 @@ const [selectedCustomerDebt, setSelectedCustomerDebt] =
   </option>
 
   {
-    customers.map(c => (
+    filteredCustomers.map(c => (
 
       <option
         key={c.Id}
         value={c.CustomerName}
       >
+
         {c.CustomerName}
+
       </option>
 
     ))
