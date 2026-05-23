@@ -27,6 +27,7 @@ import StationDashboard from './pages/station/Dashboard'
 import StationOrdersPage from './pages/station/OrdersPage'
 
 import EngineerDashboard from './pages/engineer/Dashboard'
+import EngineerOrdersPage from './pages/engineer/OrdersPage'
 
 import NotFound from './pages/NotFound'
 
@@ -211,6 +212,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/engineer/orders"
+            element={
+              <ProtectedRoute requiredRole="Engineer">
+                <EngineerOrdersPage />
+              </ProtectedRoute>
+            }
+          />  
 
 
           {/* ================= DEFAULT ================= */}
