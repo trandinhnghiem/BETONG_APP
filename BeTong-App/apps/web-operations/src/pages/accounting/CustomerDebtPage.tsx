@@ -6,6 +6,7 @@ interface Debt {
   Id: number
   CustomerName: string
   DebtAmount: number
+  DebtLimit: number
 }
 
 export default function CustomerDebtPage() {
@@ -19,9 +20,29 @@ export default function CustomerDebtPage() {
   const [debts, setDebts] =
     useState<Debt[]>([])
 
+  const [search, setSearch] =
+    useState('')
+
+  const [
+    selectedCustomer,
+    setSelectedCustomer
+  ] = useState('')
+
+  const [form, setForm] =
+    useState({
+      customerName: '',
+      debtAmount: '',
+      debtLimit: ''
+    })
+
+  const [editingId, setEditingId] =
+    useState<number | null>(null)
+
   useEffect(() => {
     fetchDebts()
   }, [])
+
+  // ================= FETCH =================
 
   const fetchDebts = async () => {
 
@@ -37,14 +58,21 @@ export default function CustomerDebtPage() {
     } catch (err) {
 
       console.error(err)
+
     }
+
   }
+
+  // ================= IMPORT =================
 
   const handleImport = async () => {
 
     if (!file) {
+
       alert('Vui lòng chọn file')
+
       return
+
     }
 
     try {
@@ -85,12 +113,137 @@ export default function CustomerDebtPage() {
     } finally {
 
       setLoading(false)
+
     }
+
+  }
+
+  // ================= SAVE =================
+
+  const handleSave = async () => {
+
+    if (
+      !form.customerName ||
+      !form.debtAmount ||
+      !form.debtLimit
+    ) {
+
+      alert('Vui lòng nhập đầy đủ')
+
+      return
+
+    }
+
+    try {
+
+      if (editingId) {
+
+        await apiClient.put(
+          `/api/customer-debts/${editingId}`,
+          {
+            customerName:
+              form.customerName,
+
+            debtAmount:
+              Number(form.debtAmount),
+
+            debtLimit:
+              Number(form.debtLimit)
+          }
+        )
+
+        alert('Cập nhật thành công')
+
+      } else {
+        console.log({
+            customerName:
+                form.customerName,
+
+            debtAmount:
+                Number(form.debtAmount),
+
+            debtLimit:
+                Number(form.debtLimit)
+            })
+
+            console.log({
+                customerName: form.customerName,
+                debtAmount: Number(form.debtAmount),
+                debtLimit: Number(form.debtLimit)
+                })
+
+        await apiClient.post(
+        '/api/customer-debts',
+        {
+            customerName: form.customerName.trim(),
+            debtAmount: Number(form.debtAmount),
+            debtLimit: Number(form.debtLimit)
+        },
+        {
+            headers: {
+            'Content-Type': 'application/json'
+            }
+        }
+        )
+
+        alert('Thêm khách hàng thành công')
+
+      }
+
+      setForm({
+        customerName: '',
+        debtAmount: '',
+        debtLimit: ''
+      })
+
+      setEditingId(null)
+
+      fetchDebts()
+
+    } catch (err: any) {
+
+      console.error(err)
+
+      alert(
+        err?.response?.data?.error ||
+        'Lưu thất bại'
+      )
+
+    }
+
+  }
+
+  // ================= EDIT =================
+
+  const handleEdit = (
+    item: Debt
+  ) => {
+
+    setEditingId(item.Id)
+
+    setForm({
+      customerName:
+        item.CustomerName,
+
+      debtAmount:
+        item.DebtAmount.toString(),
+
+      debtLimit:
+        item.DebtLimit.toString()
+    })
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+
   }
 
   return (
 
     <div className="customer-debt-page">
+
+      {/* HEADER */}
 
       <div className="page-header">
 
@@ -101,8 +254,80 @@ export default function CustomerDebtPage() {
           </h1>
 
           <p>
-            Import file Excel công nợ khách hàng
+            Import & quản lý công nợ khách hàng
           </p>
+
+        </div>
+
+      </div>
+
+      {/* FORM */}
+
+      <div className="form-card">
+
+        <h3>
+
+          {
+            editingId
+              ? 'Chỉnh sửa khách hàng'
+              : 'Thêm khách hàng'
+          }
+
+        </h3>
+
+        <div className="manual-form">
+
+          <input
+            type="text"
+            placeholder="Tên khách hàng"
+            value={form.customerName}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                customerName:
+                  e.target.value
+              })
+            }
+          />
+
+          <input
+            type="number"
+            placeholder="Công nợ"
+            value={form.debtAmount}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                debtAmount:
+                  e.target.value
+              })
+            }
+          />
+
+          <input
+            type="number"
+            placeholder="Hạn mức"
+            value={form.debtLimit}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                debtLimit:
+                  e.target.value
+              })
+            }
+          />
+
+          <button
+            className="save-btn"
+            onClick={handleSave}
+          >
+
+            {
+              editingId
+                ? 'Cập nhật'
+                : 'Thêm mới'
+            }
+
+          </button>
 
         </div>
 
@@ -116,29 +341,33 @@ export default function CustomerDebtPage() {
           Import Excel công nợ
         </h3>
 
-        <input
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={(e) =>
-            setFile(
-              e.target.files?.[0] || null
-            )
-          }
-        />
+        <div className="import-row">
 
-        <button
-          className="import-btn"
-          onClick={handleImport}
-          disabled={loading}
-        >
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) =>
+              setFile(
+                e.target.files?.[0] || null
+              )
+            }
+          />
 
-          {
-            loading
-              ? 'Đang import...'
-              : 'Import công nợ'
-          }
+          <button
+            className="import-btn"
+            onClick={handleImport}
+            disabled={loading}
+          >
 
-        </button>
+            {
+              loading
+                ? 'Đang import...'
+                : 'Import công nợ'
+            }
+
+          </button>
+
+        </div>
 
       </div>
 
@@ -146,53 +375,189 @@ export default function CustomerDebtPage() {
 
       <div className="table-card">
 
-        <table>
+        <h3>
+          Danh sách công nợ
+        </h3>
 
-          <thead>
+        {/* SEARCH */}
 
-            <tr>
+        <div className="search-box">
 
-              <th>
-                Khách hàng
-              </th>
+            <input
+                type="text"
+                placeholder="Tìm kiếm khách hàng..."
+                value={search}
+                onChange={(e) =>
+                setSearch(e.target.value)
+                }
+            />
 
-              <th>
-                Công nợ
-              </th>
+            <select
+                value={selectedCustomer}
+                onChange={(e) =>
+                setSelectedCustomer(
+                    e.target.value
+                )
+                }
+            >
 
-            </tr>
+                <option value="">
+                -- Chọn khách hàng --
+                </option>
 
-          </thead>
+                {debts.map(item => (
 
-          <tbody>
+                <option
+                    key={item.Id}
+                    value={item.CustomerName}
+                >
 
-            {
-              debts.map(item => (
-
-                <tr key={item.Id}>
-
-                  <td>
                     {item.CustomerName}
-                  </td>
 
-                  <td className="money">
+                </option>
 
-                    {
-                      item.DebtAmount.toLocaleString()
-                    } đ
+                ))}
 
-                  </td>
+            </select>
 
-                </tr>
-              ))
-            }
+            <button
+                className="reset-btn"
+                onClick={() => {
 
-          </tbody>
+                setSearch('')
+                setSelectedCustomer('')
 
-        </table>
+                }}
+            >
+
+                Reset
+
+            </button>
+
+            </div>
+
+        <div className="table-wrapper">
+
+          <table className="debt-table">
+
+            <thead>
+
+              <tr>
+
+                <th>
+                  Khách hàng
+                </th>
+
+                <th>
+                  Công nợ
+                </th>
+
+                <th>
+                  Hạn mức
+                </th>
+
+                <th>
+                  Hành động
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {
+                debts
+
+                  .filter(item => {
+
+                    const keyword =
+                      search.toLowerCase()
+
+                    const matchSearch =
+                      item.CustomerName
+                        .toLowerCase()
+                        .includes(keyword)
+
+                    const matchDropdown =
+                      !selectedCustomer ||
+
+                      item.CustomerName ===
+                      selectedCustomer
+
+                    return (
+                      matchSearch &&
+                      matchDropdown
+                    )
+
+                  })
+
+                  .map(item => (
+
+                    <tr key={item.Id}>
+
+                      <td>
+                        {item.CustomerName}
+                      </td>
+
+                      <td className="money">
+
+                        {
+                          item.DebtAmount.toLocaleString()
+                        } đ
+
+                      </td>
+
+                      <td className="money">
+
+                        {
+                          item.DebtLimit.toLocaleString()
+                        } đ
+
+                      </td>
+
+                      <td>
+
+                        <button
+                          className="edit-btn"
+                          onClick={() =>
+                            handleEdit(item)
+                          }
+                        >
+
+                          Sửa
+
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  ))
+              }
+
+            </tbody>
+
+          </table>
+
+          {
+            debts.length === 0 && (
+
+              <div className="empty">
+
+                Chưa có dữ liệu công nợ
+
+              </div>
+
+            )
+          }
+
+        </div>
 
       </div>
 
     </div>
+
   )
+
 }

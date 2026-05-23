@@ -1,65 +1,248 @@
 .customer-debt-page {
   padding: 24px;
+  background: #f1f5f9;
+  min-height: 100vh;
 }
+
+/* ================= HEADER ================= */
 
 .page-header {
   margin-bottom: 24px;
 }
 
 .page-header h1 {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
 }
 
-.import-card {
-  background: white;
-  padding: 24px;
-  border-radius: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+.page-header p {
+  color: #64748b;
+  font-size: 15px;
+}
 
+/* ================= CARD ================= */
+
+.form-card,
+.import-card,
+.table-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+/* ================= TITLE ================= */
+
+.form-card h3,
+.import-card h3,
+.table-card h3 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: #0f172a;
+}
+
+/* ================= FORM ================= */
+
+.manual-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 180px;
+  gap: 16px;
+  align-items: center;
+}
+
+.manual-form input {
+  width: 100%;
+  height: 50px;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  padding: 0 16px;
+  font-size: 15px;
+  background: white;
+}
+
+.manual-form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+}
+
+/* ================= BUTTON ================= */
+
+.save-btn,
+.import-btn,
+.edit-btn,
+.reset-btn {
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s;
+}
+
+.save-btn {
+  height: 50px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.import-btn {
+  height: 50px;
+  padding: 0 24px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+}
+
+.edit-btn {
+  height: 40px;
+  padding: 0 18px;
+  background: #f59e0b;
+  color: white;
+}
+
+.reset-btn {
+  height: 50px;
+  padding: 0 20px;
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.save-btn:hover,
+.import-btn:hover,
+.edit-btn:hover,
+.reset-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ================= IMPORT ================= */
+
+.import-row {
   display: flex;
   gap: 16px;
   align-items: center;
 }
 
-.import-btn {
-  background: #1677ff;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
+input[type='file'] {
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 12px;
+  background: #f8fafc;
+  width: 320px;
 }
 
-.import-btn:hover {
-  background: #0958d9;
+/* ================= SEARCH ================= */
+
+.search-box {
+  display: grid;
+  grid-template-columns: 1fr 280px 140px;
+  gap: 400px;
+  margin-bottom: 24px;
 }
 
-.table-card {
+.search-box input {
+  height: 50px;
+    border: 1px solid #dbe2ea;
+    border-radius: 14px;
+    padding: 0 16px;
+    font-size: 15px;
+    background: white;
+  min-width: 280px;
+}
+.search-box select {
+  height: 50px;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
+  padding: 0 16px;
+  font-size: 15px;
   background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-table {
+.search-box input:focus,
+.search-box select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+}
+
+/* ================= TABLE ================= */
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.debt-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-thead {
-  background: #f5f5f5;
+.debt-table thead th {
+  background: #f8fafc;
+  padding: 18px 24px;
+  color: #475569;
+  font-size: 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-th,
-td {
-  padding: 14px 16px;
-  border-bottom: 1px solid #eee;
+.debt-table tbody td {
+  padding: 22px 24px;
+  border-bottom: 1px solid #eef2f7;
+  color: #334155;
+  font-size: 15px;
+}
+
+.debt-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.debt-table th:nth-child(2),
+.debt-table th:nth-child(3),
+.debt-table td:nth-child(2),
+.debt-table td:nth-child(3) {
+  text-align: center;
+}
+
+.debt-table th:last-child,
+.debt-table td:last-child {
+  width: 140px;
+  text-align: center;
 }
 
 .money {
   font-weight: 700;
-  color: #1677ff;
+  color: #0f172a;
+}
+
+/* ================= EMPTY ================= */
+
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 900px) {
+
+  .manual-form {
+    grid-template-columns: 1fr;
+  }
+
+  .search-box {
+    grid-template-columns: 1fr;
+  }
+
+  .import-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  input[type='file'] {
+    width: 100%;
+  }
+
 }

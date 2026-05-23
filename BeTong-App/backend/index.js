@@ -91,19 +91,15 @@ const statisticsRoutes =
 const reportRoutes =
   require('./routes/reportRoutes')
 
+const customerDebtRoutes =
+  require('./routes/customerDebtRoutes')
+
 // =======================
 // IMPORT DATABASE
 // =======================
 const {
   getConnection
 } = require('./config/database')
-const customerDebtRoutes =
-  require('./routes/customerDebtRoutes')
-
-app.use(
-  '/api/customer-debts',
-  customerDebtRoutes
-)
 
 // =======================
 // CORS CONFIG
@@ -162,6 +158,11 @@ app.use(
 app.use(
   '/api/reports',
   reportRoutes
+)
+
+app.use(
+  '/api/customer-debts',
+  customerDebtRoutes
 )
 
 // =======================
