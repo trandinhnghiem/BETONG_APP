@@ -1,4 +1,7 @@
+const fs = require('fs')
+const path = require('path')
 const OrderModel = require('../models/Order')
+const OrderDocumentModel = require('../models/OrderDocument')
 const OrderItemModel = require('../models/OrderItem')
 const ProductModel = require('../models/Product')
 const StationModel = require('../models/Station')
@@ -378,6 +381,19 @@ if (
   }
 }
 
+  static async getEngineerOrders(req, res) {
+    try {
+      const orders = req.user.StationId
+        ? await OrderModel.findByStation(req.user.StationId)
+        : await OrderModel.findAll()
+
+      res.json(orders)
+    } catch (error) {
+      console.error(error)
+      res.status(500).json({ error: error.message })
+    }
+  }
+
   static async getStationOrders(req, res) {
     const pool = await getConnection()
     const result = await pool.request()
@@ -407,6 +423,95 @@ if (
         ORDER BY o.CreatedAt DESC
       `)
     res.json(result.recordset)
+  }
+
+  static async getUploadedDocuments(req, res) {
+    try {
+      const orderId = Number(req.params.orderId)
+
+      if (!Number.isInteger(orderId) || orderId <= 0) {
+        return res.status(400).json({ error: 'Invalid orderId' })
+      }
+
+      const order = await OrderModel.findById(orderId)
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' })
+      }
+
+      const documents = await OrderDocumentModel.findByOrderId(orderId)
+
+      res.json(documents)
+    } catch (error) {
+      console.error('getUploadedDocuments error:', error)
+      res.status(500).json({ error: error.message })
+    }
+  }
+
+  static async uploadDocuments(req, res) {
+    try {
+      const orderId = Number(req.params.orderId)
+
+      if (!Number.isInteger(orderId) || orderId <= 0) {
+        return res.status(400).json({ error: 'Invalid orderId' })
+      }
+
+      const order = await OrderModel.findById(orderId)
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' })
+      }
+
+      const files = req.files || []
+
+      if (!files.length) {
+        return res.status(400).json({ error: 'At least one file is required' })
+      }
+
+      await OrderDocumentModel.ensureTable()
+
+      const uploadDir = path.join(__dirname, '..', 'uploads', 'order-documents', String(orderId))
+      await fs.promises.mkdir(uploadDir, { recursive: true })
+
+      const savedFiles = await Promise.all(
+        files.map(async (file) => {
+          const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${path.basename(file.originalname)}`
+          const filePath = path.join(uploadDir, safeName)
+          await fs.promises.writeFile(filePath, file.buffer)
+
+          const url = `/uploads/order-documents/${orderId}/${encodeURIComponent(safeName)}`
+          const document = {
+            fileName: safeName,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            url,
+            path: url,
+          }
+
+          const documentId = await OrderDocumentModel.create(orderId, document, req.user.Id)
+
+          return {
+            id: documentId,
+            originalName: document.originalName,
+            mimeType: document.mimeType,
+            size: document.size,
+            url: document.url,
+            path: document.path,
+            uploadedAt: new Date().toISOString(),
+          }
+        })
+      )
+
+      res.status(201).json({
+        message: 'Documents uploaded successfully',
+        orderId,
+        files: savedFiles,
+      })
+    } catch (error) {
+      console.error('uploadDocuments error:', error)
+      res.status(500).json({ error: error.message })
+    }
   }
 
   static async exportOrdersReport(req, res) {

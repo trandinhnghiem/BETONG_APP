@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 
 import {
-  FiSettings,
   FiSave,
   FiBell,
   FiShield,
   FiDatabase,
-  FiGlobe,
-  FiLock
+  FiGlobe
 } from 'react-icons/fi'
 
-import apiClient from '../../services/api'
 import './SettingsPage.css'
 
 export default function SettingsPage() {

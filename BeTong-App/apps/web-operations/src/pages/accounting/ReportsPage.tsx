@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  FiBarChart2,
   FiCalendar,
-  FiCheckCircle,
-  FiClock,
   FiDollarSign,
   FiDownload,
   FiFilter,
   FiRefreshCw,
-  FiShoppingCart,
-  FiTruck
+  FiShoppingCart
 } from 'react-icons/fi'
 
 import apiClient from '../../services/api'
