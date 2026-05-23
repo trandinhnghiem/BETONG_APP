@@ -140,12 +140,12 @@
 }
 
 .reset-btn {
-  background: #ff4d4f;
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
+  background: #eb6668 !important;
+  color: white !important;
+  border: none !important;
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
 }
 
 /* TABLE CARD */
