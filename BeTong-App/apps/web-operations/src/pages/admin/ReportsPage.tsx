@@ -87,10 +87,6 @@ export default function ReportsPage() {
     i => i.OrderStatus === 'Rejected'
   ).length
 
-  const pending = filtered.filter(
-    i => i.OrderStatus === 'Pending Approval'
-  ).length
-
   // =========================
   // STATUS MAP
   // =========================
