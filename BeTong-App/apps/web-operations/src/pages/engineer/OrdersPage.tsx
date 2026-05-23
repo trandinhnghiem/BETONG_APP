@@ -18,107 +18,383 @@ interface OrderDocument {
   uploadedAt: string
 }
 
-function UploadModal({ open, onClose, onUpload, orderId }: { open: boolean, onClose: () => void, onUpload: (files: FileList, source: UploadSource) => void, orderId: number }) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [source, setSource] = useState<UploadSource>('file')
+function UploadModal({
+  open,
+  onClose,
+  onUpload,
+  orderId
+}: {
+  open: boolean
+  onClose: () => void
+  onUpload: (
+    files: FileList,
+    source: UploadSource
+  ) => void
+  orderId: number
+}) {
 
-  const handleSelect = (event: ChangeEvent<HTMLInputElement>, nextSource: UploadSource) => {
-    const files = event.target.files
+  const fileInputRef =
+    useRef<HTMLInputElement>(null)
 
-    if (!files || files.length === 0) {
-      return
+  const videoRef =
+    useRef<HTMLVideoElement>(null)
+
+  const canvasRef =
+    useRef<HTMLCanvasElement>(null)
+
+  const [selectedFiles, setSelectedFiles] =
+    useState<File[]>([])
+
+  const [source, setSource] =
+    useState<UploadSource>('file')
+
+  const [cameraOpen, setCameraOpen] =
+    useState(false)
+
+  const [stream, setStream] =
+    useState<MediaStream | null>(null)
+
+  // =========================
+  // OPEN CAMERA
+  // =========================
+  const startCamera = async () => {
+
+    try {
+
+      const mediaStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment'
+          },
+          audio: false
+        })
+
+      setStream(mediaStream)
+
+      setCameraOpen(true)
+
+      if (videoRef.current) {
+
+        videoRef.current.srcObject =
+          mediaStream
+
+      }
+
+    } catch (err) {
+
+      console.error(err)
+
+      alert(
+        'Không mở được camera'
+      )
+
     }
 
-    setSource(nextSource)
-    setSelectedFiles(Array.from(files))
   }
 
-  const handleSubmit = () => {
-    if (selectedFiles.length === 0) {
-      alert('Vui lòng chọn file hoặc ảnh để upload')
+  // =========================
+  // STOP CAMERA
+  // =========================
+  const stopCamera = () => {
+
+    stream?.getTracks().forEach(track =>
+      track.stop()
+    )
+
+    setCameraOpen(false)
+
+  }
+
+  // =========================
+  // TAKE PHOTO
+  // =========================
+  const takePhoto = async () => {
+
+    if (
+      !videoRef.current ||
+      !canvasRef.current
+    ) {
       return
     }
 
-    const dataTransfer = new DataTransfer()
+    const video =
+      videoRef.current
 
-    selectedFiles.forEach(file => dataTransfer.items.add(file))
+    const canvas =
+      canvasRef.current
 
-    onUpload(dataTransfer.files, source)
+    canvas.width =
+      video.videoWidth
+
+    canvas.height =
+      video.videoHeight
+
+    const ctx =
+      canvas.getContext('2d')
+
+    if (!ctx) return
+
+    ctx.drawImage(
+      video,
+      0,
+      0
+    )
+
+    canvas.toBlob(blob => {
+
+      if (!blob) return
+
+      const file =
+        new File(
+          [blob],
+          `camera-${Date.now()}.jpg`,
+          {
+            type: 'image/jpeg'
+          }
+        )
+
+      setSelectedFiles([file])
+
+      setSource('camera')
+
+      stopCamera()
+
+    }, 'image/jpeg')
+
+  }
+
+  // =========================
+  // SELECT FILE
+  // =========================
+  const handleSelectFile = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+
+    const files =
+      event.target.files
+
+    if (!files?.length) {
+      return
+    }
+
+    setSource('file')
+
+    setSelectedFiles(
+      Array.from(files)
+    )
+
+  }
+
+  // =========================
+  // SUBMIT
+  // =========================
+  const handleSubmit = () => {
+
+    if (
+      selectedFiles.length === 0
+    ) {
+
+      alert(
+        'Vui lòng chọn ảnh hoặc file'
+      )
+
+      return
+
+    }
+
+    const dataTransfer =
+      new DataTransfer()
+
+    selectedFiles.forEach(file =>
+      dataTransfer.items.add(file)
+    )
+
+    onUpload(
+      dataTransfer.files,
+      source
+    )
+
+  }
+
+  // =========================
+  // CLOSE MODAL
+  // =========================
+  const handleClose = () => {
+
+    stopCamera()
+
+    setSelectedFiles([])
+
+    onClose()
+
   }
 
   if (!open) return null
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.25)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 12, padding: 32, minWidth: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-        <h3 style={{ marginTop: 0 }}>Upload chứng từ cho đơn #{orderId}</h3>
-        <p style={{ color: '#555', marginBottom: 12 }}>Chọn cách upload: chụp ảnh trực tiếp hoặc tải file từ thiết bị.</p>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background:
+          'rgba(0,0,0,0.35)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+
+      <div
+        style={{
+          width: 420,
+          background: '#fff',
+          borderRadius: 16,
+          padding: 24
+        }}
+      >
+
+        <h3>
+          Upload chứng từ #{orderId}
+        </h3>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            marginTop: 16
+          }}
+        >
+
           <button
             className="action-btn"
-            onClick={() => cameraInputRef.current?.click()}
-            type="button"
+            onClick={startCamera}
           >
-            <FiCamera style={{ marginRight: 6 }} /> Chụp ảnh
+            <FiCamera />
+            Chụp ảnh
           </button>
+
           <button
             className="action-btn"
-            onClick={() => fileInputRef.current?.click()}
-            type="button"
+            onClick={() =>
+              fileInputRef.current?.click()
+            }
           >
-            <FiFile style={{ marginRight: 6 }} /> Tải file
+            <FiFile />
+            Tải file
           </button>
+
         </div>
 
+        {/* FILE INPUT */}
         <input
-          type="file"
-          ref={cameraInputRef}
-          accept="image/*"
-          capture="environment"
-          multiple
-          style={{ display: 'none' }}
-          onChange={(event) => handleSelect(event, 'camera')}
-        />
-
-        <input
-          type="file"
           ref={fileInputRef}
-          accept="image/*,application/pdf"
+          type="file"
           multiple
+          accept="image/*,application/pdf"
           style={{ display: 'none' }}
-          onChange={(event) => handleSelect(event, 'file')}
+          onChange={handleSelectFile}
         />
 
-        {selectedFiles.length > 0 ? (
-          <div style={{ marginTop: 12, border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, background: '#f9fafb' }}>
-            <strong>Đã chọn {selectedFiles.length} file</strong>
-            <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
-              {selectedFiles.map((file) => (
-                <li key={`${file.name}-${file.size}`} style={{ marginBottom: 4 }}>
-                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                </li>
-              ))}
-            </ul>
+        {/* CAMERA */}
+        {cameraOpen && (
+
+          <div
+            style={{
+              marginTop: 20
+            }}
+          >
+
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              style={{
+                width: '100%',
+                borderRadius: 12
+              }}
+            />
+
+            <button
+              className="action-btn"
+              style={{
+                marginTop: 12
+              }}
+              onClick={takePhoto}
+            >
+              📸 Chụp
+            </button>
+
           </div>
-        ) : (
-          <p style={{ color: '#6b7280', marginTop: 12 }}>Chưa chọn chứng từ nào.</p>
+
         )}
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+        {/* HIDDEN CANVAS */}
+        <canvas
+          ref={canvasRef}
+          style={{
+            display: 'none'
+          }}
+        />
+
+        {/* FILE LIST */}
+        {selectedFiles.length > 0 && (
+
+          <div
+            style={{
+              marginTop: 16,
+              padding: 12,
+              border:
+                '1px solid #e5e7eb',
+              borderRadius: 10
+            }}
+          >
+
+            {selectedFiles.map(file => (
+
+              <div key={file.name}>
+                {file.name}
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+        {/* ACTIONS */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            marginTop: 20
+          }}
+        >
+
           <button
             className="action-btn"
             onClick={handleSubmit}
           >
-            <FiUpload style={{ marginRight: 6 }} /> Upload
+            <FiUpload />
+            Upload
           </button>
-          <button className="reset-btn" onClick={onClose}>Đóng</button>
+
+          <button
+            className="reset-btn"
+            onClick={handleClose}
+          >
+            Đóng
+          </button>
+
         </div>
+
       </div>
+
     </div>
+
   )
+
 }
 
 interface Order {
