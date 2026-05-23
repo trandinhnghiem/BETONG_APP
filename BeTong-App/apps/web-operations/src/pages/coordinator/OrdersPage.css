@@ -70,6 +70,7 @@
 .orders-table td {
   padding: 12px;
   border-bottom: 1px solid #eee;
+  vertical-align: middle;
 }
 
 .orders-table tr:hover {
@@ -148,34 +149,42 @@
   cursor: pointer;
 }
 
-/* TABLE CARD */
 .table-card {
   background: white;
   padding: 16px;
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+
+  overflow-x: auto;
 }
 
 /* TABLE */
-table {
+.table-card table {
   width: 100%;
+  min-width: 1200px;
+
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
-th {
-  text-align: left;
-  padding: 12px;
-  color: #666;
-  font-weight: 600;
-  border-bottom: 1px solid #eee;
-}
-
-td {
-  padding: 12px;
+.table-card th,
+.table-card td {
+  padding: 14px 12px;
   border-bottom: 1px solid #f0f0f0;
+
+  vertical-align: middle;
+  white-space: nowrap;
+
+  text-align: left;
 }
 
-tr:hover {
+.table-card th {
+  color: #666;
+  font-weight: 700;
+  background: #f8fafc;
+}
+
+.table-card tr:hover {
   background: #fafafa;
 }
 
@@ -286,4 +295,50 @@ tr:hover {
   background: #f3f4f6;
   color: #4b5563;
   border-color: #d1d5db;
+}
+/* FIX CỘT TIỀN KHÔNG BỊ LỆCH */
+
+.orders-table td.money {
+  text-align: left !important;
+  white-space: nowrap;
+}
+
+/* FIX TABLE KHÔNG BỊ DỒN CỘT */
+
+.orders-table {
+  width: 100%;
+  min-width: 1500px;
+  border-collapse: collapse;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+/* GIỮ HEADER VÀ CELL THẲNG HÀNG */
+
+.orders-table th,
+.orders-table td {
+  padding: 14px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+/* FIX CỘT TIỀN */
+
+.orders-table td.money {
+  text-align: left !important;
+  display: table-cell !important;
+}
+
+/* FIX TOÀN BỘ CELL KHÔNG BỊ DỒN */
+
+.orders-table td,
+.orders-table th {
+  white-space: nowrap;
+}
+
+/* FIX CỘT CÔNG NỢ */
+
+.orders-table td div {
+  text-align: left;
 }
