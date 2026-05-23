@@ -90,6 +90,12 @@ export default function Sidebar() {
           { to: '/station', label: 'Tổng quan', icon: FiHome },
           { to: '/station/orders', label: 'Đơn hàng', icon: FiShoppingCart },
         ]
+      
+      case 'Engineer':
+        return [
+          { to: '/engineer', label: 'Tổng quan', icon: FiHome },
+          { to: '/engineer/orders', label: 'Đơn hàng', icon: FiShoppingCart },
+        ]
 
       default:
         return []
