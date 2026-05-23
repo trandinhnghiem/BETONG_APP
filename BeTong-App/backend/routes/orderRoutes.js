@@ -32,6 +32,11 @@ router.post(
   upload.array('files', 10),
   OrderController.uploadDocuments
 )
+router.delete(
+  '/:orderId/upload-documents/:documentId',
+  authMiddleware,
+  OrderController.deleteUploadedDocument
+)
 
 // Station routes
 router.get('/station-orders', roleMiddleware(['Station']), OrderController.getStationOrders)

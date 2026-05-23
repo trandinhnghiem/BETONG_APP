@@ -513,6 +513,86 @@ if (
       res.status(500).json({ error: error.message })
     }
   }
+  static async deleteUploadedDocument(req, res) {
+  try {
+    const orderId = Number(req.params.orderId)
+    const documentId = Number(req.params.documentId)
+
+    if (
+      !Number.isInteger(orderId) ||
+      !Number.isInteger(documentId)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid id'
+      })
+    }
+
+    const order = await OrderModel.findById(orderId)
+
+    if (!order) {
+      return res.status(404).json({
+        error: 'Order not found'
+      })
+    }
+
+    const documents =
+      await OrderDocumentModel.findByOrderId(orderId)
+
+    const document = documents.find(
+      d => Number(d.id || d.Id) === documentId
+    )
+
+    if (!document) {
+      return res.status(404).json({
+        error: 'Document not found'
+      })
+    }
+
+    // xóa file vật lý
+    try {
+      const relativePath =
+        decodeURIComponent(
+          document.path || document.Path || ''
+        )
+
+      const fullPath = path.join(
+        __dirname,
+        '..',
+        relativePath
+      )
+
+      if (fs.existsSync(fullPath)) {
+        await fs.promises.unlink(fullPath)
+      }
+    } catch (fileErr) {
+      console.error('Delete file error:', fileErr)
+    }
+
+    // xóa database
+    const pool = await getConnection()
+
+    await pool.request()
+      .input('DocumentId', sql.Int, documentId)
+      .query(`
+        DELETE FROM OrderDocuments
+        WHERE Id = @DocumentId
+      `)
+
+    return res.json({
+      message: 'Document deleted successfully'
+    })
+
+  } catch (error) {
+    console.error(
+      'deleteUploadedDocument error:',
+      error
+    )
+
+    res.status(500).json({
+      error: error.message
+    })
+  }
+}
 
   static async exportOrdersReport(req, res) {
     const orders = await OrderModel.findAll()
