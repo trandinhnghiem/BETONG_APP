@@ -15,6 +15,7 @@ import AccountingDashboard from './pages/accounting/Dashboard'
 import AccountingOrdersPage from './pages/accounting/OrdersPage'
 import AccountingReportsPage from './pages/accounting/ReportsPage'
 import AccountingStationsPage from './pages/accounting/StationsPage'
+import CustomerDebtPage from './pages/accounting/CustomerDebtPage'
 
 import CoordinatorDashboard from './pages/coordinator/Dashboard'
 import CoordinatorOrdersPage from './pages/coordinator/OrdersPage'
@@ -121,6 +122,10 @@ function App() {
                 <AccountingStationsPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/accounting/customer-debts"
+            element={<CustomerDebtPage />}
           />
 
           {/* ================= COORDINATOR ================= */}

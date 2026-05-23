@@ -72,6 +72,7 @@ export default function Sidebar() {
           { to: '/accounting/orders', label: 'Đơn hàng', icon: FiShoppingCart },
           { to: '/accounting/reports', label: 'Báo cáo', icon: FiFileText },
           { to: '/accounting/stations', label: 'Quản lý trạm', icon: FiMapPin },
+          { to: '/accounting/customer-debts', label: 'Công nợ khách hàng', icon: FiFileText }
         ]
 
       case 'Coordinator':
@@ -81,6 +82,7 @@ export default function Sidebar() {
           { to: '/coordinator/create-order', label: 'Tạo đơn hàng', icon: FiFileText },
           { to: '/coordinator/reports', label: 'Báo cáo', icon: FiBarChart2 },
           { to: '/coordinator/stations', label: 'Quản lý trạm', icon: FiMapPin },
+          
         ]
 
       case 'Station':
