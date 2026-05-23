@@ -293,3 +293,22 @@
     font-size: 16px;
   }
 }
+.debt-warning {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f5f7ff;
+  border: 1px solid #dbe4ff;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.credit-alert {
+  margin-top: 10px;
+  background: #fff1f0;
+  color: #cf1322;
+  border: 1px solid #ffa39e;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+}

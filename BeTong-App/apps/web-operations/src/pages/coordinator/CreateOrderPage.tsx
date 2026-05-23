@@ -15,10 +15,22 @@ interface Station {
   name: string
   code: string
 }
+interface CustomerDebt {
+  Id: number
+  CustomerName: string
+  DebtAmount: number
+  DebtLimit: number
+}
 
 export default function CoordinatorCreateOrderPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [stations, setStations] = useState<Station[]>([])
+  const [customers, setCustomers] =
+  useState<CustomerDebt[]>([])
+
+const [selectedCustomerDebt, setSelectedCustomerDebt] =
+  useState<CustomerDebt | null>(null)
+  
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -43,6 +55,7 @@ export default function CoordinatorCreateOrderPage() {
   useEffect(() => {
     fetchProducts()
     fetchStations()
+    fetchCustomers()
   }, [])
 
   const fetchProducts = async () => {
@@ -76,11 +89,49 @@ export default function CoordinatorCreateOrderPage() {
       ])
     }
   }
+  const fetchCustomers = async () => {
+
+  try {
+
+    const res =
+      await apiClient.get(
+        '/api/customer-debts'
+      )
+
+    setCustomers(res.data || [])
+
+  } catch (err) {
+
+    console.error(
+      'Lỗi tải khách hàng:',
+      err
+    )
+
+  }
+
+}
 
   const handleChange = (e: React.ChangeEvent<any>) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
   }
+  const handleCustomerChange = (
+  customerName: string
+) => {
+
+  setForm(prev => ({
+    ...prev,
+    customerName
+  }))
+
+  const found =
+    customers.find(
+      c => c.CustomerName === customerName
+    ) || null
+
+  setSelectedCustomerDebt(found)
+
+}
 
   const handleProductChange = (productId: string) => {
     setForm(prev => ({ ...prev, concreteType: productId }))
@@ -178,7 +229,76 @@ export default function CoordinatorCreateOrderPage() {
           <div className="form-row">
             <div className="form-group">
               <label>Tên khách hàng</label>
-              <input type="text" name="customerName" value={form.customerName} onChange={handleChange} placeholder="Nhập tên khách hàng" required />
+              <select
+  name="customerName"
+  value={form.customerName}
+  onChange={(e) =>
+    handleCustomerChange(
+      e.target.value
+    )
+  }
+  required
+>
+
+  <option value="">
+    -- Chọn khách hàng --
+  </option>
+
+  {
+    customers.map(c => (
+
+      <option
+        key={c.Id}
+        value={c.CustomerName}
+      >
+        {c.CustomerName}
+      </option>
+
+    ))
+  }
+
+</select>
+{
+  selectedCustomerDebt && (
+
+    <div className="debt-warning">
+
+      <div>
+        Công nợ hiện tại:
+        <strong>
+          {' '}
+          {selectedCustomerDebt.DebtAmount.toLocaleString()} đ
+        </strong>
+      </div>
+
+      <div>
+        Hạn mức:
+        <strong>
+          {' '}
+          {selectedCustomerDebt.DebtLimit.toLocaleString()} đ
+        </strong>
+      </div>
+
+    </div>
+
+  )
+}
+{
+  selectedCustomerDebt &&
+  (
+    selectedCustomerDebt.DebtAmount +
+    totalAmount
+  ) >
+  selectedCustomerDebt.DebtLimit && (
+
+    <div className="credit-alert">
+
+      ⚠️ Đơn hàng này sẽ vượt hạn mức công nợ!
+
+    </div>
+
+  )
+}
             </div>
             <div className="form-group">
               <label>Địa chỉ nhận</label>

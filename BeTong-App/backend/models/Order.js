@@ -16,6 +16,7 @@ class OrderModel {
         SELECT 
           o.Id,
           o.OrderCode,
+          o.CustomerName,
 
           s1.StationName AS SourceStation,
           s2.StationName AS DestinationStation,
@@ -62,6 +63,8 @@ class OrderModel {
           o.Id,
           o.OrderCode,
 
+          o.CustomerName,
+
           s1.StationName AS SourceStation,
           s2.StationName AS DestinationStation,
 
@@ -69,7 +72,6 @@ class OrderModel {
 
           o.OrderStatus,
 
-          -- ✅ THÊM
           o.RejectReason,
 
           o.CreatedAt
@@ -177,6 +179,7 @@ class OrderModel {
         SELECT 
           o.Id,
           o.OrderCode,
+          o.CustomerName,
 
           s1.StationName AS SourceStation,
           s2.StationName AS DestinationStation,

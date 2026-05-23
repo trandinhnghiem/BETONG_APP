@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
+
 interface Order {
   id: number
   orderCode: string
@@ -11,7 +12,10 @@ interface Order {
   orderStatus: string
   createdAt: string
   coordinatorName?: string
-}
+  customerName: string
+  debtAmount: number
+  debtLimit: number
+  }
 
 const statusMap: Record<string, string> = {
   'Draft': 'Đơn tạm',
@@ -57,7 +61,12 @@ export default function AccountingOrdersPage() {
           totalAmount: o.TotalAmount || 0,
           orderStatus: o.OrderStatus,
           createdAt: o.CreatedAt,
+          customerName: o.CustomerName || '',
+
+          debtAmount: o.DebtAmount || 0,
+          debtLimit: o.DebtLimit || 0,
           coordinatorName: o.CoordinatorName || ''
+
         }))
       )
     } catch (error) {
@@ -141,6 +150,7 @@ export default function AccountingOrdersPage() {
                 <th>Mã đơn</th>
                 <th>Điều phối</th>
                 <th>Trạm nhận</th>
+                <th>Công nợ</th>
                 <th>Tổng tiền</th>
                 <th>Trạng thái</th>
                 <th>Ngày tạo</th>
@@ -155,7 +165,51 @@ export default function AccountingOrdersPage() {
 
                   <td>{order.coordinatorName}</td>
 
+                  <td>{order.customerName}</td>
+
                   <td>{order.destinationStation}</td>
+
+                  <td>
+                    <div>
+
+                      <strong>
+                        {order.debtAmount.toLocaleString()} đ
+                      </strong>
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color:
+                            order.debtAmount >
+                            order.debtLimit
+                              ? 'red'
+                              : '#666'
+                        }}
+                      >
+                        Hạn mức:
+                        {order.debtLimit.toLocaleString()} đ
+                      </div>
+
+                      {
+                        order.debtAmount +
+                        order.totalAmount >
+                        order.debtLimit && (
+
+                          <div
+                            style={{
+                              color: 'red',
+                              fontSize: 12,
+                              marginTop: 4,
+                              fontWeight: 600
+                            }}
+                          >
+                            ⚠️ Vượt hạn mức
+                          </div>
+                        )
+                      }
+
+                    </div>
+                  </td>
 
                   <td className="money">
                     {order.totalAmount.toLocaleString()} đ
