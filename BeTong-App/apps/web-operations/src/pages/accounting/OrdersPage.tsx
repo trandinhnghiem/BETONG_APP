@@ -896,7 +896,7 @@ export default function AccountingOrdersPage() {
                                   onClick={() => openPaymentModal(order)}
                                   disabled={confirmingPayment}
                                 >
-                                  Xác nhận thanh toán
+                                  Xuất hóa đơn
                                 </button>
                               )}
                             </>
@@ -1144,7 +1144,7 @@ export default function AccountingOrdersPage() {
                   Hủy
                 </button>
                 <button type="submit" className="action-btn approve" disabled={confirmingPayment}>
-                  {confirmingPayment ? 'Đang xử lý...' : 'Xuất hóa đơn & xác nhận'}
+                  {confirmingPayment ? 'Đang xử lý...' : 'Xuất hóa đơn'}
                 </button>
               </div>
             </form>
