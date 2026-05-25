@@ -27,12 +27,12 @@ router.post('/:orderId/status', roleMiddleware(['Coordinator', 'Station', 'Engin
 router.get('/engineer-orders', roleMiddleware(['Engineer']), OrderController.getEngineerOrders)
 router.get(
   '/:orderId/upload-documents',
-  roleMiddleware(['Engineer']),
+  roleMiddleware(['Engineer', 'Accounting']),
   OrderController.getUploadedDocuments
 )
 router.post(
   '/:orderId/upload-documents',
-  roleMiddleware(['Engineer']),
+  roleMiddleware(['Engineer', 'Accounting']),
   upload.array('files', 10),
   OrderController.uploadDocuments
 )

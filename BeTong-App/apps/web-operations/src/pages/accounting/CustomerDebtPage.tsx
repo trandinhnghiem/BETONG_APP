@@ -238,14 +238,9 @@ export default function CustomerDebtPage() {
     })
 
   }
-  const handleDelete =async (
-    id: number,
-    customerName: string
-  )=> {
+  const handleDelete = async (id: number) => {
     const confirmDelete =
-        window.confirm(
-            'Bạn có chắc muốn xóa khách hàng "${customerName}" không?'
-        )
+      window.confirm('Bạn có chắc muốn xóa khách hàng này không?')
     if (!confirmDelete) return
 
     try {
@@ -554,10 +549,7 @@ export default function CustomerDebtPage() {
                             <button
                                 className="delete-btn"
                                 onClick={() =>
-                                    handleDelete(
-                                        item.Id,
-                                        item.CustomerName
-                                    )
+                                    handleDelete(item.Id)
                                 }
                                 >
                                     Xóa

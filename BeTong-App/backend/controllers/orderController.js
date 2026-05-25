@@ -351,6 +351,7 @@ if (
     o.TotalAmount,
     o.OrderStatus,
     o.CreatedAt,
+    o.PaymentStatus,
 
     s.StationName AS DestinationStation,
 
