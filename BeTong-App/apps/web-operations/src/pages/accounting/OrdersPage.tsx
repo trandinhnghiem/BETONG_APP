@@ -267,8 +267,16 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData) => {
     </div>
     <script>
       window.onload = function () {
-        window.focus()
-        window.print()
+
+  setTimeout(function () {
+
+    window.focus()
+
+    window.print()
+
+  }, 500)
+
+}
       }
     </script>
   </body>
@@ -660,42 +668,109 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  const handleConfirmPayment = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleConfirmPayment = async (
+  event: FormEvent<HTMLFormElement>
+) => {
 
-    if (!paymentModal.orderId) return
+  event.preventDefault()
 
-    const order = orders.find(currentOrder => currentOrder.id === paymentModal.orderId)
+  if (!paymentModal.orderId) return
 
-    if (!order) return
+  const order =
+    orders.find(
+      currentOrder =>
+        currentOrder.id === paymentModal.orderId
+    )
 
-    if (!invoiceForm.invoiceNumber.trim() || !invoiceForm.invoiceDate.trim()) {
-      alert('Vui lòng nhập số hóa đơn và ngày lập hóa đơn')
-      return
-    }
+  if (!order) return
 
-    try {
-      setConfirmingPayment(true)
-      await apiClient.post(`/api/orders/${order.id}/confirm-payment`)
-      await fetchOrders()
+  if (
+    !invoiceForm.invoiceNumber.trim()
+    ||
+    !invoiceForm.invoiceDate.trim()
+  ) {
 
-      const newWindow = window.open('', '_blank', 'noopener,noreferrer')
-      if (!newWindow) {
-        alert('Vui lòng bật popup trình duyệt để xuất hóa đơn PDF')
-        return
-      }
+    alert(
+      'Vui lòng nhập số hóa đơn và ngày lập hóa đơn'
+    )
 
-      newWindow.document.write(buildInvoiceHtml(order, invoiceForm))
-      newWindow.document.close()
-      newWindow.focus()
-      setPaymentModal({ open: false, orderId: null })
-    } catch (err: any) {
-      console.error(err)
-      alert(err?.response?.data?.error || 'Xác nhận thanh toán thất bại')
-    } finally {
-      setConfirmingPayment(false)
-    }
+    return
+
   }
+
+  try {
+
+    setConfirmingPayment(true)
+
+    // confirm payment backend
+    await apiClient.post(
+      `/api/orders/${order.id}/confirm-payment`
+    )
+
+    await fetchOrders()
+
+    // build invoice html
+    const html =
+      buildInvoiceHtml(
+        order,
+        invoiceForm
+      )
+
+    // create blob
+    const blob = new Blob(
+      [html],
+      {
+        type: 'text/html'
+      }
+    )
+
+    // create temp url
+    const url =
+      URL.createObjectURL(blob)
+
+    // open invoice
+    const printWindow =
+      window.open(url, '_blank')
+
+    if (!printWindow) {
+
+      alert(
+        'Trình duyệt đang chặn popup. Hãy cho phép popup.'
+      )
+
+      return
+
+    }
+
+    // cleanup
+    setTimeout(() => {
+
+      URL.revokeObjectURL(url)
+
+    }, 10000)
+
+    setPaymentModal({
+      open: false,
+      orderId: null
+    })
+
+  } catch (err: any) {
+
+    console.error(err)
+
+    alert(
+      err?.response?.data?.error
+      ||
+      'Xác nhận thanh toán thất bại'
+    )
+
+  } finally {
+
+    setConfirmingPayment(false)
+
+  }
+
+}
 
   return (
     <div className="orders-dashboard">
