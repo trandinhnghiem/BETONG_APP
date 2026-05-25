@@ -1,10 +1,14 @@
 const express = require('express')
 const multer = require('multer')
-const OrderController = require('../controllers/orderController')
+const OrderController = require('../controllers/OrderController')
 const { authMiddleware, roleMiddleware } = require('../middlewares/auth')
 
 const router = express.Router()
 const upload = multer({ storage: multer.memoryStorage() })
+const paymentUpload =
+  require(
+    '../middlewares/uploadPaymentDocument'
+  )
 
 // All order routes require authentication
 router.use(authMiddleware)
@@ -63,5 +67,37 @@ router.get(
 )
 // Common routes
 router.get('/:orderId', OrderController.getOrderById)
+
+router.post(
+  '/:id/upload-payment-document',
+
+  paymentUpload.single('file'),
+
+  OrderController.uploadPaymentDocument
+)
+
+router.post(
+  '/:id/send-accounting',
+
+  OrderController.sendToAccounting
+)
+
+router.get(
+  '/waiting-payments',
+
+  OrderController.getWaitingPayments
+)
+
+router.post(
+  '/:id/confirm-payment',
+
+  OrderController.confirmPayment
+)
+
+router.post(
+  '/:id/reject-payment',
+
+  OrderController.rejectPayment
+)
 
 module.exports = router

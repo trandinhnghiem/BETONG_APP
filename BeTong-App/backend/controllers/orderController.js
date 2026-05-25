@@ -598,10 +598,289 @@ if (
     const orders = await OrderModel.findAll()
     res.json(orders)
   }
+// ================= UPLOAD PAYMENT DOCUMENT =================
 
-  static async confirmPayment(req, res) {
-    res.json({ message: 'Payment confirmed' })
+static async uploadPaymentDocument(req, res) {
+
+  try {
+
+    const { id } = req.params
+
+    if (!req.file) {
+
+      return res.status(400).json({
+        error: 'Chưa chọn file'
+      })
+
+    }
+
+    const filePath =
+      `/uploads/order-documents/${req.file.filename}`
+
+    const pool =
+      await getConnection()
+
+    await pool.request()
+
+      .input(
+        'Id',
+        sql.Int,
+        id
+      )
+
+      .input(
+        'UploadDocument',
+        sql.NVarChar,
+        filePath
+      )
+
+      .query(`
+
+        UPDATE Orders
+
+        SET
+
+          UploadDocument =
+            @UploadDocument,
+
+          UploadedByEngineerAt =
+            GETDATE()
+
+        WHERE Id = @Id
+
+      `)
+
+    res.json({
+
+      message:
+        'Upload thành công',
+
+      filePath
+
+    })
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
   }
+
 }
+
+// ================= SEND ACCOUNTING =================
+
+static async sendToAccounting(req, res) {
+
+  try {
+
+    const { id } = req.params
+
+    const pool =
+      await getConnection()
+
+    await pool.request()
+
+      .input(
+        'Id',
+        sql.Int,
+        id
+      )
+
+      .query(`
+
+        UPDATE Orders
+
+        SET
+
+          PaymentStatus =
+            'WaitingConfirmation',
+
+          SentToAccountingAt =
+            GETDATE()
+
+        WHERE Id = @Id
+
+      `)
+
+    res.json({
+
+      message:
+        'Đã gửi kế toán'
+
+    })
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
+  }
+
+}
+
+// ================= WAITING PAYMENTS =================
+
+static async getWaitingPayments(req, res) {
+
+  try {
+
+    const pool =
+      await getConnection()
+
+    const result =
+      await pool.request()
+
+      .query(`
+
+        SELECT *
+        FROM Orders
+
+        WHERE PaymentStatus =
+          'WaitingConfirmation'
+
+        ORDER BY
+          SentToAccountingAt DESC
+
+      `)
+
+    res.json(result.recordset)
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
+  }
+
+}
+
+// ================= CONFIRM PAYMENT =================
+
+static async confirmPayment(req, res) {
+
+  try {
+
+    const { id } = req.params
+
+    const pool =
+      await getConnection()
+
+    await pool.request()
+
+      .input(
+        'Id',
+        sql.Int,
+        id
+      )
+
+      .query(`
+
+        UPDATE Orders
+
+        SET
+
+          PaymentStatus =
+            'Paid',
+
+          PaymentConfirmedAt =
+            GETDATE()
+
+        WHERE Id = @Id
+
+      `)
+
+    res.json({
+
+      message:
+        'Đã xác nhận thanh toán'
+
+    })
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
+  }
+
+}
+
+// ================= REJECT PAYMENT =================
+
+static async rejectPayment(req, res) {
+
+  try {
+
+    const { id } = req.params
+
+    const { reason } = req.body
+
+    const pool =
+      await getConnection()
+
+    await pool.request()
+
+      .input(
+        'Id',
+        sql.Int,
+        id
+      )
+
+      .input(
+        'Reason',
+        sql.NVarChar,
+        reason
+      )
+
+      .query(`
+
+        UPDATE Orders
+
+        SET
+
+          PaymentStatus =
+            'Rejected',
+
+          PaymentRejectReason =
+            @Reason
+
+        WHERE Id = @Id
+
+      `)
+
+    res.json({
+
+      message:
+        'Đã từ chối'
+
+    })
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
+  }
+
+}
+ 
+}
+
 
 module.exports = OrderController

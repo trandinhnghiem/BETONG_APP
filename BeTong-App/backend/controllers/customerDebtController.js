@@ -366,3 +366,59 @@ exports.importDebts = async (
   }
 
 }
+
+exports.deleteDebt = async (
+    req,
+    res
+) => {
+    try {
+        const { id } =req.params
+
+        const pool =
+            await getConnection()
+        
+        const check =
+            await pool.request()
+
+            .input(
+                'Id',
+                sql.Int,
+                id
+            )
+
+            .query(`
+                SELECT *
+                FROM CustomerDebts
+                WHERE Id = @Id
+
+            `)
+
+        if (
+            check.recordset.length === 0
+        ) {
+            return res.status(404).json({
+                error: 'Khách hàng không tồn tại'
+            })
+        }
+
+        await pool.request()
+
+            .input(
+                'Id',
+                sql.Int,
+                id
+            )
+            .query(`
+                DELETE FROM CustomerDebts
+                WHERE Id = @Id`)
+            res.json({
+                message:
+                    'Xóa khách hàng thành công'
+            })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({
+            error: error.message
+        })
+    }
+}

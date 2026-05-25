@@ -238,6 +238,30 @@ export default function CustomerDebtPage() {
     })
 
   }
+  const handleDelete =async (
+    id: number,
+    customerName: string
+  )=> {
+    const confirmDelete =
+        window.confirm(
+            'Bạn có chắc muốn xóa khách hàng "${customerName}" không?'
+        )
+    if (!confirmDelete) return
+
+    try {
+        await apiClient.delete(
+          `/api/customer-debts/${id}`
+        )
+        alert('Xóa khách hàng thành công')
+        fetchDebts()
+    }catch (err: any) {
+        console.error(err)
+        alert(
+            err?.reponse?.data?.error ||
+            'Xóa thất bại'
+        )
+    }
+  }
 
   return (
 
@@ -518,16 +542,27 @@ export default function CustomerDebtPage() {
 
                       <td>
 
-                        <button
-                          className="edit-btn"
-                          onClick={() =>
-                            handleEdit(item)
-                          }
-                        >
-
-                          Sửa
-
-                        </button>
+                        <div className="action-group">
+                            <button
+                                className="edit-btn"
+                                onClick={() =>
+                                    handleEdit(item)
+                                }
+                                >
+                                    Sửa
+                            </button>
+                            <button
+                                className="delete-btn"
+                                onClick={() =>
+                                    handleDelete(
+                                        item.Id,
+                                        item.CustomerName
+                                    )
+                                }
+                                >
+                                    Xóa
+                                </button>
+                        </div>
 
                       </td>
 

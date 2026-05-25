@@ -3,7 +3,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const cors = require('cors')
 require('dotenv').config()
-
+const path = require('path')
 const app = express()
 const server = http.createServer(app)
 
@@ -124,6 +124,15 @@ app.use(cors(corsOptions))
 // BODY PARSER
 // =======================
 app.use(express.json())
+app.use(
+  '/uploads',
+  express.static(
+    path.join(
+      __dirname,
+      'uploads'
+    )
+  )
+)
 
 app.use(
   express.urlencoded({

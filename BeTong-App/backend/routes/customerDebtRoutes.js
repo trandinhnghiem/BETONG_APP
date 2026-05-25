@@ -1,55 +1,43 @@
 const express = require('express')
 const router = express.Router()
 
-const {
-  getAllDebts,
-  createDebt,
-  updateDebt,
-  importDebts
-} = require('../controllers/CustomerDebtController')
-
 const multer = require('multer')
 
-const upload = multer({
-  storage: multer.memoryStorage()
-})
+const upload = multer()
 
-const {
-  authMiddleware,
-  roleMiddleware
-} = require('../middlewares/auth')
+const customerDebtController =
+  require('../controllers/customerDebtController')
 
-// ================= GET =================
-
+// GET
 router.get(
   '/',
-  authMiddleware,
-  getAllDebts
+  customerDebtController.getAllDebts
 )
 
-// ================= CREATE =================
-
+// CREATE
 router.post(
   '/',
-  authMiddleware,
-  createDebt
+  customerDebtController.createDebt
 )
 
-// ================= UPDATE =================
-
+// UPDATE
 router.put(
   '/:id',
-  authMiddleware,
-  updateDebt
+  customerDebtController.updateDebt
 )
 
-// ================= IMPORT =================
+// DELETE
+router.delete(
+  '/:id',
+  customerDebtController.deleteDebt
+)
 
+// IMPORT EXCEL
 router.post(
   '/import',
-  authMiddleware,
   upload.single('file'),
-  importDebts
+  customerDebtController.importDebts
 )
+
 
 module.exports = router
