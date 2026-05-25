@@ -612,6 +612,36 @@ export default function AccountingOrdersPage() {
     setPaymentModal({ open: true, orderId: order.id })
   }
 
+  const handleConfirmPaid = async (order: Order) => {
+    const previousStatus = order.paymentStatus
+
+    setConfirmingPayment(true)
+    setOrders(prev =>
+      prev.map(currentOrder =>
+        currentOrder.id === order.id
+          ? { ...currentOrder, paymentStatus: 'Paid' }
+          : currentOrder
+      )
+    )
+
+    try {
+      await apiClient.post(`/api/orders/${order.id}/confirm-payment`)
+      alert('Đã xác nhận thanh toán')
+    } catch (err: any) {
+      setOrders(prev =>
+        prev.map(currentOrder =>
+          currentOrder.id === order.id
+            ? { ...currentOrder, paymentStatus: previousStatus || 'pending' }
+            : currentOrder
+        )
+      )
+      console.error(err)
+      alert(err?.response?.data?.error || 'Xác nhận thanh toán thất bại')
+    } finally {
+      setConfirmingPayment(false)
+    }
+  }
+
   const handleUploadFiles = async (files: File[]) => {
     if (!uploadModal.orderId) return
 
@@ -890,14 +920,24 @@ export default function AccountingOrdersPage() {
                               {isPaid ? (
                                 <span className="status-badge green">Đã thanh toán</span>
                               ) : (
-                                <button
-                                  type="button"
-                                  className="action-btn approve"
-                                  onClick={() => openPaymentModal(order)}
-                                  disabled={confirmingPayment}
-                                >
-                                  Xuất hóa đơn
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    className="action-btn approve"
+                                    onClick={() => openPaymentModal(order)}
+                                    disabled={confirmingPayment}
+                                  >
+                                    Xuất hóa đơn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-btn"
+                                    onClick={() => handleConfirmPaid(order)}
+                                    disabled={confirmingPayment}
+                                  >
+                                    Xác nhận đã thanh toán
+                                  </button>
+                                </>
                               )}
                             </>
                           )}

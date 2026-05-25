@@ -771,7 +771,14 @@ static async confirmPayment(req, res) {
 
   try {
 
-    const { id } = req.params
+    const orderId =
+      req.params.orderId ?? req.params.id
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Thiếu mã đơn hàng'
+      })
+    }
 
     const pool =
       await getConnection()
@@ -781,7 +788,7 @@ static async confirmPayment(req, res) {
       .input(
         'Id',
         sql.Int,
-        id
+        Number(orderId)
       )
 
       .query(`
