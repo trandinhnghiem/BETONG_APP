@@ -329,7 +329,13 @@ export default function StationOrdersPage() {
 
       ) : (
 
-        <table className="orders-table">
+        <div
+          style={{
+            width: '100%',
+            overflowX: 'auto'
+          }}
+        >
+          <table className="orders-table">
 
           <thead>
 
@@ -478,6 +484,7 @@ export default function StationOrdersPage() {
           </tbody>
 
         </table>
+        </div>
 
       )}
 
