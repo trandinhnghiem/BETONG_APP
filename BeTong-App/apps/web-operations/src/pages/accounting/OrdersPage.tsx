@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter } from 'react-icons/fi'
+import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter, FiAlertTriangle } from 'react-icons/fi'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
@@ -36,6 +36,14 @@ interface InvoiceFormData {
   paymentMethod: string
   note: string
   customerName: string
+}
+
+interface DebtWarningDetails {
+  customerName: string
+  currentDebt: number
+  orderTotal: number
+  futureDebt: number
+  debtLimit: number
 }
 
 type UploadModalMode = 'upload' | 'edit'
@@ -536,6 +544,14 @@ export default function AccountingOrdersPage() {
     customerName: ''
   })
 
+  // ✅ State cho modal xác nhận duyệt bất chấp vượt công nợ
+  const [debtConfirmModal, setDebtConfirmModal] = useState<{
+    open: boolean
+    order: Order | null
+    details: DebtWarningDetails | null
+  }>({ open: false, order: null, details: null })
+  const [forceApproving, setForceApproving] = useState(false)
+
   useEffect(() => {
     fetchOrders()
   }, [])
@@ -603,6 +619,7 @@ export default function AccountingOrdersPage() {
     setUploadModal({ open: true, orderId, mode: 'edit' })
   }
 
+  // ✅ FIX: Xử lý phê duyệt - hỗ trợ xác nhận khi vượt công nợ
   const handleAction = async (order: Order, action: string) => {
     if (!action) return
 
@@ -632,7 +649,45 @@ export default function AccountingOrdersPage() {
       await fetchOrders()
     } catch (err: any) {
       console.error(err.response?.data || err)
+
+      // ✅ FIX: Nếu backend trả về 409 (debtWarning) → mở modal xác nhận
+      if (err.response?.status === 409 && err.response?.data?.debtWarning) {
+        setDebtConfirmModal({
+          open: true,
+          order,
+          details: err.response.data.details
+        })
+        return
+      }
+
       alert(err.response?.data?.error || 'Thao tác thất bại')
+    }
+  }
+
+  // ✅ FIX: Duyệt bất chấp vượt công nợ (sau khi user xác nhận)
+  const handleForceApprove = async () => {
+    if (!debtConfirmModal.order) return
+
+    try {
+      setForceApproving(true)
+
+      await apiClient.post(`/api/orders/${debtConfirmModal.order.id}/status`, {
+        status: 'Approved',
+        forceApprove: true
+      })
+
+      alert('Đã phê duyệt đơn hàng (bất chấp vượt công nợ)')
+      setDebtConfirmModal({ open: false, order: null, details: null })
+      setSelectedActions(prev => ({
+        ...prev,
+        [debtConfirmModal.order!.id]: ''
+      }))
+      await fetchOrders()
+    } catch (err: any) {
+      console.error(err.response?.data || err)
+      alert(err.response?.data?.error || 'Thao tác thất bại')
+    } finally {
+      setForceApproving(false)
     }
   }
 
@@ -889,7 +944,7 @@ export default function AccountingOrdersPage() {
                         </span>
                         {order.debtAmount + order.totalAmount > order.debtLimit && (
                           <span style={{ color: 'red', fontSize: 12, fontWeight: 600 }}>
-                            ⚠️ Vượt hạn mức
+                            Vượt hạn mức
                           </span>
                         )}
                       </div>
@@ -912,7 +967,7 @@ export default function AccountingOrdersPage() {
                                 </span>
                                 <br />
                                 <span style={{ color: '#ef4444', fontWeight: 700 }}>
-                                  ⚠️ Trễ {daysOverdue} ngày
+                                  Trễ {daysOverdue} ngày
                                 </span>
                               </>
                             ) : (
@@ -997,7 +1052,7 @@ export default function AccountingOrdersPage() {
                                 /* GHI CÔNG NỢ / QUÁ HẠN → Badge + In lại HĐ + Thanh toán nợ */
                                 <>
                                   {isOverdue ? (
-                                    <span className="status-badge overdue">⚠️ Quá hạn</span>
+                                    <span className="status-badge overdue">Quá hạn</span>
                                   ) : (
                                     <span className="status-badge debt">Ghi công nợ</span>
                                   )}
@@ -1017,7 +1072,7 @@ export default function AccountingOrdersPage() {
                                     disabled={confirmingPayment}
                                     title="Thanh toán công nợ"
                                   >
-                                    💰 Thanh toán công nợ
+                                    Thanh toán công nợ
                                   </button>
                                 </>
                               ) : (
@@ -1028,7 +1083,7 @@ export default function AccountingOrdersPage() {
                                   onClick={() => openInvoiceModal(order)}
                                   disabled={confirmingPayment}
                                 >
-                                  📄 Xuất hóa đơn
+                                  Xuất hóa đơn
                                 </button>
                               )}
                             </>
@@ -1056,6 +1111,156 @@ export default function AccountingOrdersPage() {
         documents={uploadModal.orderId ? documentsByOrder[uploadModal.orderId] || [] : []}
         saving={uploading}
       />
+
+      {/* ✅ MODAL XÁC NHẬN DUYỆT BẤT CHẤP VƯỢT CÔNG NỢ */}
+      {debtConfirmModal.open && debtConfirmModal.details && debtConfirmModal.order && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16
+          }}
+        >
+          <div
+            style={{
+              width: 'min(520px, 100%)',
+              background: '#fff',
+              borderRadius: 16,
+              padding: 0,
+              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.3)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header cảnh báo */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14
+              }}
+            >
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <FiAlertTriangle size={26} color="#fff" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, color: '#fff', fontSize: 18, fontWeight: 700 }}>
+                  Cảnh báo vượt hạn mức công nợ
+                </h3>
+                <p style={{ margin: '4px 0 0', color: 'rgba(255,255,255,0.9)', fontSize: 13 }}>
+                  Khách hàng đang có công nợ vượt hạn mức. Bạn có chắc muốn duyệt đơn này?
+                </p>
+              </div>
+            </div>
+
+            {/* Nội dung chi tiết */}
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: '#92400e' }}>
+                  Thông tin công nợ: {debtConfirmModal.details.customerName}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: '#6b7280' }}>Nợ hiện tại:</span>
+                    <span style={{ fontWeight: 600 }}>{debtConfirmModal.details.currentDebt.toLocaleString()} đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: '#6b7280' }}>Tiền đơn hàng:</span>
+                    <span style={{ fontWeight: 600 }}>+ {debtConfirmModal.details.orderTotal.toLocaleString()} đ</span>
+                  </div>
+                  <div style={{ borderTop: '1px dashed #d1d5db', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: '#6b7280' }}>Tổng nợ sau khi duyệt:</span>
+                    <span style={{ fontWeight: 700, color: '#dc2626' }}>{debtConfirmModal.details.futureDebt.toLocaleString()} đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: '#6b7280' }}>Hạn mức công nợ:</span>
+                    <span style={{ fontWeight: 600, color: '#16a34a' }}>{debtConfirmModal.details.debtLimit.toLocaleString()} đ</span>
+                  </div>
+                  <div style={{
+                    marginTop: 4,
+                    padding: '8px 12px',
+                    background: '#fef2f2',
+                    borderRadius: 8,
+                    border: '1px solid #fecaca',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 14
+                  }}>
+                    <span style={{ color: '#991b1b', fontWeight: 600 }}>Vượt hạn mức:</span>
+                    <span style={{ fontWeight: 700, color: '#dc2626' }}>
+                      + {(debtConfirmModal.details.futureDebt - debtConfirmModal.details.debtLimit).toLocaleString()} đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                background: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: 12,
+                padding: '12px 16px',
+                fontSize: 13,
+                color: '#0369a1',
+                lineHeight: 1.5
+              }}>
+                <strong>Lưu ý:</strong> Nếu đây là khách hàng quen, lâu năm và bạn chắc chắn muốn duyệt đơn này,
+                hãy nhấn "Vẫn duyệt". Hệ thống sẽ ghi nhận việc duyệt bất chấp vượt công nợ.
+                Nếu không chắc chắn, hãy nhấn "Hủy" để xem xét thêm.
+              </div>
+
+              {/* Nút hành động */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={() => setDebtConfirmModal({ open: false, order: null, details: null })}
+                  disabled={forceApproving}
+                  style={{ minWidth: 100 }}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={handleForceApprove}
+                  disabled={forceApproving}
+                  style={{
+                    minWidth: 140,
+                    background: '#f59e0b',
+                    color: '#fff',
+                    fontWeight: 700
+                  }}
+                >
+                  {forceApproving ? 'Đang xử lý...' : 'Vẫn duyệt'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View documents modal */}
       {viewModal.open && (
@@ -1354,8 +1559,8 @@ export default function AccountingOrdersPage() {
                   {confirmingPayment
                     ? 'Đang xử lý...'
                     : invoiceModal.mode === 'new'
-                      ? (paymentChoice === 'debt' ? '📋 Ghi công nợ & Xuất HĐ' : '💰 Xác nhận trả hết & Xuất HĐ')
-                      : '🖨️ In lại hóa đơn'
+                      ? (paymentChoice === 'debt' ? 'Ghi công nợ & Xuất HĐ' : 'Xác nhận trả hết & Xuất HĐ')
+                      : 'In lại hóa đơn'
                   }
                 </button>
               </div>

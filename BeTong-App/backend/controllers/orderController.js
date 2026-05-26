@@ -136,7 +136,7 @@ class OrderController {
   static async updateStatus(req, res) {
     try {
       const orderId = parseInt(req.params.orderId)
-      const { status, reason } = req.body
+      const { status, reason, forceApprove } = req.body
 
       const allowedStatuses = [
         'Draft',
@@ -193,6 +193,82 @@ class OrderController {
         return res.status(403).json({ error: 'You are not allowed to perform this status transition' })
       }
 
+      // =========================
+      // ✅ FIX 1: KIỂM TRA CÔNG NỢ TRƯỚC KHI DUYỆT
+      // Nếu vượt hạn mức VÀ chưa forceApprove → trả cảnh báo (409)
+      // Nếu vượt hạn mức VÀ forceApprove=true → vẫn duyệt (khách quen)
+      // =========================
+      if (status === 'Approved') {
+        const debt = await CustomerDebtModel.findByCustomerName(order.CustomerName)
+
+        const currentDebtAmount = debt ? Number(debt.DebtAmount || 0) : 0
+        const debtLimit = debt ? Number(debt.DebtLimit || 0) : 0
+        const futureDebt = currentDebtAmount + Number(order.TotalAmount || 0)
+
+        // Nếu khách đã có record công nợ VÀ vượt hạn mức
+        if (debt && futureDebt > debtLimit) {
+          // Nếu user chưa xác nhận forceApprove → trả cảnh báo, KHÔNG thay đổi trạng thái đơn
+          if (!forceApprove) {
+            return res.status(409).json({
+              debtWarning: true,
+              error: `Khách hàng ${order.CustomerName} đang có công nợ vượt hạn mức`,
+              details: {
+                customerName: order.CustomerName,
+                currentDebt: currentDebtAmount,
+                orderTotal: Number(order.TotalAmount || 0),
+                futureDebt,
+                debtLimit
+              }
+            })
+          }
+
+          // Nếu forceApprove=true → user đã xác nhận, cho phép duyệt bất chấp vượt nợ
+          // Ghi nhận lý do duyệt bất chấp vào reason
+          const forceReason = reason
+            ? `${reason} (Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ)`
+            : `Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ`
+
+          // ✅ SAU khi check xong mới cập nhật status (với lý do force approve)
+          const updated = await OrderModel.updateStatus(
+            orderId,
+            status,
+            req.user.Id,
+            forceReason
+          )
+          if (!updated) {
+            return res.status(500).json({ error: 'Failed to update status' })
+          }
+
+          const io = req.app.get('io')
+          const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
+
+          try {
+            // Tăng công nợ khách hàng khi duyệt đơn (bất chấp)
+            await CustomerDebtModel.increaseDebt(
+              order.CustomerName,
+              order.TotalAmount
+            )
+            await NotificationService.notifyStationUsers(
+              io,
+              order.DestinationStationId,
+              'OrderApproved',
+              'Đơn hàng đã được duyệt',
+              statusMessage,
+              order.Id
+            )
+          } catch (notifyError) {
+            console.error('Failed to send status update notifications:', notifyError)
+          }
+
+          return res.json({
+            message: 'Updated (force approved despite debt limit)',
+            status,
+            forceApproved: true
+          })
+        }
+      }
+
+      // ✅ SAU khi check nợ xong (hoặc không vượt nợ) → cập nhật status bình thường
       const updated = await OrderModel.updateStatus(
         orderId,
         status,
@@ -218,50 +294,9 @@ class OrderController {
           )
         }
 
-        // =========================
-// KIỂM TRA CÔNG NỢ
-// =========================
-
-if (
-  status === 'Approved'
-) {
-
-  const debt =
-    await CustomerDebtModel
-      .findByCustomerName(
-        order.CustomerName
-      )
-
-  if (debt) {
-
-    const futureDebt =
-      Number(debt.DebtAmount || 0)
-      +
-      Number(order.TotalAmount || 0)
-
-    if (
-      futureDebt >
-      Number(debt.DebtLimit || 0)
-    ) {
-
-      await OrderModel.updateStatus(
-        orderId,
-        'Rejected',
-        req.user.Id,
-        'Vượt hạn mức công nợ'
-      )
-
-      return res.status(400).json({
-        error:
-          'Đơn vượt hạn mức công nợ'
-      })
-    }
-  }
-}
-
         if (status === 'Approved') {
-          await CustomerDebtModel
-          .increaseDebt(
+          // Tăng công nợ khách hàng khi duyệt đơn
+          await CustomerDebtModel.increaseDebt(
             order.CustomerName,
             order.TotalAmount
           )
@@ -337,7 +372,7 @@ if (
     res.json(orders)
   }
 
-  // ✅ SỬA: getAccountingOrders thêm DebtDueDate
+  // ✅ getAccountingOrders thêm DebtDueDate
   static async getAccountingOrders(req, res) {
   try {
     const pool = await getConnection()
@@ -346,34 +381,23 @@ if (
   SELECT 
     o.Id,
     o.OrderCode,
-
     o.CustomerName,
-
     o.TotalAmount,
     o.OrderStatus,
     o.CreatedAt,
     o.PaymentStatus,
-
     o.DebtDueDate,
-
     s.StationName AS DestinationStation,
-
     u.FullName AS CoordinatorName,
-
     cd.DebtAmount,
     cd.DebtLimit
-
   FROM Orders o
-
   LEFT JOIN Stations s
     ON o.DestinationStationId = s.Id
-
   LEFT JOIN Users u
     ON o.CoordinatorId = u.Id
-
   LEFT JOIN CustomerDebts cd
     ON o.CustomerName = cd.CustomerName
-
   ORDER BY o.CreatedAt DESC
 `)
 
@@ -409,21 +433,14 @@ if (
           o.TotalAmount,
           o.OrderStatus,
           o.CreatedAt,
-
           s.StationName AS DestinationStation,
-
           u.FullName AS CoordinatorName
-
         FROM Orders o
-
         LEFT JOIN Stations s
           ON o.DestinationStationId = s.Id
-
         LEFT JOIN Users u
           ON o.CoordinatorId = u.Id
-
         WHERE o.DestinationStationId = @stationId
-
         ORDER BY o.CreatedAt DESC
       `)
     res.json(result.recordset)
@@ -517,6 +534,7 @@ if (
       res.status(500).json({ error: error.message })
     }
   }
+
   static async deleteUploadedDocument(req, res) {
   try {
     const orderId = Number(req.params.orderId)
@@ -602,6 +620,7 @@ if (
     const orders = await OrderModel.findAll()
     res.json(orders)
   }
+
 // ================= UPLOAD PAYMENT DOCUMENT =================
 
 static async uploadPaymentDocument(req, res) {
@@ -768,7 +787,7 @@ static async getWaitingPayments(req, res) {
 
 }
 
-// ✅ SỬA: CONFIRM PAYMENT - Hỗ trợ Trả hết hoặc Ghi công nợ
+// ✅ CONFIRM PAYMENT - Hỗ trợ Trả hết hoặc Ghi công nợ
 static async confirmPayment(req, res) {
 
   try {
@@ -787,7 +806,7 @@ static async confirmPayment(req, res) {
     const pool =
       await getConnection()
 
-    // ✅ MỚI: Nếu chọn Ghi công nợ
+    // Nếu chọn Ghi công nợ
     if (paymentType === 'debt') {
 
       if (!debtDueDate) {
@@ -818,7 +837,7 @@ static async confirmPayment(req, res) {
 
     } else {
 
-      // ✅ Trả hết (mặc định) - giống logic cũ
+      // Trả hết (mặc định) - giống logic cũ
       await pool.request()
         .input('Id', sql.Int, Number(orderId))
         .query(`
@@ -839,7 +858,7 @@ static async confirmPayment(req, res) {
 
         `)
 
-      // ✅ MỚI: Giảm công nợ khách hàng khi trả hết
+      // Giảm công nợ khách hàng khi trả hết
       try {
         const order = await OrderModel.findById(Number(orderId))
         if (order && order.CustomerName && order.TotalAmount) {
@@ -874,7 +893,7 @@ static async confirmPayment(req, res) {
 
 }
 
-// ✅ MỚI: CONFIRM DEBT PAYMENT - Thanh toán công nợ (khi khách trả nợ)
+// ✅ CONFIRM DEBT PAYMENT - Thanh toán công nợ (khi khách trả nợ)
 static async confirmDebtPayment(req, res) {
 
   try {
