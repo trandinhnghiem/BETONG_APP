@@ -337,6 +337,7 @@ if (
     res.json(orders)
   }
 
+  // ✅ SỬA: getAccountingOrders thêm DebtDueDate
   static async getAccountingOrders(req, res) {
   try {
     const pool = await getConnection()
@@ -352,6 +353,8 @@ if (
     o.OrderStatus,
     o.CreatedAt,
     o.PaymentStatus,
+
+    o.DebtDueDate,
 
     s.StationName AS DestinationStation,
 
@@ -765,9 +768,114 @@ static async getWaitingPayments(req, res) {
 
 }
 
-// ================= CONFIRM PAYMENT =================
-
+// ✅ SỬA: CONFIRM PAYMENT - Hỗ trợ Trả hết hoặc Ghi công nợ
 static async confirmPayment(req, res) {
+
+  try {
+
+    const orderId =
+      req.params.orderId ?? req.params.id
+
+    const { paymentType, debtDueDate } = req.body
+
+    if (!orderId) {
+      return res.status(400).json({
+        error: 'Thiếu mã đơn hàng'
+      })
+    }
+
+    const pool =
+      await getConnection()
+
+    // ✅ MỚI: Nếu chọn Ghi công nợ
+    if (paymentType === 'debt') {
+
+      if (!debtDueDate) {
+        return res.status(400).json({
+          error: 'Vui lòng nhập hạn trả công nợ'
+        })
+      }
+
+      await pool.request()
+        .input('Id', sql.Int, Number(orderId))
+        .input('DebtDueDate', sql.DateTime, new Date(debtDueDate))
+        .query(`
+
+          UPDATE Orders
+
+          SET
+            PaymentStatus = 'Debt',
+            DebtDueDate = @DebtDueDate,
+            PaymentConfirmedAt = GETDATE()
+
+          WHERE Id = @Id
+
+        `)
+
+      res.json({
+        message: 'Đã ghi công nợ'
+      })
+
+    } else {
+
+      // ✅ Trả hết (mặc định) - giống logic cũ
+      await pool.request()
+        .input('Id', sql.Int, Number(orderId))
+        .query(`
+
+          UPDATE Orders
+
+          SET
+
+            PaymentStatus =
+              'Paid',
+
+            PaymentConfirmedAt =
+              GETDATE(),
+
+            DebtDueDate = NULL
+
+          WHERE Id = @Id
+
+        `)
+
+      // ✅ MỚI: Giảm công nợ khách hàng khi trả hết
+      try {
+        const order = await OrderModel.findById(Number(orderId))
+        if (order && order.CustomerName && order.TotalAmount) {
+          await CustomerDebtModel.decreaseDebt(
+            order.CustomerName,
+            order.TotalAmount
+          )
+        }
+      } catch (debtErr) {
+        console.error('Failed to decrease customer debt:', debtErr)
+        // Không rollback - thanh toán vẫn thành công
+      }
+
+      res.json({
+
+        message:
+          'Đã xác nhận thanh toán'
+
+      })
+
+    }
+
+  } catch (error) {
+
+    console.error(error)
+
+    res.status(500).json({
+      error: error.message
+    })
+
+  }
+
+}
+
+// ✅ MỚI: CONFIRM DEBT PAYMENT - Thanh toán công nợ (khi khách trả nợ)
+static async confirmDebtPayment(req, res) {
 
   try {
 
@@ -780,17 +888,26 @@ static async confirmPayment(req, res) {
       })
     }
 
+    // Kiểm tra đơn hàng có ở trạng thái công nợ không
+    const order = await OrderModel.findById(Number(orderId))
+
+    if (!order) {
+      return res.status(404).json({
+        error: 'Không tìm thấy đơn hàng'
+      })
+    }
+
+    if (order.PaymentStatus !== 'Debt') {
+      return res.status(400).json({
+        error: 'Đơn hàng không ở trạng thái công nợ'
+      })
+    }
+
     const pool =
       await getConnection()
 
     await pool.request()
-
-      .input(
-        'Id',
-        sql.Int,
-        Number(orderId)
-      )
-
+      .input('Id', sql.Int, Number(orderId))
       .query(`
 
         UPDATE Orders
@@ -801,17 +918,28 @@ static async confirmPayment(req, res) {
             'Paid',
 
           PaymentConfirmedAt =
-            GETDATE()
+            GETDATE(),
+
+          DebtDueDate = NULL
 
         WHERE Id = @Id
 
       `)
 
+    // Giảm công nợ khách hàng
+    try {
+      if (order.CustomerName && order.TotalAmount) {
+        await CustomerDebtModel.decreaseDebt(
+          order.CustomerName,
+          order.TotalAmount
+        )
+      }
+    } catch (debtErr) {
+      console.error('Failed to decrease customer debt:', debtErr)
+    }
+
     res.json({
-
-      message:
-        'Đã xác nhận thanh toán'
-
+      message: 'Đã thanh toán công nợ'
     })
 
   } catch (error) {

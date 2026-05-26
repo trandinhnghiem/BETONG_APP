@@ -54,6 +54,13 @@ router.get(
 )
 router.post('/:orderId/confirm-payment', roleMiddleware(['Accounting']), OrderController.confirmPayment)
 
+// ✅ MỚI: Route thanh toán công nợ
+router.post(
+  '/:orderId/confirm-debt-payment',
+  roleMiddleware(['Accounting']),
+  OrderController.confirmDebtPayment
+)
+
 // Admin routes
 router.get(
   '/',

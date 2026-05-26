@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { FiEdit2, FiEye, FiUpload, FiX } from 'react-icons/fi'
+import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter } from 'react-icons/fi'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
@@ -15,6 +15,7 @@ interface Order {
   debtAmount: number
   debtLimit: number
   paymentStatus?: string
+  debtDueDate?: string | null
 }
 
 interface OrderDocument {
@@ -38,6 +39,7 @@ interface InvoiceFormData {
 }
 
 type UploadModalMode = 'upload' | 'edit'
+type InvoiceModalMode = 'new' | 'reprint'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
@@ -116,9 +118,11 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const buildInvoiceHtml = (order: Order, form: InvoiceFormData) => {
+const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'full' | 'debt', debtDueDate?: string | null) => {
   const totalLabel = order.totalAmount.toLocaleString('vi-VN')
   const invoiceDateLabel = formatVNDate(form.invoiceDate)
+  const paymentStatusLabel = paymentType === 'debt' ? 'Ghi công nợ' : 'Đã thanh toán'
+  const dueDateLabel = debtDueDate ? formatVNDate(debtDueDate) : ''
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -193,6 +197,23 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData) => {
         border-top: 1px dashed #d1d5db;
         color: #4b5563;
       }
+      .payment-status-box {
+        margin-top: 20px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        border: 2px solid ${paymentType === 'debt' ? '#f59e0b' : '#10b981'};
+        background: ${paymentType === 'debt' ? '#fffbeb' : '#f0fdf4'};
+      }
+      .payment-status-box .status-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: ${paymentType === 'debt' ? '#92400e' : '#15803d'};
+      }
+      .payment-status-box .status-detail {
+        font-size: 13px;
+        color: #4b5563;
+        margin-top: 4px;
+      }
       @media print {
         body { padding: 0; }
         .invoice { border: none; border-radius: 0; padding: 0; }
@@ -260,6 +281,13 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData) => {
         </tbody>
       </table>
 
+      ${paymentType ? `
+      <div class="payment-status-box">
+        <div class="status-label">Trạng thái thanh toán: ${escapeHtml(paymentStatusLabel)}</div>
+        ${paymentType === 'debt' && dueDateLabel ? `<div class="status-detail">Hạn trả công nợ: ${escapeHtml(dueDateLabel)}</div>` : ''}
+      </div>
+      ` : ''}
+
       <div class="note">
         <strong>Ghi chú:</strong>
         <div style="margin-top: 8px;">${escapeHtml(form.note || 'Không có ghi chú')}</div>
@@ -267,17 +295,11 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData) => {
     </div>
     <script>
       window.onload = function () {
-
   setTimeout(function () {
-
     window.focus()
-
     window.print()
-
   }, 500)
-
 }
-      }
     </script>
   </body>
 </html>`
@@ -491,7 +513,19 @@ export default function AccountingOrdersPage() {
   const [documentsByOrder, setDocumentsByOrder] = useState<Record<number, OrderDocument[]>>({})
   const [uploadModal, setUploadModal] = useState<{ open: boolean; orderId: number | null; mode: UploadModalMode }>({ open: false, orderId: null, mode: 'upload' })
   const [viewModal, setViewModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null })
-  const [paymentModal, setPaymentModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null })
+
+  // Hóa đơn + Thanh toán gộp chung 1 modal
+  // mode 'new' = lần đầu xuất (chọn trả hết/ghi nợ + điền form HĐ)
+  // mode 'reprint' = in lại (chỉ điền form HĐ, không chọn thanh toán)
+  const [invoiceModal, setInvoiceModal] = useState<{
+    open: boolean
+    orderId: number | null
+    mode: InvoiceModalMode
+  }>({ open: false, orderId: null, mode: 'new' })
+
+  const [paymentChoice, setPaymentChoice] = useState<'full' | 'debt'>('full')
+  const [debtDueDateInput, setDebtDueDateInput] = useState('')
+
   const [uploading, setUploading] = useState(false)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
   const [invoiceForm, setInvoiceForm] = useState<InvoiceFormData>({
@@ -547,7 +581,8 @@ export default function AccountingOrdersPage() {
         debtAmount: o.DebtAmount || 0,
         debtLimit: o.DebtLimit || 0,
         coordinatorName: o.CoordinatorName || '',
-        paymentStatus: o.PaymentStatus || 'pending'
+        paymentStatus: o.PaymentStatus || 'pending',
+        debtDueDate: o.DebtDueDate || null
       }))
 
       setOrders(mappedOrders)
@@ -601,7 +636,10 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  const openPaymentModal = (order: Order) => {
+  // Mở modal Xuất hóa đơn (lần đầu - kèm chọn thanh toán)
+  const openInvoiceModal = (order: Order) => {
+    setPaymentChoice('full')
+    setDebtDueDateInput('')
     setInvoiceForm({
       invoiceNumber: `HD-${order.orderCode}`,
       invoiceDate: new Date().toISOString().slice(0, 10),
@@ -609,34 +647,112 @@ export default function AccountingOrdersPage() {
       note: '',
       customerName: order.customerName || 'Khách hàng'
     })
-    setPaymentModal({ open: true, orderId: order.id })
+    setInvoiceModal({ open: true, orderId: order.id, mode: 'new' })
   }
 
-  const handleConfirmPaid = async (order: Order) => {
-    const previousStatus = order.paymentStatus
+  // Mở modal In lại HĐ (đã xuất trước đó, chỉ in lại)
+  const openReprintModal = (order: Order) => {
+    setInvoiceForm({
+      invoiceNumber: `HD-${order.orderCode}`,
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      paymentMethod: 'Tiền mặt',
+      note: '',
+      customerName: order.customerName || 'Khách hàng'
+    })
+    setInvoiceModal({ open: true, orderId: order.id, mode: 'reprint' })
+  }
 
-    setConfirmingPayment(true)
-    setOrders(prev =>
-      prev.map(currentOrder =>
-        currentOrder.id === order.id
-          ? { ...currentOrder, paymentStatus: 'Paid' }
-          : currentOrder
-      )
-    )
+  // Đóng modal hóa đơn
+  const closeInvoiceModal = () => {
+    setInvoiceModal({ open: false, orderId: null, mode: 'new' })
+    setPaymentChoice('full')
+    setDebtDueDateInput('')
+  }
+
+  // Xử lý submit form hóa đơn (gộp cả xác nhận thanh toán nếu là lần đầu)
+  const handleInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!invoiceModal.orderId) return
+
+    const order = orders.find(o => o.id === invoiceModal.orderId)
+    if (!order) return
+
+    if (!invoiceForm.invoiceNumber.trim() || !invoiceForm.invoiceDate.trim()) {
+      alert('Vui lòng nhập số hóa đơn và ngày lập hóa đơn')
+      return
+    }
+
+    // Nếu là lần đầu xuất → validate chọn thanh toán
+    if (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput) {
+      alert('Vui lòng nhập hạn trả công nợ')
+      return
+    }
 
     try {
-      await apiClient.post(`/api/orders/${order.id}/confirm-payment`)
-      alert('Đã xác nhận thanh toán')
+      setConfirmingPayment(true)
+
+      // Nếu lần đầu xuất → gọi API xác nhận thanh toán
+      if (invoiceModal.mode === 'new') {
+        await apiClient.post(`/api/orders/${order.id}/confirm-payment`, {
+          paymentType: paymentChoice,
+          debtDueDate: paymentChoice === 'debt' ? debtDueDateInput : undefined
+        })
+      }
+
+      // Xây dựng và in hóa đơn
+      const currentPaymentType = invoiceModal.mode === 'new'
+        ? paymentChoice
+        : order.paymentStatus === 'Debt' ? 'debt' : 'full'
+
+      const currentDueDate = invoiceModal.mode === 'new'
+        ? (paymentChoice === 'debt' ? debtDueDateInput : null)
+        : order.debtDueDate
+
+      const html = buildInvoiceHtml(order, invoiceForm, currentPaymentType, currentDueDate)
+
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const printWindow = window.open(url, '_blank')
+
+      if (!printWindow) {
+        alert('Trình duyệt đang chặn popup. Hãy cho phép popup.')
+        return
+      }
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url)
+      }, 10000)
+
+      // Refresh danh sách đơn
+      await fetchOrders()
+      closeInvoiceModal()
+
+      if (invoiceModal.mode === 'new') {
+        alert(paymentChoice === 'debt' ? 'Đã ghi công nợ và xuất hóa đơn!' : 'Đã xác nhận thanh toán và xuất hóa đơn!')
+      }
     } catch (err: any) {
-      setOrders(prev =>
-        prev.map(currentOrder =>
-          currentOrder.id === order.id
-            ? { ...currentOrder, paymentStatus: previousStatus || 'pending' }
-            : currentOrder
-        )
-      )
       console.error(err)
-      alert(err?.response?.data?.error || 'Xác nhận thanh toán thất bại')
+      alert(err?.response?.data?.error || 'Thao tác thất bại')
+    } finally {
+      setConfirmingPayment(false)
+    }
+  }
+
+  // Thanh toán công nợ (khi khách trả nợ)
+  const handlePayDebt = async (order: Order) => {
+    if (!confirm(`Xác nhận thanh toán công nợ cho đơn ${order.orderCode}?`)) return
+
+    try {
+      setConfirmingPayment(true)
+
+      await apiClient.post(`/api/orders/${order.id}/confirm-debt-payment`)
+
+      alert('Đã thanh toán công nợ!')
+      await fetchOrders()
+    } catch (err: any) {
+      console.error(err)
+      alert(err?.response?.data?.error || 'Thanh toán công nợ thất bại')
     } finally {
       setConfirmingPayment(false)
     }
@@ -698,109 +814,26 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  const handleConfirmPayment = async (
-  event: FormEvent<HTMLFormElement>
-) => {
-
-  event.preventDefault()
-
-  if (!paymentModal.orderId) return
-
-  const order =
-    orders.find(
-      currentOrder =>
-        currentOrder.id === paymentModal.orderId
-    )
-
-  if (!order) return
-
-  if (
-    !invoiceForm.invoiceNumber.trim()
-    ||
-    !invoiceForm.invoiceDate.trim()
-  ) {
-
-    alert(
-      'Vui lòng nhập số hóa đơn và ngày lập hóa đơn'
-    )
-
-    return
-
+  // Kiểm tra đơn công nợ có quá hạn không
+  const isDebtOverdue = (order: Order): boolean => {
+    if (order.paymentStatus !== 'Debt' || !order.debtDueDate) return false
+    const dueDate = new Date(order.debtDueDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    dueDate.setHours(0, 0, 0, 0)
+    return today > dueDate
   }
 
-  try {
-
-    setConfirmingPayment(true)
-
-    // confirm payment backend
-    await apiClient.post(
-      `/api/orders/${order.id}/confirm-payment`
-    )
-
-    await fetchOrders()
-
-    // build invoice html
-    const html =
-      buildInvoiceHtml(
-        order,
-        invoiceForm
-      )
-
-    // create blob
-    const blob = new Blob(
-      [html],
-      {
-        type: 'text/html'
-      }
-    )
-
-    // create temp url
-    const url =
-      URL.createObjectURL(blob)
-
-    // open invoice
-    const printWindow =
-      window.open(url, '_blank')
-
-    if (!printWindow) {
-
-      alert(
-        'Trình duyệt đang chặn popup. Hãy cho phép popup.'
-      )
-
-      return
-
-    }
-
-    // cleanup
-    setTimeout(() => {
-
-      URL.revokeObjectURL(url)
-
-    }, 10000)
-
-    setPaymentModal({
-      open: false,
-      orderId: null
-    })
-
-  } catch (err: any) {
-
-    console.error(err)
-
-    alert(
-      err?.response?.data?.error
-      ||
-      'Xác nhận thanh toán thất bại'
-    )
-
-  } finally {
-
-    setConfirmingPayment(false)
-
+  // Tính số ngày trễ hạn
+  const getDaysOverdue = (order: Order): number => {
+    if (!order.debtDueDate) return 0
+    const dueDate = new Date(order.debtDueDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    dueDate.setHours(0, 0, 0, 0)
+    const diff = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
   }
-
-}
 
   return (
     <div className="orders-dashboard">
@@ -827,6 +860,7 @@ export default function AccountingOrdersPage() {
                 <th>Công nợ</th>
                 <th>Tổng tiền</th>
                 <th>Trạng thái</th>
+                <th>Hạn trả</th>
                 <th>Ngày tạo</th>
                 <th>Hành động</th>
               </tr>
@@ -837,6 +871,9 @@ export default function AccountingOrdersPage() {
                 const docs = documentsByOrder[order.id] || []
                 const isCompleted = order.orderStatus === 'Completed'
                 const isPaid = order.paymentStatus === 'Paid'
+                const isDebt = order.paymentStatus === 'Debt'
+                const isOverdue = isDebtOverdue(order)
+                const daysOverdue = getDaysOverdue(order)
 
                 return (
                   <tr key={order.id}>
@@ -862,6 +899,30 @@ export default function AccountingOrdersPage() {
                       <span className={`status ${getStatusClass(order.orderStatus)}`}>
                         {getStatusLabel(order.orderStatus)}
                       </span>
+                    </td>
+                    {/* Cột Hạn trả */}
+                    <td>
+                      {isDebt && order.debtDueDate ? (
+                        <div className="debt-due-date">
+                          <span className={`due-date-value${isOverdue ? ' due-date-overdue' : ''}`}>
+                            {isOverdue ? (
+                              <>
+                                <span style={{ textDecoration: 'line-through' }}>
+                                  {formatVNDate(order.debtDueDate)}
+                                </span>
+                                <br />
+                                <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                                  ⚠️ Trễ {daysOverdue} ngày
+                                </span>
+                              </>
+                            ) : (
+                              formatVNDate(order.debtDueDate)
+                            )}
+                          </span>
+                        </div>
+                      ) : (
+                        <span style={{ color: '#999' }}>—</span>
+                      )}
                     </td>
                     <td>{formatVNDate(order.createdAt)}</td>
                     <td>
@@ -897,6 +958,7 @@ export default function AccountingOrdersPage() {
                             </button>
                           ) : (
                             <>
+                              {/* Nút chứng từ - luôn hiện khi có docs */}
                               <button
                                 type="button"
                                 className="action-btn"
@@ -918,26 +980,56 @@ export default function AccountingOrdersPage() {
                               </button>
 
                               {isPaid ? (
-                                <span className="status-badge green">Đã thanh toán</span>
-                              ) : (
+                                /* ĐÃ THANH TOÁN → Badge + In lại HĐ */
                                 <>
+                                  <span className="status-badge green">Đã thanh toán</span>
                                   <button
                                     type="button"
-                                    className="action-btn approve"
-                                    onClick={() => openPaymentModal(order)}
+                                    className="action-btn reprint"
+                                    onClick={() => openReprintModal(order)}
                                     disabled={confirmingPayment}
+                                    title="In lại hóa đơn"
                                   >
-                                    Xuất hóa đơn
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="action-btn"
-                                    onClick={() => handleConfirmPaid(order)}
-                                    disabled={confirmingPayment}
-                                  >
-                                    Xác nhận đã thanh toán
+                                    <FiPrinter style={{ marginRight: 4 }} /> In lại HĐ
                                   </button>
                                 </>
+                              ) : isDebt ? (
+                                /* GHI CÔNG NỢ / QUÁ HẠN → Badge + In lại HĐ + Thanh toán nợ */
+                                <>
+                                  {isOverdue ? (
+                                    <span className="status-badge overdue">⚠️ Quá hạn</span>
+                                  ) : (
+                                    <span className="status-badge debt">Ghi công nợ</span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="action-btn reprint"
+                                    onClick={() => openReprintModal(order)}
+                                    disabled={confirmingPayment}
+                                    title="In lại hóa đơn"
+                                  >
+                                    <FiPrinter style={{ marginRight: 4 }} /> In lại HĐ
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`action-btn debt-pay${isOverdue ? ' overdue' : ''}`}
+                                    onClick={() => handlePayDebt(order)}
+                                    disabled={confirmingPayment}
+                                    title="Thanh toán công nợ"
+                                  >
+                                    💰 Thanh toán công nợ
+                                  </button>
+                                </>
+                              ) : (
+                                /* CHƯA THANH TOÁN → 1 nút duy nhất: Xuất hóa đơn */
+                                <button
+                                  type="button"
+                                  className="action-btn approve"
+                                  onClick={() => openInvoiceModal(order)}
+                                  disabled={confirmingPayment}
+                                >
+                                  📄 Xuất hóa đơn
+                                </button>
                               )}
                             </>
                           )}
@@ -965,6 +1057,7 @@ export default function AccountingOrdersPage() {
         saving={uploading}
       />
 
+      {/* View documents modal */}
       {viewModal.open && (
         <div
           style={{
@@ -1081,7 +1174,12 @@ export default function AccountingOrdersPage() {
         </div>
       )}
 
-      {paymentModal.open && (
+      {/* ============================
+          MODAL HÓA ĐƠN (GỘP THANH TOÁN)
+          - mode 'new': chọn Trả hết/Ghi nợ + điền form HĐ
+          - mode 'reprint': chỉ điền form HĐ để in lại
+      ============================ */}
+      {invoiceModal.open && (
         <div
           style={{
             position: 'fixed',
@@ -1095,25 +1193,34 @@ export default function AccountingOrdersPage() {
           }}
         >
           <div
+            className="invoice-modal"
             style={{
-              width: 'min(560px, 100%)',
+              width: 'min(600px, 100%)',
               background: '#fff',
               borderRadius: 16,
               padding: 24,
-              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.2)'
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.2)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
             }}
           >
+            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <div>
-                <h3 style={{ margin: 0 }}>Xác nhận thanh toán</h3>
-                <p style={{ margin: '6px 0 0', color: '#6b7280' }}>
-                  Điền thông tin hóa đơn để xuất file PDF cho đơn <strong>{paymentModal.orderId}</strong>.
+                <h3 style={{ margin: 0 }}>
+                  {invoiceModal.mode === 'new' ? 'Xuất hóa đơn' : 'In lại hóa đơn'}
+                </h3>
+                <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: 13 }}>
+                  {invoiceModal.mode === 'new'
+                    ? <>Chọn trạng thái thanh toán và điền thông tin hóa đơn cho đơn <strong>{orders.find(o => o.id === invoiceModal.orderId)?.orderCode}</strong>.</>
+                    : <>Điền thông tin hóa đơn để in lại cho đơn <strong>{orders.find(o => o.id === invoiceModal.orderId)?.orderCode}</strong>.</>
+                  }
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setPaymentModal({ open: false, orderId: null })}
+                onClick={closeInvoiceModal}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -1129,62 +1236,127 @@ export default function AccountingOrdersPage() {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPayment} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>Số hóa đơn</span>
-                <input
-                  value={invoiceForm.invoiceNumber}
-                  onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceNumber: event.target.value }))}
-                  placeholder="VD: HD-ORD001"
-                />
-              </label>
+            <form onSubmit={handleInvoiceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* ===== CHỌN THANH TOÁN (chỉ hiện khi mode 'new') ===== */}
+              {invoiceModal.mode === 'new' && (
+                <div className="invoice-payment-section">
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
+                    Trạng thái thanh toán
+                  </div>
+                  <div className="payment-choice">
+                    <div
+                      className={`choice-card${paymentChoice === 'full' ? ' selected-full' : ''}`}
+                      onClick={() => setPaymentChoice('full')}
+                    >
+                      <div className="choice-icon">💰</div>
+                      <div className="choice-title">Trả hết</div>
+                      <div className="choice-desc">Khách đã thanh toán toàn bộ. Xuất hóa đơn hoàn tất.</div>
+                    </div>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>Ngày lập</span>
-                <input
-                  type="date"
-                  value={invoiceForm.invoiceDate}
-                  onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceDate: event.target.value }))}
-                />
-              </label>
+                    <div
+                      className={`choice-card${paymentChoice === 'debt' ? ' selected-debt' : ''}`}
+                      onClick={() => setPaymentChoice('debt')}
+                    >
+                      <div className="choice-icon">📋</div>
+                      <div className="choice-title">Ghi công nợ</div>
+                      <div className="choice-desc">Khách chưa trả, xuất hóa đơn làm bằng chứng đòi nợ.</div>
+                    </div>
+                  </div>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>Khách hàng</span>
-                <input
-                  value={invoiceForm.customerName}
-                  onChange={event => setInvoiceForm(prev => ({ ...prev, customerName: event.target.value }))}
-                  placeholder="Tên khách hàng"
-                />
-              </label>
+                  {/* Hiện field nhập hạn trả khi chọn Ghi công nợ */}
+                  {paymentChoice === 'debt' && (
+                    <div className="debt-date-field">
+                      <label>Hạn trả công nợ *</label>
+                      <input
+                        type="date"
+                        value={debtDueDateInput}
+                        onChange={event => setDebtDueDateInput(event.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>Phương thức thanh toán</span>
-                <select
-                  value={invoiceForm.paymentMethod}
-                  onChange={event => setInvoiceForm(prev => ({ ...prev, paymentMethod: event.target.value }))}
-                >
-                  <option value="Tiền mặt">Tiền mặt</option>
-                  <option value="Chuyển khoản">Chuyển khoản</option>
-                  <option value="Thẻ">Thẻ</option>
-                </select>
-              </label>
+              {/* ===== THÔNG TIN HÓA ĐƠN ===== */}
+              <div className="invoice-form-section">
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
+                  Thông tin hóa đơn
+                </div>
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontWeight: 700 }}>Ghi chú</span>
-                <textarea
-                  rows={4}
-                  value={invoiceForm.note}
-                  onChange={event => setInvoiceForm(prev => ({ ...prev, note: event.target.value }))}
-                  placeholder="Thông tin bổ sung"
-                />
-              </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Số hóa đơn</span>
+                  <input
+                    value={invoiceForm.invoiceNumber}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceNumber: event.target.value }))}
+                    placeholder="VD: HD-ORD001"
+                  />
+                </label>
 
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ngày lập</span>
+                  <input
+                    type="date"
+                    value={invoiceForm.invoiceDate}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceDate: event.target.value }))}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Khách hàng</span>
+                  <input
+                    value={invoiceForm.customerName}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, customerName: event.target.value }))}
+                    placeholder="Tên khách hàng"
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Phương thức thanh toán</span>
+                  <select
+                    value={invoiceForm.paymentMethod}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, paymentMethod: event.target.value }))}
+                  >
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Thẻ">Thẻ</option>
+                  </select>
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ghi chú</span>
+                  <textarea
+                    rows={3}
+                    value={invoiceForm.note}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, note: event.target.value }))}
+                    placeholder="Thông tin bổ sung"
+                  />
+                </label>
+              </div>
+
+              {/* ===== NÚT SUBMIT ===== */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
-                <button type="button" className="action-btn" onClick={() => setPaymentModal({ open: false, orderId: null })}>
+                <button type="button" className="action-btn" onClick={closeInvoiceModal}>
                   Hủy
                 </button>
-                <button type="submit" className="action-btn approve" disabled={confirmingPayment}>
-                  {confirmingPayment ? 'Đang xử lý...' : 'Xuất hóa đơn'}
+                <button
+                  type="submit"
+                  className="action-btn"
+                  disabled={confirmingPayment || (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput)}
+                  style={{
+                    background: invoiceModal.mode === 'new'
+                      ? (paymentChoice === 'debt' ? '#f59e0b' : '#10b981')
+                      : '#6366f1',
+                    color: 'white',
+                    opacity: (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput) ? 0.5 : 1
+                  }}
+                >
+                  {confirmingPayment
+                    ? 'Đang xử lý...'
+                    : invoiceModal.mode === 'new'
+                      ? (paymentChoice === 'debt' ? '📋 Ghi công nợ & Xuất HĐ' : '💰 Xác nhận trả hết & Xuất HĐ')
+                      : '🖨️ In lại hóa đơn'
+                  }
                 </button>
               </div>
             </form>
