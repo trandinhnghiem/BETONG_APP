@@ -244,10 +244,7 @@ class OrderController {
 
           try {
             // Tăng công nợ khách hàng khi duyệt đơn (bất chấp)
-            await CustomerDebtModel.increaseDebt(
-              order.CustomerName,
-              order.TotalAmount
-            )
+            
             await NotificationService.notifyStationUsers(
               io,
               order.DestinationStationId,
@@ -296,10 +293,7 @@ class OrderController {
 
         if (status === 'Approved') {
           // Tăng công nợ khách hàng khi duyệt đơn
-          await CustomerDebtModel.increaseDebt(
-            order.CustomerName,
-            order.TotalAmount
-          )
+         
           await NotificationService.notifyStationUsers(
             io,
             order.DestinationStationId,
@@ -830,6 +824,35 @@ static async confirmPayment(req, res) {
           WHERE Id = @Id
 
         `)
+              // ✅ Cộng công nợ khi chọn ghi công nợ
+      try {
+
+        const order =
+          await OrderModel.findById(
+            Number(orderId)
+          )
+
+        if (
+          order &&
+          order.CustomerName &&
+          order.TotalAmount
+        ) {
+
+          await CustomerDebtModel.increaseDebt(
+            order.CustomerName,
+            order.TotalAmount
+          )
+
+        }
+
+      } catch (debtErr) {
+
+        console.error(
+          'Failed to increase customer debt:',
+          debtErr
+        )
+
+      }
 
       res.json({
         message: 'Đã ghi công nợ'
