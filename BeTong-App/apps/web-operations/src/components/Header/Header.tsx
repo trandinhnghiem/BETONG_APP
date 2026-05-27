@@ -242,12 +242,22 @@ export default function Header() {
       const role = localStorage.getItem('userRole')
 
       if (role === 'Accounting') {
-        navigate('/accounting/orders')
-      } else if (role === 'Station' || role === 'Engineer') {
-        navigate('/engineer/orders')
-      } else if (role === 'Coordinator') {
-        navigate('/coordinator/orders')
-      }
+
+          navigate('/accounting/orders')
+
+        } else if (role === 'Station') {
+
+          navigate('/station/orders')
+
+        } else if (role === 'Engineer') {
+
+          navigate('/engineer/orders')
+
+        } else if (role === 'Coordinator') {
+
+          navigate('/coordinator/orders')
+
+        }
     }
   }
 
