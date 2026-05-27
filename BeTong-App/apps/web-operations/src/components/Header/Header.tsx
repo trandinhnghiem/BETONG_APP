@@ -61,7 +61,8 @@ export default function Header() {
 
   // =========================
   // MARQUEE: Dòng chạy ngang khi có đơn chờ xử lý
-  // Giống hệt code cũ: chỉ Station, dùng /api/orders/station-orders, filter Approved
+  // Chỉ Station, dùng /api/orders/station-orders, filter Approved
+  // ✅ Click → Ẩn marquee ngay lập tức + chuyển trang
   // =========================
   const [marquee, setMarquee] = useState('')
   const userRole = localStorage.getItem('userRole')
@@ -78,16 +79,20 @@ export default function Header() {
       } else {
         setMarquee('')
       }
-    } catch (err: any) {
-      if (err?.response?.status !== 403) {
-        console.error('checkApprovedOrders error:', err)
+    } catch (err) {
+      if (err && typeof err === 'object' && 'response' in err) {
+        const httpErr = err as { response?: { status?: number } }
+        if (httpErr.response?.status !== 403) {
+          console.error('checkApprovedOrders error:', err)
+        }
       }
     }
   }
 
-  // Click marquee → chuyển đến trang đơn hàng
+  // ✅ FIX: Click marquee → ẨN NGAY + chuyển trang
   const handleMarqueeClick = () => {
-    navigate('/engineer/orders')
+    setMarquee('')          // Ẩn marquee ngay lập tức
+    navigate('/engineer/orders')  // Chuyển đến trang đơn hàng
   }
 
   // =========================
@@ -102,10 +107,8 @@ export default function Header() {
       setNotifications(res.data)
       const total = await apiClient.get('/api/notifications/unread-count')
       setNotificationCount(total.data.total)
-    } catch (err: any) {
-      if (err?.response?.status !== 403) {
-        console.error('loadNotifications error:', err)
-      }
+    } catch (err) {
+      console.error('loadNotifications error:', err)
     }
   }
 
@@ -165,7 +168,8 @@ export default function Header() {
     }
   }, [])
 
-  // ✅ Polling checkApprovedOrders mỗi 15 giây (nhẹ hơn 5s cũ, vẫn đủ nhanh)
+  // ✅ Polling checkApprovedOrders mỗi 15 giây
+  // Marquee sẽ hiện lại nếu vẫn còn đơn Approved sau khi user click
   useEffect(() => {
     if (userRole !== 'Station') return
     const interval = setInterval(checkApprovedOrders, 15000)
@@ -405,10 +409,9 @@ export default function Header() {
 
       {/* ========================= */}
       {/* MARQUEE: Dòng chữ chạy ngang */}
-      {/* Giống hệt code cũ:       */}
       {/* - Chỉ hiện cho Station    */}
       {/* - Khi có đơn Approved     */}
-      {/* - Click → trang đơn hàng  */}
+      {/* - Click → ẨN NGAY + chuyển trang */}
       {/* ========================= */}
       {marquee && (
         <div className="notification-marquee" onClick={handleMarqueeClick}>
