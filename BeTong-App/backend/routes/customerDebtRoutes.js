@@ -8,6 +8,14 @@ const upload = multer()
 const customerDebtController =
   require('../controllers/customerDebtController')
 
+const CustomerDebtModel =
+  require('../models/CustomerDebt')
+
+// ✅ Tự động ensure columns khi routes được load
+CustomerDebtModel.ensureColumns()
+  .then(() => console.log('✅ CustomerDebts table columns checked'))
+  .catch(err => console.error('❌ CustomerDebts ensure columns error:', err.message))
+
 // GET
 router.get(
   '/',

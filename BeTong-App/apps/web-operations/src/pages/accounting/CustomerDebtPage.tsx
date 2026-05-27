@@ -4,8 +4,10 @@ import './CustomerDebtPage.css'
 
 interface Debt {
   Id: number
+  CustomerCode: string
   CustomerName: string
   DebtAmount: number
+  CreditAmount: number
   DebtLimit: number
 }
 
@@ -30,13 +32,19 @@ export default function CustomerDebtPage() {
 
   const [form, setForm] =
     useState({
+      customerCode: '',
       customerName: '',
       debtAmount: '',
+      creditAmount: '',
       debtLimit: ''
     })
 
   const [editingId, setEditingId] =
     useState<number | null>(null)
+
+  // Import result
+  const [importResult, setImportResult] =
+    useState<{ message: string; imported: number; skipped: number } | null>(null)
 
   useEffect(() => {
     fetchDebts()
@@ -78,13 +86,14 @@ export default function CustomerDebtPage() {
     try {
 
       setLoading(true)
+      setImportResult(null)
 
       const formData =
         new FormData()
 
       formData.append('file', file)
 
-      await apiClient.post(
+      const res = await apiClient.post(
         '/api/customer-debts/import',
         formData,
         {
@@ -95,7 +104,11 @@ export default function CustomerDebtPage() {
         }
       )
 
-      alert('Import công nợ thành công')
+      setImportResult({
+        message: res.data.message,
+        imported: res.data.imported,
+        skipped: res.data.skipped
+      })
 
       setFile(null)
 
@@ -141,11 +154,17 @@ export default function CustomerDebtPage() {
         await apiClient.put(
           `/api/customer-debts/${editingId}`,
           {
+            customerCode:
+              form.customerCode.trim(),
+
             customerName:
-              form.customerName,
+              form.customerName.trim(),
 
             debtAmount:
               Number(form.debtAmount),
+
+            creditAmount:
+              Number(form.creditAmount || 0),
 
             debtLimit:
               Number(form.debtLimit)
@@ -155,35 +174,21 @@ export default function CustomerDebtPage() {
         alert('Cập nhật thành công')
 
       } else {
-        console.log({
-            customerName:
-                form.customerName,
-
-            debtAmount:
-                Number(form.debtAmount),
-
-            debtLimit:
-                Number(form.debtLimit)
-            })
-
-            console.log({
-                customerName: form.customerName,
-                debtAmount: Number(form.debtAmount),
-                debtLimit: Number(form.debtLimit)
-                })
 
         await apiClient.post(
-        '/api/customer-debts',
-        {
+          '/api/customer-debts',
+          {
+            customerCode: form.customerCode.trim(),
             customerName: form.customerName.trim(),
             debtAmount: Number(form.debtAmount),
+            creditAmount: Number(form.creditAmount || 0),
             debtLimit: Number(form.debtLimit)
-        },
-        {
+          },
+          {
             headers: {
-            'Content-Type': 'application/json'
+              'Content-Type': 'application/json'
             }
-        }
+          }
         )
 
         alert('Thêm khách hàng thành công')
@@ -191,8 +196,10 @@ export default function CustomerDebtPage() {
       }
 
       setForm({
+        customerCode: '',
         customerName: '',
         debtAmount: '',
+        creditAmount: '',
         debtLimit: ''
       })
 
@@ -222,11 +229,17 @@ export default function CustomerDebtPage() {
     setEditingId(item.Id)
 
     setForm({
+      customerCode:
+        item.CustomerCode || '',
+
       customerName:
         item.CustomerName,
 
       debtAmount:
         item.DebtAmount.toString(),
+
+      creditAmount:
+        (item.CreditAmount || 0).toString(),
 
       debtLimit:
         item.DebtLimit.toString()
@@ -238,6 +251,7 @@ export default function CustomerDebtPage() {
     })
 
   }
+
   const handleDelete = async (id: number) => {
     const confirmDelete =
       window.confirm('Bạn có chắc muốn xóa khách hàng này không?')
@@ -249,13 +263,25 @@ export default function CustomerDebtPage() {
         )
         alert('Xóa khách hàng thành công')
         fetchDebts()
-    }catch (err: any) {
+    } catch (err: any) {
         console.error(err)
         alert(
-            err?.reponse?.data?.error ||
+            err?.response?.data?.error ||
             'Xóa thất bại'
         )
     }
+  }
+
+  // ================= FORMAT MONEY =================
+
+  const formatMoney = (amount: number) => {
+    return amount.toLocaleString('vi-VN')
+  }
+
+  // ================= TÍNH NỢ THUẦN =================
+
+  const getNetDebt = (item: Debt) => {
+    return (item.DebtAmount || 0) - (item.CreditAmount || 0)
   }
 
   return (
@@ -298,6 +324,19 @@ export default function CustomerDebtPage() {
 
           <input
             type="text"
+            placeholder="Mã khách hàng"
+            value={form.customerCode}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                customerCode:
+                  e.target.value
+              })
+            }
+          />
+
+          <input
+            type="text"
             placeholder="Tên khách hàng"
             value={form.customerName}
             onChange={(e) =>
@@ -311,12 +350,25 @@ export default function CustomerDebtPage() {
 
           <input
             type="number"
-            placeholder="Công nợ"
+            placeholder="Dư cuối Nợ"
             value={form.debtAmount}
             onChange={(e) =>
               setForm({
                 ...form,
                 debtAmount:
+                  e.target.value
+              })
+            }
+          />
+
+          <input
+            type="number"
+            placeholder="Dư cuối Có"
+            value={form.creditAmount}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                creditAmount:
                   e.target.value
               })
             }
@@ -350,6 +402,16 @@ export default function CustomerDebtPage() {
 
         </div>
 
+        {/* Gợi ý hạn mức */}
+        {!editingId && form.debtAmount && (
+          <div className="limit-hint">
+            💡 Gợi ý hạn mức: {formatMoney(Math.max(Number(form.debtAmount) * 1.5, 10000000))} đ
+            <span className="limit-hint-detail">
+              (max(Nợ × 1.5, 10 triệu), làm tròn xuống triệu chẵn)
+            </span>
+          </div>
+        )}
+
       </div>
 
       {/* IMPORT */}
@@ -359,6 +421,13 @@ export default function CustomerDebtPage() {
         <h3>
           Import Excel công nợ
         </h3>
+
+        <p className="import-guide">
+          File Excel cần có cấu trúc: Cột A = Mã khách hàng, Cột B = Tên khách hàng,
+          Cột G = Dư cuối Nợ, Cột H = Dư cuối Có.
+          Chỉ các dòng có Mã khách hàng mới được import.
+          Hạn mức tự động tính: max(Nợ × 1.5, 10 triệu).
+        </p>
 
         <div className="import-row">
 
@@ -387,6 +456,17 @@ export default function CustomerDebtPage() {
           </button>
 
         </div>
+
+        {/* Import result */}
+        {importResult && (
+          <div className="import-result">
+            ✅ {importResult.message}
+            <br />
+            <span className="import-detail">
+              Đã import: {importResult.imported} khách hàng | Bỏ qua: {importResult.skipped} dòng
+            </span>
+          </div>
+        )}
 
       </div>
 
@@ -464,11 +544,23 @@ export default function CustomerDebtPage() {
               <tr>
 
                 <th>
+                  Mã KH
+                </th>
+
+                <th>
                   Khách hàng
                 </th>
 
                 <th>
-                  Công nợ
+                  Dư cuối Nợ
+                </th>
+
+                <th>
+                  Dư cuối Có
+                </th>
+
+                <th>
+                  Nợ thuần
                 </th>
 
                 <th>
@@ -494,7 +586,10 @@ export default function CustomerDebtPage() {
                       search.toLowerCase()
 
                     const matchSearch =
-                      item.CustomerName
+                      (item.CustomerName || '')
+                        .toLowerCase()
+                        .includes(keyword) ||
+                      (item.CustomerCode || '')
                         .toLowerCase()
                         .includes(keyword)
 
@@ -511,56 +606,76 @@ export default function CustomerDebtPage() {
 
                   })
 
-                  .map(item => (
+                  .map(item => {
 
-                    <tr key={item.Id}>
+                    const netDebt = getNetDebt(item)
+                    const isOverLimit = netDebt > item.DebtLimit
 
-                      <td>
-                        {item.CustomerName}
-                      </td>
+                    return (
 
-                      <td className="money">
+                      <tr key={item.Id} className={isOverLimit ? 'over-limit-row' : ''}>
 
-                        {
-                          item.DebtAmount.toLocaleString()
-                        } đ
+                        <td className="code-cell">
+                          {item.CustomerCode || '-'}
+                        </td>
 
-                      </td>
+                        <td>
+                          {item.CustomerName}
+                        </td>
 
-                      <td className="money">
+                        <td className="money">
 
-                        {
-                          item.DebtLimit.toLocaleString()
-                        } đ
+                          {formatMoney(item.DebtAmount || 0)} đ
 
-                      </td>
+                        </td>
 
-                      <td>
+                        <td className="money credit">
 
-                        <div className="action-group">
-                            <button
-                                className="edit-btn"
-                                onClick={() =>
-                                    handleEdit(item)
-                                }
-                                >
-                                    Sửa
-                            </button>
-                            <button
-                                className="delete-btn"
-                                onClick={() =>
-                                    handleDelete(item.Id)
-                                }
-                                >
-                                    Xóa
-                                </button>
-                        </div>
+                          {formatMoney(item.CreditAmount || 0)} đ
 
-                      </td>
+                        </td>
 
-                    </tr>
+                        <td className={`money${isOverLimit ? ' text-danger' : netDebt > 0 ? ' text-warning' : ' text-success'}`}>
 
-                  ))
+                          {formatMoney(netDebt)} đ
+
+                          {isOverLimit && <span className="over-badge">!</span>}
+
+                        </td>
+
+                        <td className="money">
+
+                          {formatMoney(item.DebtLimit)} đ
+
+                        </td>
+
+                        <td>
+
+                          <div className="action-group">
+                              <button
+                                  className="edit-btn"
+                                  onClick={() =>
+                                      handleEdit(item)
+                                  }
+                                  >
+                                  Sửa
+                              </button>
+                              <button
+                                  className="delete-btn"
+                                  onClick={() =>
+                                      handleDelete(item.Id)
+                                  }
+                                  >
+                                  Xóa
+                              </button>
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  })
               }
 
             </tbody>
