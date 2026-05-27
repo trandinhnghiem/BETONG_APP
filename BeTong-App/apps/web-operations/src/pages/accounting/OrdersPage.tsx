@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter, FiAlertTriangle } from 'react-icons/fi'
+import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter, FiAlertTriangle, FiCamera, FiTrash2, FiFile } from 'react-icons/fi'
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
@@ -334,20 +334,71 @@ function UploadModal({
 }) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [deleteIds, setDeleteIds] = useState<number[]>([])
+  const [previews, setPreviews] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  // ✅ Camera stream state
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
     if (!open) {
       setSelectedFiles([])
       setDeleteIds([])
+      setPreviews([])
+      setCameraOpen(false)
     }
   }, [open])
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop())
+      }
+    }
+  }, [cameraStream])
+
+  // Attach stream to video element when camera opens
+  useEffect(() => {
+    if (cameraOpen && cameraStream && videoRef.current) {
+      videoRef.current.srcObject = cameraStream
+    }
+  }, [cameraOpen, cameraStream])
+
+  // Cleanup preview URLs
+  useEffect(() => {
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [previews])
+
+  const addFiles = (newFiles: File[]) => {
+    setSelectedFiles(prev => [...prev, ...newFiles])
+    // Tạo preview URL cho ảnh
+    newFiles.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        setPreviews(prev => [...prev, URL.createObjectURL(file)])
+      }
+    })
+  }
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files?.length) return
+    addFiles(Array.from(files))
+    event.target.value = ''
+  }
 
-    setSelectedFiles(Array.from(files))
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviews(prev => {
+      const removed = prev[index]
+      if (removed) URL.revokeObjectURL(removed)
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   const handleDeleteToggle = (id: number) => {
@@ -358,19 +409,68 @@ function UploadModal({
     )
   }
 
+  // ✅ Mở camera thiết bị bằng getUserMedia
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      })
+      setCameraStream(stream)
+      setCameraOpen(true)
+    } catch (err) {
+      // Fallback: dùng input capture (hoạt động tốt trên mobile)
+      console.log('Camera getUserMedia thất bại, dùng fallback input:', err)
+      cameraInputRef.current?.click()
+    }
+  }
+
+  // ✅ Chụp ảnh từ camera stream
+  const capturePhoto = () => {
+    if (!videoRef.current) return
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const file = new File([blob], `chup_${Date.now()}.jpg`, { type: 'image/jpeg' })
+      addFiles([file])
+      closeCamera()
+    }, 'image/jpeg', 0.9)
+  }
+
+  // ✅ Đóng camera
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop())
+    }
+    setCameraStream(null)
+    setCameraOpen(false)
+  }
+
   const handleClose = () => {
+    closeCamera()
     setSelectedFiles([])
     setDeleteIds([])
+    previews.forEach(url => URL.revokeObjectURL(url))
+    setPreviews([])
     onClose()
   }
 
   const handleSubmit = () => {
     if (mode === 'upload') {
       if (!selectedFiles.length) {
-        alert('Vui lòng chọn ảnh hoặc file')
+        alert('Vui lòng chọn ảnh hoặc chụp ảnh')
         return
       }
-
       onUpload(selectedFiles)
       return
     }
@@ -384,6 +484,9 @@ function UploadModal({
   }
 
   if (!open) return null
+
+  // Tính preview index cho file (bỏ qua file không phải ảnh)
+  let previewIdx = 0
 
   return (
     <div
@@ -399,7 +502,7 @@ function UploadModal({
     >
       <div
         style={{
-          width: 460,
+          width: 520,
           background: '#fff',
           borderRadius: 16,
           padding: 24,
@@ -415,7 +518,7 @@ function UploadModal({
             <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: 13 }}>
               {mode === 'edit'
                 ? 'Bạn có thể xóa chứng từ hiện có, thêm mới và lưu thay đổi.'
-                : 'Chọn ảnh hoặc file để upload chứng từ.'}
+                : 'Chọn ảnh, file hoặc chụp ảnh từ camera để upload.'}
             </p>
           </div>
 
@@ -438,17 +541,33 @@ function UploadModal({
         </div>
 
         <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* 2 nút: Chọn file + Chụp ảnh */}
           <div>
-            <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Chọn file</label>
-            <button
-              type="button"
-              className="action-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={saving}
-            >
-              <FiUpload style={{ marginRight: 6 }} />
-              Chọn ảnh / PDF
-            </button>
+            <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Thêm chứng từ</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="action-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={saving}
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                <FiUpload style={{ marginRight: 6 }} />
+                Chọn file
+              </button>
+              <button
+                type="button"
+                className="action-btn"
+                onClick={openCamera}
+                disabled={saving}
+                style={{ flex: 1, justifyContent: 'center', background: '#8b5cf6' }}
+              >
+                <FiCamera style={{ marginRight: 6 }} />
+                Chụp ảnh
+              </button>
+            </div>
+
+            {/* Hidden file inputs */}
             <input
               ref={fileInputRef}
               type="file"
@@ -457,33 +576,114 @@ function UploadModal({
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
-
-            {selectedFiles.length > 0 && (
-              <div style={{ marginTop: 10, fontSize: 13, color: '#4b5563' }}>
-                {selectedFiles.map(file => (
-                  <div key={`${file.name}-${file.size}`}>{file.name}</div>
-                ))}
-              </div>
-            )}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
           </div>
 
+          {/* Preview file đã chọn */}
+          {selectedFiles.length > 0 && (
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#435ebe' }}>
+                Đã chọn ({selectedFiles.length} file)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {(() => {
+                  previewIdx = 0
+                  return selectedFiles.map((file, index) => {
+                    const isImage = file.type.startsWith('image/')
+                    const previewUrl = isImage ? previews[previewIdx++] : null
+
+                    return (
+                      <div
+                        key={`${file.name}-${file.size}-${index}`}
+                        style={{
+                          position: 'relative',
+                          width: 80,
+                          height: 80,
+                          borderRadius: 10,
+                          border: '1px solid #e5e7eb',
+                          overflow: 'hidden',
+                          background: '#f3f4f6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {isImage && previewUrl ? (
+                          <img
+                            src={previewUrl}
+                            alt={file.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: 8 }}>
+                            <FiFile size={24} color="#6b7280" />
+                            <div style={{ fontSize: 9, color: '#6b7280', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 70 }}>
+                              {file.name.length > 10 ? file.name.slice(0, 10) + '...' : file.name}
+                            </div>
+                          </div>
+                        )}
+                        {/* Nút xóa */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(index)}
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            width: 22,
+                            height: 22,
+                            borderRadius: '50%',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            padding: 0
+                          }}
+                        >
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Chứng từ hiện có (edit mode) */}
           {mode === 'edit' && documents.length > 0 && (
             <div>
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Chứng từ hiện có</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {documents.map(doc => {
                   const checked = deleteIds.includes(doc.id)
+                  const isImage = doc.mimeType?.startsWith('image/')
+                  const fullUrl = getDocumentUrl(doc.url)
+
                   return (
-                    <label
+                    <div
                       key={doc.id}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 10,
-                        border: '1px solid #e5e7eb',
+                        border: `1px solid ${checked ? '#fca5a5' : '#e5e7eb'}`,
                         borderRadius: 10,
                         padding: '10px 12px',
-                        background: '#f9fafb'
+                        background: checked ? '#fef2f2' : '#f9fafb',
+                        textDecoration: checked ? 'line-through' : 'none',
+                        opacity: checked ? 0.6 : 1
                       }}
                     >
                       <input
@@ -491,9 +691,25 @@ function UploadModal({
                         checked={checked}
                         onChange={() => handleDeleteToggle(doc.id)}
                         disabled={saving}
+                        style={{ accentColor: '#ef4444' }}
                       />
+                      {/* Thumbnail */}
+                      {isImage ? (
+                        <img
+                          src={fullUrl}
+                          alt={doc.originalFileName}
+                          style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }}
+                        />
+                      ) : (
+                        <div style={{ width: 40, height: 40, borderRadius: 6, background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0369a1', fontWeight: 700, fontSize: 10 }}>
+                          {doc.mimeType?.includes('pdf') ? 'PDF' : 'FILE'}
+                        </div>
+                      )}
                       <span style={{ flex: 1, fontSize: 14 }}>{doc.originalFileName || doc.fileName}</span>
-                    </label>
+                      {checked && (
+                        <FiTrash2 size={14} color="#ef4444" />
+                      )}
+                    </div>
                   )
                 })}
               </div>
@@ -501,7 +717,7 @@ function UploadModal({
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
-            <button type="button" className="action-btn" onClick={handleClose} disabled={saving}>
+            <button type="button" className="action-btn" onClick={handleClose} disabled={saving} style={{ background: '#6b7280' }}>
               Hủy
             </button>
             <button type="button" className="action-btn" onClick={handleSubmit} disabled={saving}>
@@ -510,6 +726,63 @@ function UploadModal({
           </div>
         </div>
       </div>
+
+      {/* ✅ CAMERA STREAM OVERLAY - Hiển thị camera thiết bị */}
+      {cameraOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            zIndex: 10001,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            padding: 20
+          }}
+        >
+          <div style={{ color: '#fff', fontSize: 16, fontWeight: 600 }}>
+            Camera thiết bị
+          </div>
+          <div
+            style={{
+              width: 'min(640px, 95%)',
+              borderRadius: 16,
+              overflow: 'hidden',
+              background: '#000',
+              position: 'relative'
+            }}
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ width: '100%', display: 'block' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              type="button"
+              className="action-btn"
+              onClick={closeCamera}
+              style={{ background: '#6b7280', minWidth: 120, justifyContent: 'center' }}
+            >
+              Đóng camera
+            </button>
+            <button
+              type="button"
+              className="action-btn"
+              onClick={capturePhoto}
+              style={{ background: '#10b981', minWidth: 140, justifyContent: 'center', fontWeight: 700, fontSize: 15 }}
+            >
+              Chụp ảnh
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1006,7 +1279,7 @@ export default function AccountingOrdersPage() {
                           </button>
                         </div>
                       ) : isCompleted ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-start', flexWrap: 'nowrap' }}>
                           {docs.length === 0 ? (
                             <button className="action-btn" onClick={() => openUploadModal(order.id)} disabled={uploading}>
                               <FiUpload style={{ marginRight: 6 }} /> Upload chứng từ
@@ -1111,6 +1384,130 @@ export default function AccountingOrdersPage() {
         documents={uploadModal.orderId ? documentsByOrder[uploadModal.orderId] || [] : []}
         saving={uploading}
       />
+
+      {/* ========================= */}
+      {/* VIEW MODAL: Xem chứng từ */}
+      {/* ========================= */}
+      {viewModal.open && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.45)',
+            zIndex: 9998,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16
+          }}
+        >
+          <div
+            style={{
+              width: 'min(760px, 100%)',
+              background: '#fff',
+              borderRadius: 16,
+              padding: 24,
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.2)',
+              maxHeight: '85vh',
+              overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0 }}>Danh sách chứng từ</h3>
+                <p style={{ margin: '6px 0 0', color: '#6b7280' }}>Nhấn vào file để mở trực tiếp trên trình duyệt.</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setViewModal({ open: false, orderId: null })}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  fontSize: 20,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                aria-label="Đóng popup"
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {viewModal.orderId && documentsByOrder[viewModal.orderId]?.length ? (
+                documentsByOrder[viewModal.orderId].map(doc => {
+                  const mimeType = doc.mimeType || 'unknown'
+                  const isImage = mimeType.startsWith('image/')
+                  const fullUrl = getDocumentUrl(doc.url)
+
+                  return (
+                    <a
+                      key={doc.id}
+                      href={fullUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'flex',
+                        gap: 12,
+                        alignItems: 'center',
+                        padding: 12,
+                        borderRadius: 12,
+                        border: '1px solid #e5e7eb',
+                        textDecoration: 'none',
+                        color: '#111827',
+                        background: '#f9fafb',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isImage ? (
+                        <img
+                          src={fullUrl}
+                          alt={doc.originalFileName || doc.fileName || 'Tệp chứng từ'}
+                          style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb' }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: 8,
+                            background: '#e0f2fe',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#0369a1',
+                            fontWeight: 700,
+                            fontSize: 14
+                          }}
+                        >
+                          {mimeType.includes('pdf') ? 'PDF' : 'FILE'}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {doc.originalFileName || doc.fileName}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                          {mimeType} • {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : ''}
+                          {doc.uploadedAt ? ` • ${formatVNDateTime(doc.uploadedAt)}` : ''}
+                        </div>
+                      </div>
+                      <FiEye size={18} color="#6b7280" />
+                    </a>
+                  )
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>
+                  Không có chứng từ nào
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ✅ MODAL XÁC NHẬN DUYỆT BẤT CHẤP VƯỢT CÔNG NỢ */}
       {debtConfirmModal.open && debtConfirmModal.details && debtConfirmModal.order && (
@@ -1262,122 +1659,7 @@ export default function AccountingOrdersPage() {
         </div>
       )}
 
-      {/* View documents modal */}
-      {viewModal.open && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
-            zIndex: 9998,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16
-          }}
-        >
-          <div
-            style={{
-              width: 'min(760px, 100%)',
-              background: '#fff',
-              borderRadius: 16,
-              padding: 24,
-              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.2)',
-              maxHeight: '85vh',
-              overflowY: 'auto'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0 }}>Danh sách chứng từ</h3>
-                <p style={{ margin: '6px 0 0', color: '#6b7280' }}>Nhấn vào file để mở trực tiếp trên trình duyệt.</p>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => setViewModal({ open: false, orderId: null })}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  fontSize: 20,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-                aria-label="Đóng popup"
-              >
-                <FiX />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {viewModal.orderId && documentsByOrder[viewModal.orderId]?.length ? (
-                documentsByOrder[viewModal.orderId].map(doc => {
-                  const mimeType = doc.mimeType || 'unknown'
-                  const isImage = mimeType.startsWith('image/')
-                  const fullUrl = getDocumentUrl(doc.url)
-
-                  return (
-                    <a
-                      key={doc.id}
-                      href={fullUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        display: 'flex',
-                        gap: 12,
-                        alignItems: 'center',
-                        padding: 12,
-                        borderRadius: 12,
-                        border: '1px solid #e5e7eb',
-                        textDecoration: 'none',
-                        color: '#111827',
-                        background: '#f9fafb'
-                      }}
-                    >
-                      {isImage ? (
-                        <img
-                          src={fullUrl}
-                          alt={doc.originalFileName || doc.fileName || 'Tệp chứng từ'}
-                          style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb' }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: 8,
-                            background: '#e0f2fe',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#0369a1',
-                            fontWeight: 700
-                          }}
-                        >
-                          {mimeType.includes('pdf') ? 'PDF' : 'FILE'}
-                        </div>
-                      )}
-
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700 }}>{doc.originalFileName || doc.fileName || 'Tệp chứng từ'}</div>
-                        <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                          {mimeType} • {doc.uploadedAt ? formatVNDateTime(doc.uploadedAt) : 'Không rõ thời gian'}
-                        </div>
-                      </div>
-                    </a>
-                  )
-                })
-              ) : (
-                <div style={{ padding: 16, borderRadius: 10, background: '#f9fafb', color: '#6b7280' }}>
-                  Chưa có chứng từ để xem.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ============================
           MODAL HÓA ĐƠN (GỘP THANH TOÁN)
