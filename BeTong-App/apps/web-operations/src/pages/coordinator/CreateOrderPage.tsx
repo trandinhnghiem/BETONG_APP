@@ -155,23 +155,7 @@ const [searchCustomer, setSearchCustomer] =
       )
   )
 
-  const buildNotes = () => {
-    return [
-      `Tên khách hàng: ${form.customerName}`,
-      `Địa chỉ nhận: ${form.address}`,
-      `Số điện thoại: ${form.phone}`,
-      `Mác bê tông: ${products.find(p => p.Id === Number(form.concreteType))?.ProductName || ''}`,
-      `Khối lượng đặt: ${form.volume} m³`,
-      `Đơn giá: ${Number(form.price).toLocaleString()} VND`,
-      `Thời gian giao: ${form.deliveryTime}`,
-      `Trạm trộn: ${selectedStation?.name || ''}`,
-      `Xe giao: ${form.truck}`,
-      `Kỹ thuật công trình: ${form.technicalEngineer}`,
-      `Ôm ống: ${form.pipeOperator}`,
-      `Bắt ống: ${form.pipeInstaller}`,
-      `Khối lượng đổ: ${form.pouringInstructions}`
-    ].join('\n')
-  }
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,13 +169,36 @@ const [searchCustomer, setSearchCustomer] =
     try {
       setLoading(true)
       const response = await apiClient.post('/api/orders', {
+
         mixingStationId: Number(form.mixingStationId),
 
         customerName: form.customerName,
         address: form.address,
         phone: form.phone,
 
-        notes: buildNotes(),
+        concreteType:
+          products.find(
+            p => p.Id === Number(form.concreteType)
+          )?.ProductName || '',
+
+        volume: Number(form.volume),
+
+        price: Number(form.price),
+
+        deliveryTime: form.deliveryTime,
+
+        technicalEngineer: form.technicalEngineer,
+
+        pipeOperator: form.pipeOperator,
+
+        pipeInstaller: form.pipeInstaller,
+
+        pouringInstructions: form.pouringInstructions,
+
+        truck: form.truck,
+
+        // notes chỉ để ghi chú thêm
+        notes: '',
 
         items: [{
           productId: Number(form.concreteType),
@@ -319,7 +326,7 @@ const [searchCustomer, setSearchCustomer] =
 
     <div className="credit-alert">
 
-      ⚠️ Đơn hàng này sẽ vượt hạn mức công nợ!
+      ⚠️ Nếu cộng thêm đơn hàng này sẽ vượt hạn mức công nợ!
 
     </div>
 

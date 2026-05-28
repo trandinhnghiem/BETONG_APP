@@ -34,15 +34,31 @@ class OrderController {
   // ================= CREATE ORDER =================
   static async createOrder(req, res) {
   try {
+    console.log(req.body)
 
     const {
       mixingStationId,
       notes,
       items,
+
       customerName,
       address,
-      phone
+      phone,
+
+      concreteType,
+      volume,
+      price,
+      deliveryTime,
+
+      technicalEngineer,
+      pipeOperator,
+      pipeInstaller,
+      pouringInstructions,
+
+      truck
+
     } = req.body
+    
 
     if (!mixingStationId || !items?.length) {
       return res.status(400).json({ error: 'Invalid data' })
@@ -63,9 +79,30 @@ class OrderController {
       // ⭐ CUSTOMER INFO
       .input('CustomerName', sql.NVarChar, customerName)
       .input('Address', sql.NVarChar, address)
+      
+
+      
+      
       .input('Phone', sql.NVarChar, phone)
 
-      .input('TotalAmount', sql.Decimal(18, 2), totalAmount)
+      .input('ConcreteType', sql.NVarChar, concreteType)
+      .input('Volume', sql.Float, Number(volume) || 0)
+      .input('Price', sql.Decimal(18,2), Number(price) || 0)
+      .input('DeliveryTime', sql.DateTime, deliveryTime)
+
+      .input('Engineer', sql.NVarChar, technicalEngineer)
+      .input('PipeHolder', sql.NVarChar, pipeOperator)
+      .input('PipeFixer', sql.NVarChar, pipeInstaller)
+      .input(
+        'PouringVolume',
+        sql.NVarChar,
+        pouringInstructions
+      )
+
+      .input('Truck', sql.NVarChar, truck)
+
+      .input('TotalAmount', sql.Decimal(18,2), Number(totalAmount) || 0)
+
       .input('Notes', sql.NVarChar(sql.MAX), notes || '')
 
       .query(`
@@ -74,9 +111,23 @@ class OrderController {
           CoordinatorId,
           SourceStationId,
           DestinationStationId,
+
           CustomerName,
           Address,
           Phone,
+
+          ConcreteType,
+          Volume,
+          Price,
+          DeliveryTime,
+
+          Engineer,
+          PipeHolder,
+          PipeFixer,
+          PouringVolume,
+
+          Truck,
+
           TotalAmount,
           Notes,
           OrderStatus,
@@ -88,15 +139,30 @@ class OrderController {
           @CoordinatorId,
           @SourceStationId,
           @DestinationStationId,
+
           @CustomerName,
           @Address,
           @Phone,
+
+          @ConcreteType,
+          @Volume,
+          @Price,
+          @DeliveryTime,
+
+          @Engineer,
+          @PipeHolder,
+          @PipeFixer,
+          @PouringVolume,
+
+          @Truck,
+
           @TotalAmount,
           @Notes,
+
           'Draft',
           GETDATE(),
           GETDATE()
-        );
+        )
 
         SELECT SCOPE_IDENTITY() AS OrderId;
       `)
