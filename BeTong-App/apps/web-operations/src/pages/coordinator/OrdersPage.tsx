@@ -6,24 +6,60 @@ import { FiDownload } from 'react-icons/fi'
 
 interface Order {
   id: number
+
   orderCode: string
+
+  customerName?: string
+  address?: string
+  phone?: string
+
+  concreteType?: string
+  volume?: number
+  price?: number
+  deliveryTime?: string
+
+  engineer?: string
+  pipeHolder?: string
+  pipeFixer?: string
+  pouringVolume?: string
+
+  truck?: string
+
+  notes?: string
+
   destinationStation: string
+
   totalAmount: number
+
   orderStatus: string
+
   rejectReason?: string
+
   createdAt: string
 }
 
 export default function CoordinatorOrdersPage() {
 
-  const [orders, setOrders] = useState<Order[]>([])
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [orders, setOrders] =
+    useState<Order[]>([])
 
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('All')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [filteredOrders, setFilteredOrders] =
+    useState<Order[]>([])
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [search, setSearch] =
+    useState('')
+
+  const [status, setStatus] =
+    useState('All')
+
+  const [fromDate, setFromDate] =
+    useState('')
+
+  const [toDate, setToDate] =
+    useState('')
 
   useEffect(() => {
     fetchOrders()
@@ -31,23 +67,32 @@ export default function CoordinatorOrdersPage() {
 
   useEffect(() => {
     applyFilters()
-  }, [orders, search, status, fromDate, toDate])
+  }, [
+    orders,
+    search,
+    status,
+    fromDate,
+    toDate
+  ])
 
   // =========================
-  // FIX TIME -7 HOURS
+  // FORMAT VN DATE
   // =========================
+
   const formatVNDateTime = (
     dateString: string
   ) => {
 
-    const date = new Date(dateString)
+    const date =
+      new Date(dateString)
 
-    // trừ 7 tiếng
     date.setHours(
       date.getHours() - 7
     )
 
-    return date.toLocaleString('vi-VN')
+    return date.toLocaleString(
+      'vi-VN'
+    )
 
   }
 
@@ -55,16 +100,22 @@ export default function CoordinatorOrdersPage() {
     dateString: string
   ) => {
 
-    const date = new Date(dateString)
+    const date =
+      new Date(dateString)
 
-    // trừ 7 tiếng
     date.setHours(
       date.getHours() - 7
     )
 
-    return date.toLocaleDateString('vi-VN')
+    return date.toLocaleDateString(
+      'vi-VN'
+    )
 
   }
+
+  // =========================
+  // FETCH ORDERS
+  // =========================
 
   const fetchOrders = async () => {
 
@@ -73,36 +124,80 @@ export default function CoordinatorOrdersPage() {
       setLoading(true)
 
       const res =
-        await apiClient.get('/api/orders/my-orders')
+        await apiClient.get(
+          '/api/orders/my-orders'
+        )
 
-      const data = res.data.map((o: any) => ({
+      const data =
+        res.data.map((o: any) => ({
 
-        id: o.Id,
+          id: o.Id,
 
-        orderCode: o.OrderCode,
+          orderCode:
+            o.OrderCode,
 
-        destinationStation:
-          o.DestinationStation,
+          customerName:
+            o.CustomerName,
 
-        totalAmount:
-          o.TotalAmount || 0,
+          address:
+            o.Address,
 
-        orderStatus:
-          o.OrderStatus,
+          phone:
+            o.Phone,
 
-        rejectReason:
-          o.RejectReason,
+          concreteType:
+            o.ConcreteType,
 
-        createdAt:
-          o.CreatedAt
+          volume:
+            o.Volume,
 
-      }))
+          price:
+            o.Price,
+
+          deliveryTime:
+            o.DeliveryTime,
+
+          engineer:
+            o.Engineer,
+
+          pipeHolder:
+            o.PipeHolder,
+
+          pipeFixer:
+            o.PipeFixer,
+
+          pouringVolume:
+            o.PouringVolume,
+
+          truck:
+            o.Truck,
+
+          notes:
+            o.Notes,
+
+          destinationStation:
+            o.DestinationStation,
+
+          totalAmount:
+            o.TotalAmount || 0,
+
+          orderStatus:
+            o.OrderStatus,
+
+          rejectReason:
+            o.RejectReason,
+
+          createdAt:
+            o.CreatedAt
+
+        }))
 
       setOrders(data)
 
     } catch (err) {
 
       console.error(err)
+
       setOrders([])
 
     } finally {
@@ -110,7 +205,12 @@ export default function CoordinatorOrdersPage() {
       setLoading(false)
 
     }
+
   }
+
+  // =========================
+  // FILTER
+  // =========================
 
   const applyFilters = () => {
 
@@ -121,7 +221,9 @@ export default function CoordinatorOrdersPage() {
       result = result.filter(o =>
         o.orderCode
           .toLowerCase()
-          .includes(search.toLowerCase())
+          .includes(
+            search.toLowerCase()
+          )
       )
 
     }
@@ -129,23 +231,26 @@ export default function CoordinatorOrdersPage() {
     if (status !== 'All') {
 
       result = result.filter(
-        o => o.orderStatus === status
+        o =>
+          o.orderStatus === status
       )
 
     }
 
     if (fromDate) {
 
-      result = result.filter(o =>
-        new Date(o.createdAt) >=
-        new Date(fromDate)
+      result = result.filter(
+        o =>
+          new Date(o.createdAt) >=
+          new Date(fromDate)
       )
 
     }
 
     if (toDate) {
 
-      const end = new Date(toDate)
+      const end =
+        new Date(toDate)
 
       end.setHours(
         23,
@@ -154,13 +259,16 @@ export default function CoordinatorOrdersPage() {
         999
       )
 
-      result = result.filter(o =>
-        new Date(o.createdAt) <= end
+      result = result.filter(
+        o =>
+          new Date(o.createdAt) <=
+          end
       )
 
     }
 
     setFilteredOrders(result)
+
   }
 
   const reset = () => {
@@ -172,36 +280,43 @@ export default function CoordinatorOrdersPage() {
 
   }
 
-  const statusMap: Record<string, string> = {
+  // =========================
+  // STATUS
+  // =========================
 
-    'Draft': 'Đơn tạm',
+  const statusMap:
+    Record<string, string> = {
+
+    Draft:
+      'Đơn tạm',
 
     'Pending Approval':
       'Chờ duyệt',
 
-    'Approved':
+    Approved:
       'Đã duyệt',
 
-    'Processing':
+    Processing:
       'Đang xử lý',
 
-    'Delivering':
+    Delivering:
       'Đang giao hàng',
 
-    'Completed':
+    Completed:
       'Hoàn thành',
 
-    'Cancelled':
+    Cancelled:
       'Đã hủy',
 
-    'Rejected':
+    Rejected:
       'Từ chối',
 
-    'Sent':
+    Sent:
       'Đã gửi',
 
-    'Delivered':
+    Delivered:
       'Đã giao'
+
   }
 
   const getStatusLabel = (
@@ -214,172 +329,314 @@ export default function CoordinatorOrdersPage() {
   ) =>
     status.replace(/\s/g, '')
 
-  const sendOrderToStation = async (
-    id: number
-  ) => {
+  // =========================
+  // SEND ORDER
+  // =========================
 
-    try {
+  const sendOrderToStation =
+    async (
+      id: number
+    ) => {
 
-      await apiClient.post(
-        `/api/orders/${id}/status`,
-        {
-          status:
-            'Pending Approval'
-        }
-      )
+      try {
 
-      fetchOrders()
+        await apiClient.post(
+          `/api/orders/${id}/status`,
+          {
+            status:
+              'Pending Approval'
+          }
+        )
 
-      alert('Đã gửi kế toán')
+        fetchOrders()
 
-    } catch (err) {
+        alert(
+          'Đã gửi kế toán'
+        )
 
-      console.error(err)
+      } catch (err) {
 
-      alert('Gửi thất bại')
+        console.error(err)
+
+        alert(
+          'Gửi thất bại'
+        )
+
+      }
 
     }
-  }
 
   // =========================
   // EXPORT EXCEL
   // =========================
-  const handleExportExcel = async () => {
 
-    try {
+  const handleExportExcel =
+    async () => {
 
-      const workbook =
-        new ExcelJS.Workbook()
+      try {
 
-      const sheet =
-        workbook.addWorksheet(
-          'Coordinator Orders'
-        )
+        const workbook =
+          new ExcelJS.Workbook()
 
-      sheet.columns = [
+        const sheet =
+          workbook.addWorksheet(
+            'Coordinator Orders'
+          )
 
-        {
-          header: 'Mã đơn',
-          key: 'orderCode',
-          width: 22
-        },
+        sheet.columns = [
 
-        {
-          header: 'Trạm',
-          key: 'destinationStation',
-          width: 28
-        },
-
-        {
-          header: 'Tổng tiền',
-          key: 'totalAmount',
-          width: 20
-        },
-
-        {
-          header: 'Trạng thái',
-          key: 'orderStatus',
-          width: 20
-        },
-
-        {
-          header: 'Lý do từ chối',
-          key: 'rejectReason',
-          width: 40
-        },
-
-        {
-          header: 'Ngày tạo',
-          key: 'createdAt',
-          width: 25
-        }
-
-      ]
-
-      filteredOrders.forEach(order => {
-
-        sheet.addRow({
-
-          orderCode:
-            order.orderCode,
-
-          destinationStation:
-            order.destinationStation,
-
-          totalAmount:
-            `${order.totalAmount.toLocaleString()} đ`,
-
-          orderStatus:
-            getStatusLabel(
-              order.orderStatus
-            ),
-
-          rejectReason:
-            order.rejectReason || '',
-
-          createdAt:
-            formatVNDateTime(
-              order.createdAt
-            )
-
-        })
-
-      })
-
-      sheet.getRow(1).font = {
-        bold: true
-      }
-
-      const buffer =
-        await workbook.xlsx.writeBuffer()
-
-      const blob =
-        new Blob(
-          [buffer],
           {
-            type:
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            header: 'Mã đơn',
+            key: 'orderCode',
+            width: 22
+          },
+
+          {
+            header: 'Khách hàng',
+            key: 'customerName',
+            width: 30
+          },
+
+          {
+            header: 'SĐT',
+            key: 'phone',
+            width: 20
+          },
+
+          {
+            header: 'Địa chỉ',
+            key: 'address',
+            width: 40
+          },
+
+          {
+            header: 'Loại bê tông',
+            key: 'concreteType',
+            width: 25
+          },
+
+          {
+            header: 'Khối lượng',
+            key: 'volume',
+            width: 15
+          },
+
+          {
+            header: 'Giá',
+            key: 'price',
+            width: 20
+          },
+
+          {
+            header: 'Giờ đổ',
+            key: 'deliveryTime',
+            width: 25
+          },
+
+          {
+            header: 'Kỹ sư',
+            key: 'engineer',
+            width: 25
+          },
+
+          {
+            header: 'Vận hành bơm',
+            key: 'pipeHolder',
+            width: 25
+          },
+
+          {
+            header: 'Lắp ống',
+            key: 'pipeFixer',
+            width: 25
+          },
+
+          {
+            header: 'HDSX',
+            key: 'pouringVolume',
+            width: 35
+          },
+
+          {
+            header: 'Xe',
+            key: 'truck',
+            width: 20
+          },
+
+          {
+            header: 'Ghi chú',
+            key: 'notes',
+            width: 40
+          },
+
+          {
+            header: 'Trạm',
+            key: 'destinationStation',
+            width: 28
+          },
+
+          {
+            header: 'Tổng tiền',
+            key: 'totalAmount',
+            width: 20
+          },
+
+          {
+            header: 'Trạng thái',
+            key: 'orderStatus',
+            width: 20
+          },
+
+          {
+            header: 'Lý do từ chối',
+            key: 'rejectReason',
+            width: 40
+          },
+
+          {
+            header: 'Ngày tạo',
+            key: 'createdAt',
+            width: 25
+          }
+
+        ]
+
+        filteredOrders.forEach(
+          order => {
+
+            sheet.addRow({
+
+              orderCode:
+                order.orderCode,
+
+              customerName:
+                order.customerName || '',
+
+              phone:
+                order.phone || '',
+
+              address:
+                order.address || '',
+
+              concreteType:
+                order.concreteType || '',
+
+              volume:
+                order.volume || 0,
+
+              price:
+                order.price
+                  ? `${Number(
+                      order.price
+                    ).toLocaleString()} đ`
+                  : '',
+
+              deliveryTime:
+                order.deliveryTime
+                  ? formatVNDateTime(
+                      order.deliveryTime
+                    )
+                  : '',
+
+              engineer:
+                order.engineer || '',
+
+              pipeHolder:
+                order.pipeHolder || '',
+
+              pipeFixer:
+                order.pipeFixer || '',
+
+              pouringVolume:
+                order.pouringVolume || '',
+
+              truck:
+                order.truck || '',
+
+              notes:
+                order.notes || '',
+
+              destinationStation:
+                order.destinationStation,
+
+              totalAmount:
+                `${order.totalAmount.toLocaleString()} đ`,
+
+              orderStatus:
+                getStatusLabel(
+                  order.orderStatus
+                ),
+
+              rejectReason:
+                order.rejectReason || '',
+
+              createdAt:
+                formatVNDateTime(
+                  order.createdAt
+                )
+
+            })
+
           }
         )
 
-      const url =
-        window.URL.createObjectURL(
-          blob
+        sheet.getRow(1).font = {
+          bold: true
+        }
+
+        const buffer =
+          await workbook.xlsx.writeBuffer()
+
+        const blob =
+          new Blob(
+            [buffer],
+            {
+              type:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+          )
+
+        const url =
+          window.URL.createObjectURL(
+            blob
+          )
+
+        const a =
+          document.createElement('a')
+
+        a.href = url
+
+        a.download =
+          'don-hang-coordinator.xlsx'
+
+        document.body.appendChild(a)
+
+        a.click()
+
+        a.remove()
+
+        window.URL.revokeObjectURL(
+          url
         )
 
-      const a =
-        document.createElement('a')
+      } catch (err) {
 
-      a.href = url
+        console.error(err)
 
-      a.download =
-        'don-hang-coordinator.xlsx'
+        alert(
+          'Xuất Excel thất bại'
+        )
 
-      document.body.appendChild(a)
-
-      a.click()
-
-      a.remove()
-
-      window.URL.revokeObjectURL(url)
-
-    } catch (err) {
-
-      console.error(err)
-
-      alert(
-        'Xuất Excel thất bại'
-      )
+      }
 
     }
-
-  }
 
   return (
 
     <div className="orders-dashboard">
 
       {/* HEADER */}
+
       <div className="page-header">
 
         <div>
@@ -397,10 +654,14 @@ export default function CoordinatorOrdersPage() {
 
         <button
           className="action-btn"
-          onClick={handleExportExcel}
+          onClick={
+            handleExportExcel
+          }
         >
 
-          <FiDownload size={18} />
+          <FiDownload
+            size={18}
+          />
 
           Xuất Excel
 
@@ -408,21 +669,26 @@ export default function CoordinatorOrdersPage() {
 
       </div>
 
-      {/* FILTER BAR */}
+      {/* FILTER */}
+
       <div className="filter-bar">
 
         <input
           placeholder="🔍 Tìm mã đơn..."
           value={search}
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
         />
 
         <select
           value={status}
           onChange={(e) =>
-            setStatus(e.target.value)
+            setStatus(
+              e.target.value
+            )
           }
         >
 
@@ -468,7 +734,9 @@ export default function CoordinatorOrdersPage() {
           type="date"
           value={fromDate}
           onChange={(e) =>
-            setFromDate(e.target.value)
+            setFromDate(
+              e.target.value
+            )
           }
         />
 
@@ -476,7 +744,9 @@ export default function CoordinatorOrdersPage() {
           type="date"
           value={toDate}
           onChange={(e) =>
-            setToDate(e.target.value)
+            setToDate(
+              e.target.value
+            )
           }
         />
 
@@ -490,6 +760,7 @@ export default function CoordinatorOrdersPage() {
       </div>
 
       {/* CONTENT */}
+
       {loading ? (
 
         <div className="loading">
@@ -498,15 +769,39 @@ export default function CoordinatorOrdersPage() {
 
       ) : (
 
-        <div className="table-card">
+  <div className="table-card">
 
-          <table>
+  <div className="table-scroll">
+
+    <table>
 
             <thead>
 
               <tr>
 
                 <th>Mã đơn</th>
+
+                <th>Khách hàng</th>
+
+                <th>SĐT</th>
+
+                <th>Địa chỉ</th>
+
+                <th>Loại bê tông</th>
+
+                <th>Khối lượng</th>
+
+                <th>Giá</th>
+
+                <th>Giờ đổ</th>
+
+                <th>Kỹ sư</th>
+
+                <th>Vận hành bơm</th>
+
+                <th>Lắp ống</th>
+
+                <th>Xe</th>
 
                 <th>Trạm</th>
 
@@ -524,110 +819,184 @@ export default function CoordinatorOrdersPage() {
 
             <tbody>
 
-              {filteredOrders.map(o => (
+              {filteredOrders.map(
+                o => (
 
-                <tr key={o.id}>
+                  <tr key={o.id}>
 
-                  <td className="code">
-                    {o.orderCode}
-                  </td>
+                    <td className="code">
+                      {o.orderCode}
+                    </td>
 
-                  <td>
-                    {o.destinationStation}
-                  </td>
+                    <td>
+                      {o.customerName || '-'}
+                    </td>
 
-                  <td className="money">
-                    {o.totalAmount.toLocaleString()} đ
-                  </td>
+                    <td>
+                      {o.phone || '-'}
+                    </td>
 
-                  {/* STATUS */}
-                  <td>
+                    <td>
+                      {o.address || '-'}
+                    </td>
 
-                    <span
+                    <td>
+                      {o.concreteType || '-'}
+                    </td>
 
-                      className={`
-                        status
-                        ${getStatusClass(o.orderStatus)}
-                      `}
+                    <td>
+                      {o.volume || 0}
+                    </td>
 
-                      title={
-                        o.orderStatus === 'Rejected'
-                          ? o.rejectReason ||
-                            'Không có lý do'
-                          : ''
-                      }
+                    <td className="money">
 
-                      onClick={() => {
+                      {o.price
+                        ? `${Number(
+                            o.price
+                          ).toLocaleString()} đ`
+                        : '-'}
 
-                        if (
-                          o.orderStatus === 'Rejected'
-                        ) {
+                    </td>
 
-                          alert(
-                            `Lý do từ chối:\n\n${
-                              o.rejectReason ||
-                              'Không có lý do'
-                            }`
+                    <td>
+
+                      {o.deliveryTime
+                        ? formatVNDateTime(
+                            o.deliveryTime
                           )
+                        : '-'}
 
+                    </td>
+
+                    <td>
+                      {o.engineer || '-'}
+                    </td>
+
+                    <td>
+                      {o.pipeHolder || '-'}
+                    </td>
+
+                    <td>
+                      {o.pipeFixer || '-'}
+                    </td>
+
+                    <td>
+                      {o.truck || '-'}
+                    </td>
+
+                    <td>
+                      {o.destinationStation}
+                    </td>
+
+                    <td className="money">
+
+                      {o.totalAmount.toLocaleString()} đ
+
+                    </td>
+
+                    {/* STATUS */}
+
+                    <td>
+
+                      <span
+
+                        className={`
+                          status
+                          ${getStatusClass(
+                            o.orderStatus
+                          )}
+                        `}
+
+                        title={
+                          o.orderStatus ===
+                          'Rejected'
+                            ? o.rejectReason ||
+                              'Không có lý do'
+                            : ''
                         }
 
-                      }}
+                        onClick={() => {
 
-                      style={{
-                        cursor:
-                          o.orderStatus === 'Rejected'
-                            ? 'pointer'
-                            : 'default'
-                      }}
+                          if (
+                            o.orderStatus ===
+                            'Rejected'
+                          ) {
 
-                    >
+                            alert(
+                              `Lý do từ chối:\n\n${
+                                o.rejectReason ||
+                                'Không có lý do'
+                              }`
+                            )
 
-                      {getStatusLabel(
-                        o.orderStatus
+                          }
+
+                        }}
+
+                        style={{
+                          cursor:
+                            o.orderStatus ===
+                            'Rejected'
+                              ? 'pointer'
+                              : 'default'
+                        }}
+
+                      >
+
+                        {getStatusLabel(
+                          o.orderStatus
+                        )}
+
+                      </span>
+
+                    </td>
+
+                    <td>
+
+                      {formatVNDate(
+                        o.createdAt
                       )}
 
-                    </span>
+                    </td>
 
-                  </td>
+                    <td>
 
-                  <td>
+                      {o.orderStatus ===
+                        'Draft' && (
 
-                    {formatVNDate(
-                      o.createdAt
-                    )}
+                        <button
+                          className="action-btn"
+                          onClick={() =>
+                            sendOrderToStation(
+                              o.id
+                            )
+                          }
+                        >
+                          Gửi kế toán
+                        </button>
 
-                  </td>
+                      )}
 
-                  <td>
+                    </td>
 
-                    {o.orderStatus === 'Draft' && (
+                  </tr>
 
-                      <button
-                        className="action-btn"
-                        onClick={() =>
-                          sendOrderToStation(o.id)
-                        }
-                      >
-                        Gửi kế toán
-                      </button>
-
-                    )}
-
-                  </td>
-
-                </tr>
-
-              ))}
+                )
+              )}
 
             </tbody>
 
-          </table>
+    </table>
 
-        </div>
+  </div>
+
+</div>
 
       )}
 
     </div>
+
   )
+
 }
+
