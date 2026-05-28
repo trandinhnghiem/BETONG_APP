@@ -483,28 +483,78 @@ class OrderController {
   }
 
   static async getStationOrders(req, res) {
-    const pool = await getConnection()
-    const result = await pool.request()
-      .input('stationId', sql.Int, req.user.StationId)
+
+  const pool =
+    await getConnection()
+
+  const result =
+    await pool.request()
+
+      .input(
+        'stationId',
+        sql.Int,
+        req.user.StationId
+      )
+
       .query(`
         SELECT
+
           o.Id,
           o.OrderCode,
-          o.TotalAmount,
+
+          o.CustomerName,
+          o.Address,
+          o.Phone,
+
+          o.ConcreteType,
+          o.Volume,
+          o.Price,
+          o.DeliveryTime,
+
+          o.Engineer,
+          o.PipeHolder,
+          o.PipeFixer,
+          o.PouringVolume,
+
+          o.Truck,
+          o.Notes,
+
+          ISNULL(
+            o.TotalAmount,
+            o.Volume * o.Price
+          ) AS TotalAmount,
+
           o.OrderStatus,
+
+          o.RejectReason,
+
           o.CreatedAt,
+
           s.StationName AS DestinationStation,
+
           u.FullName AS CoordinatorName
+
         FROM Orders o
+
         LEFT JOIN Stations s
           ON o.DestinationStationId = s.Id
+
         LEFT JOIN Users u
           ON o.CoordinatorId = u.Id
-        WHERE o.DestinationStationId = @stationId
-        ORDER BY o.CreatedAt DESC
+
+        WHERE
+          o.DestinationStationId =
+          @stationId
+
+        ORDER BY
+          o.CreatedAt DESC
       `)
-    res.json(result.recordset)
-  }
+
+  res.json(
+    result.recordset
+  )
+
+}
 
   static async getUploadedDocuments(req, res) {
     try {

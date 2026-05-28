@@ -1,37 +1,83 @@
 import { useEffect, useState } from 'react'
 import {
   FiCheckCircle,
-  FiRefreshCcw
+  FiRefreshCcw,
+  FiDownload
 } from 'react-icons/fi'
 
-import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
+import * as ExcelJS from 'exceljs'
 
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
 interface Order {
+
   id: number
+
   orderCode: string
-  coordinatorName: string
-  destinationStation: string
+
+  customerName?: string
+
+  address?: string
+
+  phone?: string
+
+  concreteType?: string
+
+  volume?: number
+
+  price?: number
+
+  deliveryTime?: string
+
+  engineer?: string
+
+  pipeHolder?: string
+
+  pipeFixer?: string
+
+  pouringVolume?: string
+
+  truck?: string
+
+  notes?: string
+
+  coordinatorName?: string
+
+  destinationStation?: string
+
   totalAmount: number
+
   orderStatus: string
+
+  rejectReason?: string
+
   createdAt: string
+
 }
 
 export default function StationOrdersPage() {
 
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [orders, setOrders] =
+    useState<Order[]>([])
+
+  const [loading, setLoading] =
+    useState(true)
+
+  // =========================
+  // FETCH
+  // =========================
 
   useEffect(() => {
+
     fetchOrders()
+
   }, [])
 
   // =========================
-  // FORMAT TIME (-7 HOURS)
+  // FORMAT DATE
   // =========================
+
   const formatDateTime = (
     dateString: string
   ) => {
@@ -39,7 +85,6 @@ export default function StationOrdersPage() {
     const date =
       new Date(dateString)
 
-    // trừ 7 tiếng
     date.setHours(
       date.getHours() - 7
     )
@@ -50,9 +95,27 @@ export default function StationOrdersPage() {
 
   }
 
+  const formatDate = (
+    dateString: string
+  ) => {
+
+    const date =
+      new Date(dateString)
+
+    date.setHours(
+      date.getHours() - 7
+    )
+
+    return date.toLocaleDateString(
+      'vi-VN'
+    )
+
+  }
+
   // =========================
   // FETCH ORDERS
   // =========================
+
   const fetchOrders = async () => {
 
     try {
@@ -64,13 +127,58 @@ export default function StationOrdersPage() {
           '/api/orders/station-orders'
         )
 
-      setOrders(
+      console.log(
+        'Station Orders:',
+        res.data
+      )
+
+      const data =
         res.data.map((o: any) => ({
 
-          id: o.Id,
+          id:
+            o.Id,
 
           orderCode:
             o.OrderCode,
+
+          customerName:
+            o.CustomerName,
+
+          address:
+            o.Address,
+
+          phone:
+            o.Phone,
+
+          concreteType:
+            o.ConcreteType,
+
+          volume:
+            o.Volume,
+
+          price:
+            o.Price,
+
+          deliveryTime:
+            o.DeliveryTime,
+
+          engineer:
+            o.Engineer,
+
+          pipeHolder:
+            o.PipeHolder,
+
+          pipeFixer:
+            o.PipeFixer,
+
+          pouringVolume:
+            o.PouringVolume,
+
+          truck:
+            o.Truck,
+
+          notes:
+            o.Notes,
 
           coordinatorName:
             o.CoordinatorName,
@@ -84,11 +192,15 @@ export default function StationOrdersPage() {
           orderStatus:
             o.OrderStatus,
 
+          rejectReason:
+            o.RejectReason,
+
           createdAt:
             o.CreatedAt
 
         }))
-      )
+
+      setOrders(data)
 
     } catch (err) {
 
@@ -105,42 +217,9 @@ export default function StationOrdersPage() {
   }
 
   // =========================
-  // UPDATE STATUS
+  // STATUS
   // =========================
-  const updateStatus = async (
-    orderId: number,
-    status: string
-  ) => {
 
-    try {
-
-      const confirmed =
-        window.confirm(
-          `Xác nhận chuyển sang trạng thái "${status}" ?`
-        )
-
-      if (!confirmed) return
-
-      await apiClient.post(
-        `/api/orders/${orderId}/status`,
-        { status }
-      )
-
-      await fetchOrders()
-
-    } catch (err) {
-
-      console.error(err)
-
-      alert('Lỗi cập nhật')
-
-    }
-
-  }
-
-  // =========================
-  // STATUS LABEL
-  // =========================
   const statusMap:
     Record<string, string> = {
 
@@ -187,92 +266,313 @@ export default function StationOrdersPage() {
     status.replace(/\s/g, '')
 
   // =========================
-  // EXPORT EXCEL
+  // UPDATE STATUS
   // =========================
-  const exportExcel = () => {
 
-    const excelData =
-      orders.map((order) => ({
+  const updateStatus = async (
+    orderId: number,
+    status: string
+  ) => {
 
-        'Mã đơn':
-          order.orderCode,
+    try {
 
-        'Điều phối':
-          order.coordinatorName,
+      const confirmed =
+        window.confirm(
+          `Xác nhận chuyển sang trạng thái "${status}" ?`
+        )
 
-        'Tổng tiền':
-          order.totalAmount,
+      if (!confirmed) return
 
-        'Trạng thái':
-          getStatusLabel(
-            order.orderStatus
-          ),
-
-        'Ngày tạo':
-          formatDateTime(
-            order.createdAt
-          )
-
-      }))
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(
-        excelData
+      await apiClient.post(
+        `/api/orders/${orderId}/status`,
+        { status }
       )
 
-    worksheet['!cols'] = [
+      fetchOrders()
 
-      { wch: 20 },
+    } catch (err) {
 
-      { wch: 25 },
+      console.error(err)
 
-      { wch: 18 },
+      alert('Lỗi cập nhật')
 
-      { wch: 20 },
-
-      { wch: 25 }
-
-    ]
-
-    const workbook =
-      XLSX.utils.book_new()
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      'DanhSachDonHang'
-    )
-
-    const excelBuffer =
-      XLSX.write(workbook, {
-        bookType: 'xlsx',
-        type: 'array'
-      })
-
-    const fileData =
-      new Blob(
-        [excelBuffer],
-        {
-          type:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
-        }
-      )
-
-    saveAs(
-      fileData,
-      `don-hang-${Date.now()}.xlsx`
-    )
+    }
 
   }
 
   // =========================
+  // EXPORT EXCEL
+  // =========================
+
+  const exportExcel =
+    async () => {
+
+      try {
+
+        const workbook =
+          new ExcelJS.Workbook()
+
+        const sheet =
+          workbook.addWorksheet(
+            'Station Orders'
+          )
+
+        sheet.columns = [
+
+          {
+            header: 'Mã đơn',
+            key: 'orderCode',
+            width: 22
+          },
+
+          {
+            header: 'Khách hàng',
+            key: 'customerName',
+            width: 30
+          },
+
+          {
+            header: 'SĐT',
+            key: 'phone',
+            width: 20
+          },
+
+          {
+            header: 'Địa chỉ',
+            key: 'address',
+            width: 40
+          },
+
+          {
+            header: 'Loại bê tông',
+            key: 'concreteType',
+            width: 25
+          },
+
+          {
+            header: 'Khối lượng',
+            key: 'volume',
+            width: 15
+          },
+
+          {
+            header: 'Giá',
+            key: 'price',
+            width: 20
+          },
+
+          {
+            header: 'Giờ đổ',
+            key: 'deliveryTime',
+            width: 25
+          },
+
+          {
+            header: 'Kỹ sư',
+            key: 'engineer',
+            width: 25
+          },
+
+          {
+            header: 'Vận hành bơm',
+            key: 'pipeHolder',
+            width: 25
+          },
+
+          {
+            header: 'Lắp ống',
+            key: 'pipeFixer',
+            width: 25
+          },
+
+          {
+            header: 'HDSX',
+            key: 'pouringVolume',
+            width: 25
+          },
+
+          {
+            header: 'Xe',
+            key: 'truck',
+            width: 20
+          },
+
+          {
+            header: 'Ghi chú',
+            key: 'notes',
+            width: 40
+          },
+
+          {
+            header: 'Điều phối',
+            key: 'coordinatorName',
+            width: 30
+          },
+
+          {
+            header: 'Trạm',
+            key: 'destinationStation',
+            width: 25
+          },
+
+          {
+            header: 'Tổng tiền',
+            key: 'totalAmount',
+            width: 20
+          },
+
+          {
+            header: 'Trạng thái',
+            key: 'orderStatus',
+            width: 20
+          },
+
+          {
+            header: 'Ngày tạo',
+            key: 'createdAt',
+            width: 25
+          }
+
+        ]
+
+        orders.forEach(order => {
+
+          sheet.addRow({
+
+            orderCode:
+              order.orderCode,
+
+            customerName:
+              order.customerName || '',
+
+            phone:
+              order.phone || '',
+
+            address:
+              order.address || '',
+
+            concreteType:
+              order.concreteType || '',
+
+            volume:
+              order.volume || 0,
+
+            price:
+              order.price
+                ? `${Number(
+                    order.price
+                  ).toLocaleString()} đ`
+                : '',
+
+            deliveryTime:
+              order.deliveryTime
+                ? formatDateTime(
+                    order.deliveryTime
+                  )
+                : '',
+
+            engineer:
+              order.engineer || '',
+
+            pipeHolder:
+              order.pipeHolder || '',
+
+            pipeFixer:
+              order.pipeFixer || '',
+
+            pouringVolume:
+              order.pouringVolume || '',
+
+            truck:
+              order.truck || '',
+
+            notes:
+              order.notes || '',
+
+            coordinatorName:
+              order.coordinatorName || '',
+
+            destinationStation:
+              order.destinationStation || '',
+
+            totalAmount:
+              `${order.totalAmount.toLocaleString()} đ`,
+
+            orderStatus:
+              getStatusLabel(
+                order.orderStatus
+              ),
+
+            createdAt:
+              formatDateTime(
+                order.createdAt
+              )
+
+          })
+
+        })
+
+        sheet.getRow(1).font = {
+          bold: true
+        }
+
+        const buffer =
+          await workbook.xlsx.writeBuffer()
+
+        const blob =
+          new Blob(
+            [buffer],
+            {
+              type:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+          )
+
+        const url =
+          window.URL.createObjectURL(
+            blob
+          )
+
+        const a =
+          document.createElement('a')
+
+        a.href = url
+
+        a.download =
+          `station-orders-${Date.now()}.xlsx`
+
+        document.body.appendChild(a)
+
+        a.click()
+
+        a.remove()
+
+        window.URL.revokeObjectURL(
+          url
+        )
+
+      } catch (err) {
+
+        console.error(err)
+
+        alert(
+          'Xuất Excel thất bại'
+        )
+
+      }
+
+    }
+
+  // =========================
   // UI
   // =========================
+
   return (
 
     <div className="orders-dashboard">
 
       {/* HEADER */}
+
       <div className="page-header">
 
         <div>
@@ -297,10 +597,16 @@ export default function StationOrdersPage() {
         >
 
           <button
-            className="refresh-btn"
+            className="action-btn"
             onClick={exportExcel}
           >
-            📥 Xuất Excel
+
+            <FiDownload
+              size={18}
+            />
+
+            Xuất Excel
+
           </button>
 
           <button
@@ -321,6 +627,7 @@ export default function StationOrdersPage() {
       </div>
 
       {/* LOADING */}
+
       {loading ? (
 
         <div className="loading">
@@ -329,161 +636,249 @@ export default function StationOrdersPage() {
 
       ) : (
 
-        <div
-          style={{
-            width: '100%',
-            overflowX: 'auto'
-          }}
-        >
-          <table className="orders-table">
+        <div className="table-card">
 
-          <thead>
+          <div className="table-scroll">
 
-            <tr>
+            <table>
 
-              <th>
-                Mã đơn
-              </th>
+              <thead>
 
-              <th>
-                Điều phối
-              </th>
+                <tr>
 
-              <th>
-                Tiền
-              </th>
+                  <th>Mã đơn</th>
 
-              <th>
-                Ngày tạo
-              </th>
+                  <th>Khách hàng</th>
 
-              <th>
-                Trạng thái
-              </th>
+                  <th>SĐT</th>
 
-              <th>
-                Hành động
-              </th>
+                  <th>Địa chỉ</th>
 
-            </tr>
+                  <th>Loại bê tông</th>
 
-          </thead>
+                  <th>Khối lượng</th>
 
-          <tbody>
+                  <th>Giá</th>
 
-            {orders.map((order) => (
+                  <th>Giờ đổ</th>
 
-              <tr key={order.id}>
+                  <th>Kỹ sư</th>
 
-                <td>
-                  {order.orderCode}
-                </td>
+                  <th>Vận hành bơm</th>
 
-                <td>
-                  {order.coordinatorName || '---'}
-                </td>
+                  <th>Lắp ống</th>
 
-                <td>
-                  {order.totalAmount.toLocaleString()}
-                  {' '}đ
-                </td>
+                  <th>HDSX</th>
 
-                <td>
-                  {formatDateTime(
-                    order.createdAt
-                  )}
-                </td>
+                  <th>Xe</th>
 
-                <td>
+                  <th>Ghi chú</th>
 
-                  <span
-                    className={`
-                      status
-                      ${getStatusClass(
-                        order.orderStatus
+                  <th>Điều phối</th>
+
+                  <th>Trạm</th>
+
+                  <th>Tổng tiền</th>
+
+                  <th>Trạng thái</th>
+
+                  <th>Ngày tạo</th>
+
+                  <th>Hành động</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody>
+
+                {orders.map((order) => (
+
+                  <tr key={order.id}>
+
+                    <td className="code">
+                      {order.orderCode}
+                    </td>
+
+                    <td>
+                      {order.customerName || '-'}
+                    </td>
+
+                    <td>
+                      {order.phone || '-'}
+                    </td>
+
+                    <td>
+                      {order.address || '-'}
+                    </td>
+
+                    <td>
+                      {order.concreteType || '-'}
+                    </td>
+
+                    <td>
+                      {order.volume || 0}
+                    </td>
+
+                    <td className="money">
+
+                      {order.price
+                        ? `${Number(
+                            order.price
+                          ).toLocaleString()} đ`
+                        : '-'}
+
+                    </td>
+
+                    <td>
+
+                      {order.deliveryTime
+                        ? formatDateTime(
+                            order.deliveryTime
+                          )
+                        : '-'}
+
+                    </td>
+
+                    <td>
+                      {order.engineer || '-'}
+                    </td>
+
+                    <td>
+                      {order.pipeHolder || '-'}
+                    </td>
+
+                    <td>
+                      {order.pipeFixer || '-'}
+                    </td>
+
+                    <td>
+                      {order.pouringVolume || '-'}
+                    </td>
+
+                    <td>
+                      {order.truck || '-'}
+                    </td>
+
+                    <td>
+                      {order.notes || '-'}
+                    </td>
+
+                    <td>
+                      {order.coordinatorName || '-'}
+                    </td>
+
+                    <td>
+                      {order.destinationStation || '-'}
+                    </td>
+
+                    <td className="money">
+
+                      {order.totalAmount.toLocaleString()} đ
+
+                    </td>
+
+                    <td>
+
+                      <span
+                        className={`
+                          status
+                          ${getStatusClass(
+                            order.orderStatus
+                          )}
+                        `}
+                      >
+
+                        {getStatusLabel(
+                          order.orderStatus
+                        )}
+
+                      </span>
+
+                    </td>
+
+                    <td>
+
+                      {formatDate(
+                        order.createdAt
                       )}
-                    `}
-                  >
 
-                    {getStatusLabel(
-                      order.orderStatus
-                    )}
+                    </td>
 
-                  </span>
+                    <td>
 
-                </td>
+                      <div className="actions">
 
-                <td>
+                        {String(
+                          order.orderStatus
+                        ).trim() ===
+                          'Approved' && (
 
-                  <div className="actions">
+                          <button
+                            onClick={() =>
+                              updateStatus(
+                                order.id,
+                                'Processing'
+                              )
+                            }
+                          >
+                            ⚙️ Xử lý
+                          </button>
 
-                    {String(
-                      order.orderStatus
-                    ).trim() ===
-                      'Approved' && (
+                        )}
 
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Processing'
-                          )
-                        }
-                      >
-                        ⚙️ Xử lý
-                      </button>
+                        {order.orderStatus ===
+                          'Processing' && (
 
-                    )}
+                          <button
+                            onClick={() =>
+                              updateStatus(
+                                order.id,
+                                'Delivering'
+                              )
+                            }
+                          >
+                            🚚 Giao hàng
+                          </button>
 
-                    {order.orderStatus ===
-                      'Processing' && (
+                        )}
 
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Delivering'
-                          )
-                        }
-                      >
-                        🚚 Giao hàng
-                      </button>
+                        {order.orderStatus ===
+                          'Delivering' && (
 
-                    )}
+                          <button
+                            onClick={() =>
+                              updateStatus(
+                                order.id,
+                                'Completed'
+                              )
+                            }
+                          >
 
-                    {order.orderStatus ===
-                      'Delivering' && (
+                            <FiCheckCircle
+                              size={16}
+                            />
 
-                      <button
-                        onClick={() =>
-                          updateStatus(
-                            order.id,
-                            'Completed'
-                          )
-                        }
-                      >
+                            Hoàn thành
 
-                        <FiCheckCircle
-                          size={16}
-                        />
+                          </button>
 
-                        Hoàn thành
+                        )}
 
-                      </button>
+                      </div>
 
-                    )}
+                    </td>
 
-                  </div>
+                  </tr>
 
-                </td>
+                ))}
 
-              </tr>
+              </tbody>
 
-            ))}
+            </table>
 
-          </tbody>
+          </div>
 
-        </table>
         </div>
 
       )}
