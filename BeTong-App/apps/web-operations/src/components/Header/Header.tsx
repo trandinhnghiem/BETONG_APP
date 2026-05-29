@@ -92,7 +92,7 @@ export default function Header() {
   // ✅ FIX: Click marquee → ẨN NGAY + chuyển trang
   const handleMarqueeClick = () => {
     setMarquee('')          // Ẩn marquee ngay lập tức
-    navigate('/engineer/orders')  // Chuyển đến trang đơn hàng
+    navigate('/station/orders')  // Chuyển đến trang đơn hàng
   }
 
   // =========================
