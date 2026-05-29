@@ -22,6 +22,8 @@ import CoordinatorOrdersPage from './pages/coordinator/OrdersPage'
 import CoordinatorCreateOrderPage from './pages/coordinator/CreateOrderPage'
 import CoordinatorReportsPage from './pages/coordinator/ReportsPage'
 import CoordinatorStationsPage from './pages/coordinator/StationsPage'
+import VehiclesPage
+from './pages/coordinator/VehiclesPage'
 
 import StationDashboard from './pages/station/Dashboard'
 import StationOrdersPage from './pages/station/OrdersPage'
@@ -182,6 +184,10 @@ function App() {
                 <CoordinatorStationsPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/coordinator/vehicles"
+            element={<VehiclesPage />}
           />
 
           {/* ================= STATION ================= */}

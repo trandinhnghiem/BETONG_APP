@@ -94,6 +94,9 @@ const reportRoutes =
 const customerDebtRoutes =
   require('./routes/customerDebtRoutes')
 
+const vehicleRoutes =
+  require('./routes/vehicleRoutes')
+
 // =======================
 // IMPORT DATABASE
 // =======================
@@ -153,6 +156,11 @@ app.set('io', io)
 app.use('/api/auth', authRoutes)
 
 app.use('/api/orders', orderRoutes)
+
+app.use(
+  '/api/vehicles',
+  vehicleRoutes
+)
 
 app.use(
   '/api/notifications',

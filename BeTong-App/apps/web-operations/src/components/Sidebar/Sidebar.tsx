@@ -10,7 +10,8 @@ import {
   FiMoon,
   FiSun,
   FiBarChart2,
-  FiMapPin
+  FiMapPin,
+  FiTruck
 } from 'react-icons/fi'
 import { useEffect, useState } from 'react'
 import './Sidebar.css'
@@ -82,8 +83,10 @@ export default function Sidebar() {
           { to: '/coordinator/orders', label: 'Đơn hàng', icon: FiShoppingCart },
           { to: '/coordinator/reports', label: 'Báo cáo', icon: FiBarChart2 },
           { to: '/coordinator/stations', label: 'Quản lý trạm', icon: FiMapPin },
-          
+          { to: '/coordinator/vehicles', label: 'Phương tiện', icon: FiTruck }
         ]
+
+        
 
       case 'Station':
         return [

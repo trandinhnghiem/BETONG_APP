@@ -1,0 +1,479 @@
+.vehicles-page {
+  padding: 24px;
+
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f5f7fa 0%,
+      #c3cfe2 100%
+    );
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.page-header {
+  background: white;
+
+  border-radius: 18px;
+
+  padding: 24px;
+
+  margin-bottom: 24px;
+
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.06);
+}
+
+.page-header h1 {
+  margin: 0;
+
+  font-size: 32px;
+
+  color: #1e293b;
+
+  font-weight: 700;
+}
+
+.page-header p {
+  margin-top: 8px;
+
+  color: #64748b;
+
+  font-size: 15px;
+}
+
+/* =========================
+   CARD
+========================= */
+
+.vehicle-card {
+  background: white;
+
+  border-radius: 18px;
+
+  padding: 24px;
+
+  margin-bottom: 24px;
+
+  box-shadow:
+    0 8px 24px rgba(0,0,0,0.06);
+}
+
+/* =========================
+   FORM
+========================= */
+
+.vehicle-form {
+  display: flex;
+
+  gap: 16px;
+
+  align-items: flex-end;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+
+  font-weight: 700;
+
+  color: #475569;
+
+  text-transform: uppercase;
+}
+
+.form-group input {
+  width: 260px;
+
+  height: 48px;
+
+  border:
+    1px solid #dbe2ea;
+
+  border-radius: 14px;
+
+  padding: 0 16px;
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition: 0.2s;
+
+  background: #f8fafc;
+}
+
+.form-group input:focus {
+  border-color: #1677ff;
+
+  background: white;
+
+  box-shadow:
+    0 0 0 4px rgba(22,119,255,0.12);
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.add-btn,
+.import-btn,
+.template-btn,
+.action-btn {
+  height: 48px;
+
+  border: none;
+
+  border-radius: 14px;
+
+  padding: 0 22px;
+
+  font-size: 15px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  transition: 0.2s;
+}
+
+.add-btn {
+  background: #1677ff;
+
+  color: white;
+
+  min-width: 140px;
+
+  height: 48px;
+
+  align-self: flex-end;
+
+  margin-bottom: 2px;
+}
+
+.add-btn:hover {
+  background: #0958d9;
+}
+
+.import-btn {
+  background: #2563eb;
+
+  color: white;
+}
+
+.import-btn:hover {
+  background: #1d4ed8;
+}
+
+.template-btn {
+  background: #16a34a;
+
+  color: white;
+}
+
+.template-btn:hover {
+  background: #15803d;
+}
+
+/* ACTION BUTTON */
+
+.action-btn {
+  background: #ef4444;
+
+  color: white;
+}
+
+.action-btn:hover {
+  background: #dc2626;
+}
+.action-btn {
+  background: #ef4444;
+
+  color: white;
+
+  border: none;
+
+  padding: 10px 16px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-weight: 600;
+
+  transition: 0.2s;
+}
+
+.action-btn:hover {
+  background: #dc2626;
+}
+/* =========================
+   IMPORT
+========================= */
+
+.import-section {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 14px;
+
+  align-items: center;
+
+  margin-top: 10px;
+}
+
+.file-box {
+  display: flex;
+
+  align-items: center;
+}
+
+.file-box input[type='file'] {
+  border:
+    2px dashed #cbd5e1;
+
+  border-radius: 14px;
+
+  padding: 10px 14px;
+
+  background: #f8fafc;
+
+  min-width: 320px;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+.table-card {
+  background: white;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 28px rgba(0,0,0,0.06);
+}
+
+.table-scroll {
+  width: 100%;
+
+  overflow-x: hidden;
+}
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  table-layout: auto;
+}
+
+thead {
+  background: #f8fafc;
+}
+
+th {
+  padding: 16px 14px;
+
+  text-align: left;
+
+  font-size: 14px;
+
+  font-weight: 700;
+
+  color: #475569;
+
+  border-bottom:
+    1px solid #e2e8f0;
+
+  white-space: nowrap;
+}
+
+td {
+  padding: 14px;
+
+  font-size: 14px;
+
+  color: #334155;
+
+  border-bottom:
+    1px solid #f1f5f9;
+
+  vertical-align: middle;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* =========================
+   COLUMN WIDTH
+========================= */
+
+.col-plate {
+  width: 180px;
+}
+
+.col-driver {
+  width: 180px;
+}
+
+.col-phone {
+  width: 160px;
+}
+
+.col-capacity {
+  width: 140px;
+}
+
+.col-status {
+  width: 160px;
+}
+
+/* =========================
+   LICENSE PLATE
+========================= */
+
+.plate {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  font-weight: 700;
+
+  color: #1677ff;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-width: 120px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+.status-badge.Ready {
+  background: #dcfce7;
+
+  color: #15803d;
+}
+
+.status-badge.Delivering {
+  background: #dbeafe;
+
+  color: #1d4ed8;
+}
+
+/* =========================
+   EMPTY
+========================= */
+
+.empty-row {
+  text-align: center;
+
+  padding: 40px !important;
+
+  color: #94a3b8;
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+.table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+
+  border-radius: 999px;
+}
+
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 768px) {
+
+  .vehicle-form {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .form-group input {
+    width: 100%;
+  }
+
+  .import-section {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .import-btn,
+  .template-btn,
+  .add-btn,
+  .action-btn {
+    width: 100%;
+  }
+
+  .file-box input[type='file'] {
+    min-width: 100%;
+  }
+  
+
+}

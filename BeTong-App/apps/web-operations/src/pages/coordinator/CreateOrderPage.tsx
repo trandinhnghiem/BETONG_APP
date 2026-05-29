@@ -25,6 +25,8 @@ interface CustomerDebt {
 export default function CoordinatorCreateOrderPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [stations, setStations] = useState<Station[]>([])
+  const [vehicles, setVehicles] =
+  useState<any[]>([])
   const [customers, setCustomers] =
   useState<CustomerDebt[]>([])
 
@@ -59,7 +61,19 @@ const [searchCustomer, setSearchCustomer] =
     fetchProducts()
     fetchStations()
     fetchCustomers()
+    fetchVehicles()
   }, [])
+  const fetchVehicles =
+  async () => {
+
+    const res =
+      await apiClient.get(
+        '/api/vehicles'
+      )
+
+    setVehicles(res.data)
+
+  }
 
   const fetchProducts = async () => {
     try {
@@ -386,7 +400,38 @@ const [searchCustomer, setSearchCustomer] =
             </div>
             <div className="form-group">
               <label>Xe giao</label>
-              <input type="text" name="truck" value={form.truck} onChange={handleChange} placeholder="Nhập mã xe" />
+              <select
+                  name="truck"
+                  value={form.truck}
+                  onChange={handleChange}
+                >
+
+                  <option value="">
+                    -- Chọn xe --
+                  </option>
+
+                  {vehicles
+                    .filter(
+                      v =>
+                        v.VehicleStatus ===
+                        'Sẵn sàng'
+                    )
+                    .map(v => (
+
+                      <option
+                        key={v.Id}
+                        value={v.LicensePlate}
+                      >
+
+                        {v.LicensePlate}
+                        {' - '}
+                        {v.DriverName}
+
+                      </option>
+
+                  ))}
+
+                </select>
             </div>
           </div>
         </div>
