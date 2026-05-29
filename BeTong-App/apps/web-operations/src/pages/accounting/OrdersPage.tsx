@@ -3,6 +3,8 @@ import { FiEdit2, FiEye, FiUpload, FiX, FiPrinter, FiAlertTriangle, FiCamera, Fi
 import apiClient from '../../services/api'
 import './OrdersPage.css'
 
+// ===================== INTERFACES =====================
+
 interface Order {
   id: number
   orderCode: string
@@ -11,21 +13,25 @@ interface Order {
   phone: string
   address: string
   destinationStation: string
+  sourceStation: string
   concreteType: string
   volume: number
   price: number
   totalAmount: number
   debtAmount: number
   debtLimit: number
-  debtDueDate?: string | null
-  deliveryTime: string | null
+  deliveryTime: string
   engineer: string
   pipeHolder: string
   pipeFixer: string
   truck: string
   orderStatus: string
   paymentStatus?: string
+  debtDueDate?: string | null
   createdAt: string
+  additionalCosts: number
+  transportCompVolume: number
+  transportCompAmount: number
 }
 
 interface OrderDocument {
@@ -46,6 +52,9 @@ interface InvoiceFormData {
   paymentMethod: string
   note: string
   customerName: string
+  additionalCosts: number
+  transportCompVolume: number
+  transportCompAmount: number
 }
 
 interface DebtWarningDetails {
@@ -56,10 +65,24 @@ interface DebtWarningDetails {
   debtLimit: number
 }
 
+interface TransportCompResult {
+  customerName: string
+  deliveryDate: string
+  totalVolume: number
+  orderCount: number
+  minVolume: number
+  needsCompensation: boolean
+  transportCompVolume: number
+  message: string
+}
+
 type UploadModalMode = 'upload' | 'edit'
 type InvoiceModalMode = 'new' | 'reprint'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+
+// ✅ Hằng số: Đơn tối thiểu (m³)
+const MIN_VOLUME = 5
 
 const statusMap: Record<string, string> = {
   Draft: 'Đơn tạm',
@@ -78,12 +101,14 @@ const getStatusLabel = (status: string) => statusMap[status] || status
 const getStatusClass = (status: string) => status.replace(/\s+/g, '')
 
 const formatVNDate = (dateString: string) => {
+  if (!dateString) return '—'
   const date = new Date(dateString)
   date.setHours(date.getHours() - 7)
   return date.toLocaleDateString('vi-VN')
 }
 
 const formatVNDateTime = (dateString: string) => {
+  if (!dateString) return '—'
   const date = new Date(dateString)
   date.setHours(date.getHours() - 7)
   return date.toLocaleString('vi-VN')
@@ -136,11 +161,24 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'full' | 'debt', debtDueDate?: string | null) => {
+// ===================== INVOICE HTML BUILDER =====================
+const buildInvoiceHtml = (
+  order: Order,
+  form: InvoiceFormData,
+  paymentType?: 'full' | 'debt',
+  debtDueDate?: string | null
+) => {
+  const volumeLabel = order.volume.toLocaleString('vi-VN')
+  const priceLabel = order.price.toLocaleString('vi-VN')
+  const concreteTotalLabel = (order.volume * order.price).toLocaleString('vi-VN')
   const totalLabel = order.totalAmount.toLocaleString('vi-VN')
   const invoiceDateLabel = formatVNDate(form.invoiceDate)
   const paymentStatusLabel = paymentType === 'debt' ? 'Ghi công nợ' : 'Đã thanh toán'
   const dueDateLabel = debtDueDate ? formatVNDate(debtDueDate) : ''
+
+  const addCostsLabel = form.additionalCosts.toLocaleString('vi-VN')
+  const tCompVolumeLabel = form.transportCompVolume.toLocaleString('vi-VN')
+  const tCompAmountLabel = form.transportCompAmount.toLocaleString('vi-VN')
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -175,6 +213,12 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'fu
       .grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 24px;
+        margin-bottom: 24px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px 24px;
         margin-bottom: 24px;
       }
@@ -232,6 +276,23 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'fu
         color: #4b5563;
         margin-top: 4px;
       }
+      .compensation-box {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 2px solid #3b82f6;
+        background: #eff6ff;
+      }
+      .compensation-box .comp-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1d4ed8;
+      }
+      .compensation-box .comp-detail {
+        font-size: 13px;
+        color: #4b5563;
+        margin-top: 4px;
+      }
       @media print {
         body { padding: 0; }
         .invoice { border: none; border-radius: 0; padding: 0; }
@@ -261,32 +322,64 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'fu
           <div class="value">${escapeHtml(order.orderCode)}</div>
         </div>
         <div>
+          <div class="label">SĐT</div>
+          <div class="value">${escapeHtml(order.phone || '—')}</div>
+        </div>
+        <div>
+          <div class="label">Địa chỉ</div>
+          <div class="value">${escapeHtml(order.address || '—')}</div>
+        </div>
+        <div>
           <div class="label">Trạm nhận</div>
           <div class="value">${escapeHtml(order.destinationStation || 'Không rõ')}</div>
+        </div>
+        <div>
+          <div class="label">Loại bê tông</div>
+          <div class="value">${escapeHtml(order.concreteType || '—')}</div>
         </div>
         <div>
           <div class="label">Phương thức thanh toán</div>
           <div class="value">${escapeHtml(form.paymentMethod)}</div>
         </div>
+        <div>
+          <div class="label">Giờ đổ</div>
+          <div class="value">${order.deliveryTime ? escapeHtml(formatVNDateTime(order.deliveryTime)) : '—'}</div>
+        </div>
       </div>
 
-      <h2 class="section-title">Thông tin thanh toán</h2>
+      <h2 class="section-title">Chi tiết đơn hàng</h2>
       <table>
         <thead>
           <tr>
             <th>Diễn giải</th>
-            <th>Số lượng</th>
+            <th>Khối lượng (m³)</th>
             <th>Đơn giá</th>
             <th>Thành tiền</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>${escapeHtml(order.orderCode)}</td>
-            <td>1</td>
-            <td>${escapeHtml(totalLabel)} đ</td>
-            <td>${escapeHtml(totalLabel)} đ</td>
+            <td>Bê tông ${escapeHtml(order.concreteType || '')} - ${escapeHtml(order.orderCode)}</td>
+            <td>${escapeHtml(volumeLabel)}</td>
+            <td>${escapeHtml(priceLabel)} đ/m³</td>
+            <td>${escapeHtml(concreteTotalLabel)} đ</td>
           </tr>
+          ${form.additionalCosts > 0 ? `
+          <tr>
+            <td>Chi phí phát sinh</td>
+            <td>—</td>
+            <td>—</td>
+            <td>${escapeHtml(addCostsLabel)} đ</td>
+          </tr>
+          ` : ''}
+          ${form.transportCompAmount > 0 ? `
+          <tr>
+            <td>Bù vận chuyển (${escapeHtml(tCompVolumeLabel)} m³ x ${escapeHtml(priceLabel)} đ)</td>
+            <td>${escapeHtml(tCompVolumeLabel)}</td>
+            <td>${escapeHtml(priceLabel)} đ/m³</td>
+            <td>${escapeHtml(tCompAmountLabel)} đ</td>
+          </tr>
+          ` : ''}
         </tbody>
       </table>
 
@@ -298,6 +391,18 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'fu
           </tr>
         </tbody>
       </table>
+
+      ${form.transportCompAmount > 0 ? `
+      <div class="compensation-box">
+        <div class="comp-label">Bù vận chuyển</div>
+        <div class="comp-detail">
+          Đơn tối thiểu: ${MIN_VOLUME}m³ | Tổng KL ngày: ${escapeHtml((order.volume).toLocaleString('vi-VN'))}m³ | Thiếu: ${escapeHtml(tCompVolumeLabel)}m³
+        </div>
+        <div class="comp-detail">
+          Phí bù = ${escapeHtml(tCompVolumeLabel)}m³ x ${escapeHtml(priceLabel)} đ/m³ = ${escapeHtml(tCompAmountLabel)} đ
+        </div>
+      </div>
+      ` : ''}
 
       ${paymentType ? `
       <div class="payment-status-box">
@@ -323,6 +428,7 @@ const buildInvoiceHtml = (order: Order, form: InvoiceFormData, paymentType?: 'fu
 </html>`
 }
 
+// ===================== UPLOAD MODAL =====================
 function UploadModal({
   open,
   onClose,
@@ -780,6 +886,7 @@ function UploadModal({
   )
 }
 
+// ===================== MAIN COMPONENT =====================
 export default function AccountingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -804,8 +911,15 @@ export default function AccountingOrdersPage() {
     invoiceDate: new Date().toISOString().slice(0, 10),
     paymentMethod: 'Tiền mặt',
     note: '',
-    customerName: ''
+    customerName: '',
+    additionalCosts: 0,
+    transportCompVolume: 0,
+    transportCompAmount: 0
   })
+
+  // ✅ State cho bù vận chuyển
+  const [transportCompResult, setTransportCompResult] = useState<TransportCompResult | null>(null)
+  const [calculatingComp, setCalculatingComp] = useState(false)
 
   const [debtConfirmModal, setDebtConfirmModal] = useState<{
     open: boolean
@@ -856,21 +970,25 @@ export default function AccountingOrdersPage() {
         phone: o.Phone || '',
         address: o.Address || '',
         destinationStation: o.DestinationStation || '',
+        sourceStation: o.SourceStation || '',
         concreteType: o.ConcreteType || '',
         volume: o.Volume || 0,
         price: o.Price || 0,
         totalAmount: o.TotalAmount || 0,
         debtAmount: o.DebtAmount || 0,
         debtLimit: o.DebtLimit || 0,
-        debtDueDate: o.DebtDueDate || null,
-        deliveryTime: o.DeliveryTime || null,
+        deliveryTime: o.DeliveryTime || '',
         engineer: o.Engineer || '',
         pipeHolder: o.PipeHolder || '',
         pipeFixer: o.PipeFixer || '',
         truck: o.Truck || '',
         orderStatus: o.OrderStatus,
         paymentStatus: o.PaymentStatus || 'pending',
-        createdAt: o.CreatedAt
+        debtDueDate: o.DebtDueDate || null,
+        createdAt: o.CreatedAt,
+        additionalCosts: o.AdditionalCosts || 0,
+        transportCompVolume: o.TransportCompVolume || 0,
+        transportCompAmount: o.TransportCompAmount || 0
       }))
 
       setOrders(mappedOrders)
@@ -889,6 +1007,45 @@ export default function AccountingOrdersPage() {
 
   const openEditModal = (orderId: number) => {
     setUploadModal({ open: true, orderId, mode: 'edit' })
+  }
+
+  // ✅ Tính bù vận chuyển khi mở hóa đơn
+  const calculateTransportComp = async (order: Order) => {
+    if (!order.customerName || !order.deliveryTime) {
+      setTransportCompResult(null)
+      return
+    }
+
+    try {
+      setCalculatingComp(true)
+      const deliveryDate = new Date(order.deliveryTime).toISOString().slice(0, 10)
+      const res = await apiClient.get('/api/orders/transport-compensation', {
+        params: { customerName: order.customerName, deliveryDate }
+      })
+      const result = res.data as TransportCompResult
+      setTransportCompResult(result)
+
+      // Cập nhật form
+      if (result.needsCompensation) {
+        const compAmount = result.transportCompVolume * order.price
+        setInvoiceForm(prev => ({
+          ...prev,
+          transportCompVolume: result.transportCompVolume,
+          transportCompAmount: compAmount
+        }))
+      } else {
+        setInvoiceForm(prev => ({
+          ...prev,
+          transportCompVolume: 0,
+          transportCompAmount: 0
+        }))
+      }
+    } catch (err) {
+      console.error('Lỗi tính bù vận chuyển:', err)
+      setTransportCompResult(null)
+    } finally {
+      setCalculatingComp(false)
+    }
   }
 
   const handleAction = async (order: Order, action: string) => {
@@ -960,26 +1117,38 @@ export default function AccountingOrdersPage() {
     }
   }
 
+  // Mở modal Xuất hóa đơn (lần đầu)
   const openInvoiceModal = (order: Order) => {
     setPaymentChoice('full')
     setDebtDueDateInput('')
+    setTransportCompResult(null)
     setInvoiceForm({
       invoiceNumber: `HD-${order.orderCode}`,
       invoiceDate: new Date().toISOString().slice(0, 10),
       paymentMethod: 'Tiền mặt',
       note: '',
-      customerName: order.customerName || 'Khách hàng'
+      customerName: order.customerName || 'Khách hàng',
+      additionalCosts: order.additionalCosts || 0,
+      transportCompVolume: order.transportCompVolume || 0,
+      transportCompAmount: order.transportCompAmount || 0
     })
     setInvoiceModal({ open: true, orderId: order.id, mode: 'new' })
+
+    // ✅ Tự động tính bù vận chuyển
+    calculateTransportComp(order)
   }
 
+  // Mở modal In lại HĐ
   const openReprintModal = (order: Order) => {
     setInvoiceForm({
       invoiceNumber: `HD-${order.orderCode}`,
       invoiceDate: new Date().toISOString().slice(0, 10),
       paymentMethod: 'Tiền mặt',
       note: '',
-      customerName: order.customerName || 'Khách hàng'
+      customerName: order.customerName || 'Khách hàng',
+      additionalCosts: order.additionalCosts || 0,
+      transportCompVolume: order.transportCompVolume || 0,
+      transportCompAmount: order.transportCompAmount || 0
     })
     setInvoiceModal({ open: true, orderId: order.id, mode: 'reprint' })
   }
@@ -988,8 +1157,10 @@ export default function AccountingOrdersPage() {
     setInvoiceModal({ open: false, orderId: null, mode: 'new' })
     setPaymentChoice('full')
     setDebtDueDateInput('')
+    setTransportCompResult(null)
   }
 
+  // Xử lý submit form hóa đơn
   const handleInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -1011,11 +1182,36 @@ export default function AccountingOrdersPage() {
     try {
       setConfirmingPayment(true)
 
+      // Nếu lần đầu xuất → gọi API xác nhận thanh toán (kèm chi phí phát sinh & bù VC)
       if (invoiceModal.mode === 'new') {
         await apiClient.post(`/api/orders/${order.id}/confirm-payment`, {
           paymentType: paymentChoice,
-          debtDueDate: paymentChoice === 'debt' ? debtDueDateInput : undefined
+          debtDueDate: paymentChoice === 'debt' ? debtDueDateInput : undefined,
+          additionalCosts: invoiceForm.additionalCosts,
+          transportCompVolume: invoiceForm.transportCompVolume,
+          transportCompAmount: invoiceForm.transportCompAmount
         })
+      } else {
+        // In lại → vẫn cập nhật chi phí nếu thay đổi
+        if (
+          invoiceForm.additionalCosts !== order.additionalCosts ||
+          invoiceForm.transportCompVolume !== order.transportCompVolume
+        ) {
+          await apiClient.put(`/api/orders/${order.id}/update-costs`, {
+            additionalCosts: invoiceForm.additionalCosts,
+            transportCompVolume: invoiceForm.transportCompVolume,
+            transportCompAmount: invoiceForm.transportCompAmount
+          })
+        }
+      }
+
+      // Xây dựng và in hóa đơn - sử dụng dữ liệu form đã cập nhật
+      const orderForInvoice: Order = {
+        ...order,
+        additionalCosts: invoiceForm.additionalCosts,
+        transportCompVolume: invoiceForm.transportCompVolume,
+        transportCompAmount: invoiceForm.transportCompAmount,
+        totalAmount: order.volume * order.price + invoiceForm.additionalCosts + invoiceForm.transportCompAmount
       }
 
       const currentPaymentType = invoiceModal.mode === 'new'
@@ -1026,7 +1222,7 @@ export default function AccountingOrdersPage() {
         ? (paymentChoice === 'debt' ? debtDueDateInput : null)
         : order.debtDueDate
 
-      const html = buildInvoiceHtml(order, invoiceForm, currentPaymentType, currentDueDate)
+      const html = buildInvoiceHtml(orderForInvoice, invoiceForm, currentPaymentType, currentDueDate)
 
       const blob = new Blob([html], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
@@ -1148,16 +1344,6 @@ export default function AccountingOrdersPage() {
     return diff > 0 ? diff : 0
   }
 
-  // Helper format DeliveryTime
-  const formatDeliveryTime = (dt: string | null) => {
-    if (!dt) return '—'
-    try {
-      return formatVNDateTime(dt)
-    } catch {
-      return dt
-    }
-  }
-
   return (
     <div className="orders-dashboard">
       <div className="page-header">
@@ -1214,12 +1400,24 @@ export default function AccountingOrdersPage() {
                     <td>{order.coordinatorName}</td>
                     <td>{order.customerName}</td>
                     <td>{order.phone || '—'}</td>
-                    <td>{order.address || '—'}</td>
+                    <td title={order.address}>{order.address ? (order.address.length > 20 ? order.address.slice(0, 20) + '...' : order.address) : '—'}</td>
                     <td>{order.destinationStation}</td>
                     <td>{order.concreteType || '—'}</td>
                     <td>{order.volume ? `${order.volume} m³` : '—'}</td>
                     <td className="money">{order.price ? `${order.price.toLocaleString()} đ` : '—'}</td>
-                    <td className="money">{order.totalAmount.toLocaleString()} đ</td>
+                    <td className="money">
+                      {order.totalAmount.toLocaleString()} đ
+                      {order.transportCompAmount > 0 && (
+                        <div style={{ fontSize: 10, color: '#3b82f6', marginTop: 2 }}>
+                          +Bù VC: {order.transportCompAmount.toLocaleString()} đ
+                        </div>
+                      )}
+                      {order.additionalCosts > 0 && (
+                        <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 2 }}>
+                          +Phát sinh: {order.additionalCosts.toLocaleString()} đ
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                         <strong>{order.debtAmount.toLocaleString()} đ</strong>
@@ -1233,7 +1431,6 @@ export default function AccountingOrdersPage() {
                         )}
                       </div>
                     </td>
-                    {/* Cột Hạn trả */}
                     <td>
                       {isDebt && order.debtDueDate ? (
                         <div className="debt-due-date">
@@ -1257,7 +1454,7 @@ export default function AccountingOrdersPage() {
                         <span style={{ color: '#999' }}>—</span>
                       )}
                     </td>
-                    <td>{formatDeliveryTime(order.deliveryTime)}</td>
+                    <td>{order.deliveryTime ? formatVNDateTime(order.deliveryTime) : '—'}</td>
                     <td>{order.engineer || '—'}</td>
                     <td>{order.pipeHolder || '—'}</td>
                     <td>{order.pipeFixer || '—'}</td>
@@ -1396,7 +1593,7 @@ export default function AccountingOrdersPage() {
         saving={uploading}
       />
 
-      {/* VIEW MODAL: Xem chứng từ */}
+      {/* VIEW MODAL */}
       {viewModal.open && (
         <div
           style={{
@@ -1665,9 +1862,9 @@ export default function AccountingOrdersPage() {
         </div>
       )}
 
-
-
-      {/* MODAL HÓA ĐƠN (GỘP THANH TOÁN) */}
+      {/* ============================
+          MODAL HÓA ĐƠN (GỘP THANH TOÁN + BÙ VC + CHI PHÍ PHÁT SINH)
+          ============================ */}
       {invoiceModal.open && (
         <div
           style={{
@@ -1684,7 +1881,7 @@ export default function AccountingOrdersPage() {
           <div
             className="invoice-modal"
             style={{
-              width: 'min(600px, 100%)',
+              width: 'min(640px, 100%)',
               background: '#fff',
               borderRadius: 16,
               padding: 24,
@@ -1719,19 +1916,19 @@ export default function AccountingOrdersPage() {
                   display: 'flex',
                   alignItems: 'center'
                 }}
+                aria-label="Đóng popup"
               >
                 <FiX />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleInvoiceSubmit}>
-              {/* Chọn thanh toán (chỉ hiện lần đầu) */}
+            <form onSubmit={handleInvoiceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* CHỌN THANH TOÁN (chỉ hiện khi mode 'new') */}
               {invoiceModal.mode === 'new' && (
                 <div className="invoice-payment-section">
-                  <label style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: 'block' }}>
-                    Chọn trạng thái thanh toán
-                  </label>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
+                    Trạng thái thanh toán
+                  </div>
                   <div className="payment-choice">
                     <div
                       className={`choice-card${paymentChoice === 'full' ? ' selected-full' : ''}`}
@@ -1739,91 +1936,242 @@ export default function AccountingOrdersPage() {
                     >
                       <div className="choice-icon">💰</div>
                       <div className="choice-title">Trả hết</div>
-                      <div className="choice-desc">Khách thanh toán toàn bộ</div>
+                      <div className="choice-desc">Khách đã thanh toán toàn bộ. Xuất hóa đơn hoàn tất.</div>
                     </div>
+
                     <div
                       className={`choice-card${paymentChoice === 'debt' ? ' selected-debt' : ''}`}
                       onClick={() => setPaymentChoice('debt')}
                     >
                       <div className="choice-icon">📋</div>
                       <div className="choice-title">Ghi công nợ</div>
-                      <div className="choice-desc">Ghi nhận công nợ, chọn hạn trả</div>
+                      <div className="choice-desc">Khách chưa trả, xuất hóa đơn làm bằng chứng đòi nợ.</div>
                     </div>
                   </div>
 
                   {paymentChoice === 'debt' && (
                     <div className="debt-date-field">
-                      <label>Hạn trả công nợ</label>
+                      <label>Hạn trả công nợ *</label>
                       <input
                         type="date"
                         value={debtDueDateInput}
-                        onChange={(e) => setDebtDueDateInput(e.target.value)}
-                        required
+                        onChange={event => setDebtDueDateInput(event.target.value)}
+                        min={new Date().toISOString().slice(0, 10)}
                       />
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Form Hóa đơn */}
-              <div className="invoice-form-section" style={{ marginTop: 14 }}>
-                <label style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Thông tin hóa đơn</label>
-                <input
-                  type="text"
-                  placeholder="Số hóa đơn"
-                  value={invoiceForm.invoiceNumber}
-                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                  required
-                />
-                <input
-                  type="date"
-                  value={invoiceForm.invoiceDate}
-                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Khách hàng"
-                  value={invoiceForm.customerName}
-                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, customerName: e.target.value }))}
-                />
-                <select
-                  value={invoiceForm.paymentMethod}
-                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                >
-                  <option value="Tiền mặt">Tiền mặt</option>
-                  <option value="Chuyển khoản">Chuyển khoản</option>
-                  <option value="Khác">Khác</option>
-                </select>
-                <textarea
-                  placeholder="Ghi chú"
-                  value={invoiceForm.note}
-                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, note: e.target.value }))}
-                  rows={2}
-                />
+              {/* ✅ BÙ VẬN CHUYỂN */}
+              <div className="invoice-payment-section" style={{ borderColor: '#3b82f6', background: '#eff6ff' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#1d4ed8' }}>
+                  Bù vận chuyển (Đơn tối thiểu: {MIN_VOLUME} m³)
+                </div>
+
+                {calculatingComp ? (
+                  <div style={{ color: '#6b7280', fontSize: 13 }}>Đang tính toán bù vận chuyển...</div>
+                ) : transportCompResult ? (
+                  <div style={{ fontSize: 13, color: '#374151' }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <strong>Tổng KL trong ngày:</strong> {transportCompResult.totalVolume} m³ | <strong>Số đơn:</strong> {transportCompResult.orderCount}
+                    </div>
+                    {transportCompResult.needsCompensation ? (
+                      <div style={{ padding: '8px 12px', background: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca' }}>
+                        <div><strong style={{ color: '#dc2626' }}>Cần bù vận chuyển:</strong> {transportCompResult.transportCompVolume} m³</div>
+                        <div style={{ color: '#6b7280', marginTop: 4 }}>
+                          Công thức: {MIN_VOLUME} - {transportCompResult.totalVolume} = {transportCompResult.transportCompVolume} m³
+                        </div>
+                        <div style={{ color: '#6b7280', marginTop: 2 }}>
+                          Tiền bù = {transportCompResult.transportCompVolume} m³ x {orders.find(o => o.id === invoiceModal.orderId)?.price?.toLocaleString() || 0} đ/m³ = <strong style={{ color: '#dc2626' }}>{invoiceForm.transportCompAmount.toLocaleString()} đ</strong>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: '8px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #86efac', color: '#15803d' }}>
+                        Tổng KL {transportCompResult.totalVolume} m³ {'>='} {MIN_VOLUME} m³ → Không cần bù vận chuyển
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ color: '#6b7280', fontSize: 13 }}>Chưa có thông tin bù vận chuyển</div>
+                )}
+
+                <div style={{ marginTop: 10, display: 'flex', gap: 12 }}>
+                  <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Số khối bù VC (m³)</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={invoiceForm.transportCompVolume}
+                      onChange={event => {
+                        const vol = Number(event.target.value) || 0
+                        const order = orders.find(o => o.id === invoiceModal.orderId)
+                        const price = order?.price || 0
+                        setInvoiceForm(prev => ({
+                          ...prev,
+                          transportCompVolume: vol,
+                          transportCompAmount: vol * price
+                        }))
+                      }}
+                      style={{ padding: '6px 10px', border: '1px solid #93c5fd', borderRadius: 6, fontSize: 13 }}
+                    />
+                  </label>
+                  <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Tiền bù VC (đ)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={invoiceForm.transportCompAmount}
+                      onChange={event => setInvoiceForm(prev => ({
+                        ...prev,
+                        transportCompAmount: Number(event.target.value) || 0
+                      }))}
+                      style={{ padding: '6px 10px', border: '1px solid #93c5fd', borderRadius: 6, fontSize: 13 }}
+                    />
+                  </label>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-                <button
-                  type="button"
-                  className="action-btn"
-                  onClick={closeInvoiceModal}
-                  disabled={confirmingPayment}
-                  style={{ background: '#6b7280' }}
-                >
+              {/* ✅ CHI PHÍ PHÁT SINH */}
+              <div className="invoice-form-section">
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
+                  Chi phí phát sinh
+                </div>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Số tiền phát sinh (đ)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={invoiceForm.additionalCosts}
+                    onChange={event => setInvoiceForm(prev => ({
+                      ...prev,
+                      additionalCosts: Number(event.target.value) || 0
+                    }))}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+
+              {/* THÔNG TIN HÓA ĐƠN */}
+              <div className="invoice-form-section">
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
+                  Thông tin hóa đơn
+                </div>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Số hóa đơn</span>
+                  <input
+                    value={invoiceForm.invoiceNumber}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceNumber: event.target.value }))}
+                    placeholder="VD: HD-ORD001"
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ngày lập</span>
+                  <input
+                    type="date"
+                    value={invoiceForm.invoiceDate}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceDate: event.target.value }))}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Khách hàng</span>
+                  <input
+                    value={invoiceForm.customerName}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, customerName: event.target.value }))}
+                    placeholder="Tên khách hàng"
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Phương thức thanh toán</span>
+                  <select
+                    value={invoiceForm.paymentMethod}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, paymentMethod: event.target.value }))}
+                  >
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Thẻ">Thẻ</option>
+                  </select>
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ghi chú</span>
+                  <textarea
+                    rows={3}
+                    value={invoiceForm.note}
+                    onChange={event => setInvoiceForm(prev => ({ ...prev, note: event.target.value }))}
+                    placeholder="Thông tin bổ sung"
+                  />
+                </label>
+              </div>
+
+              {/* TỔNG CỘNG */}
+              {(() => {
+                const order = orders.find(o => o.id === invoiceModal.orderId)
+                if (!order) return null
+                const baseAmount = order.volume * order.price
+                const totalWithAll = baseAmount + invoiceForm.additionalCosts + invoiceForm.transportCompAmount
+                return (
+                  <div style={{
+                    padding: '12px 16px',
+                    background: '#f0fdf4',
+                    border: '2px solid #86efac',
+                    borderRadius: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span>Tiền bê tông ({order.volume} m³ x {order.price.toLocaleString()} đ):</span>
+                      <span>{baseAmount.toLocaleString()} đ</span>
+                    </div>
+                    {invoiceForm.additionalCosts > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                        <span>Chi phí phát sinh:</span>
+                        <span>{invoiceForm.additionalCosts.toLocaleString()} đ</span>
+                      </div>
+                    )}
+                    {invoiceForm.transportCompAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                        <span>Bù vận chuyển ({invoiceForm.transportCompVolume} m³):</span>
+                        <span>{invoiceForm.transportCompAmount.toLocaleString()} đ</span>
+                    </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 16, fontWeight: 700, borderTop: '1px dashed #d1d5db', paddingTop: 8 }}>
+                      <span>Tổng cộng:</span>
+                      <span style={{ color: '#15803d' }}>{totalWithAll.toLocaleString()} đ</span>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* NÚT SUBMIT */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+                <button type="button" className="action-btn" onClick={closeInvoiceModal}>
                   Hủy
                 </button>
                 <button
                   type="submit"
                   className="action-btn"
-                  disabled={confirmingPayment}
-                  style={{ minWidth: 160 }}
+                  disabled={confirmingPayment || (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput)}
+                  style={{
+                    background: invoiceModal.mode === 'new'
+                      ? (paymentChoice === 'debt' ? '#f59e0b' : '#10b981')
+                      : '#6366f1',
+                    color: 'white',
+                    opacity: (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput) ? 0.5 : 1
+                  }}
                 >
                   {confirmingPayment
                     ? 'Đang xử lý...'
                     : invoiceModal.mode === 'new'
-                      ? 'Xác nhận & In hóa đơn'
-                      : 'In hóa đơn'}
+                      ? (paymentChoice === 'debt' ? 'Ghi công nợ & Xuất HĐ' : 'Xác nhận trả hết & Xuất HĐ')
+                      : 'In lại hóa đơn'
+                  }
                 </button>
               </div>
             </form>

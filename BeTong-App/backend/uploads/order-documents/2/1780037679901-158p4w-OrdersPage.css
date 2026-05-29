@@ -555,10 +555,9 @@
   background: #f1f5f9;
   color: #000;
   font-weight: 700;
-  padding: 14px 10px;
+  padding: 14px;
   text-align: left;
   border-bottom: 1px solid #dbe2ea;
-  font-size: 12px;
 }
 
 /* =========================
@@ -633,7 +632,7 @@
 }
 .orders-table th,
 .orders-table td {
-  padding: 12px 8px;
+  padding: 16px 14px;
   vertical-align: middle;
 }
 
@@ -643,12 +642,13 @@
 
 .orders-table td {
   white-space: nowrap;
-  font-size: 13px;
 }
 
-/* ✅ MỚI: Bảng rộng hơn vì có 20 cột */
+/* =========================
+   BẢNG RỘNG - 20 CỘT
+========================= */
 .orders-table {
-  min-width: 2400px;
+  min-width: 2600px;
 }
 
 /* =========================
@@ -657,9 +657,6 @@
 .table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .orders-table td.money {
@@ -804,12 +801,4 @@
   color: #ef4444;
   font-size: 11px;
   font-weight: 600;
-}
-
-/* =========================
-   BÙ VẬN CHUYỂN
-========================= */
-.invoice-payment-section[style*="border-color: rgb(59, 130, 246)"],
-.invoice-payment-section[style*="border-color:#3b82f6"] {
-  border-width: 2px;
 }

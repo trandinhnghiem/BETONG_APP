@@ -9,6 +9,9 @@ const { getConnection, sql } = require('../config/database')
 const NotificationService = require('../services/notificationService')
 const CustomerDebtModel = require('../models/CustomerDebt')
 
+// ✅ Hằng số: Đơn tối thiểu (m³)
+const MIN_VOLUME = 5
+
 class OrderController {
 
   // ================= PRODUCTS =================
@@ -27,6 +30,97 @@ class OrderController {
       const stations = await StationModel.findAll()
       res.json(stations)
     } catch (err) {
+      res.status(500).json({ error: err.message })
+    }
+  }
+
+  // ================= ✅ TÍNH BÙ VẬN CHUYỂN =================
+  // GET /api/orders/transport-compensation?customerName=xxx&deliveryDate=2024-01-15
+  static async calculateTransportCompensation(req, res) {
+    try {
+      const { customerName, deliveryDate } = req.query
+
+      if (!customerName || !deliveryDate) {
+        return res.status(400).json({ error: 'Thiếu customerName hoặc deliveryDate' })
+      }
+
+      const dayInfo = await OrderModel.getDayVolumeByCustomer(customerName, deliveryDate)
+      const totalVolume = Number(dayInfo.TotalVolume || 0)
+      const orderCount = Number(dayInfo.OrderCount || 0)
+
+      let transportCompVolume = 0
+      let needsCompensation = false
+
+      if (totalVolume < MIN_VOLUME) {
+        transportCompVolume = MIN_VOLUME - totalVolume
+        needsCompensation = true
+      }
+
+      res.json({
+        customerName,
+        deliveryDate,
+        totalVolume,
+        orderCount,
+        minVolume: MIN_VOLUME,
+        needsCompensation,
+        transportCompVolume,
+        message: needsCompensation
+          ? `Tổng KL ${totalVolume}m³ < Đơn tối thiểu ${MIN_VOLUME}m³ → Bù VC: ${transportCompVolume}m³`
+          : `Tổng KL ${totalVolume}m³ >= Đơn tối thiểu ${MIN_VOLUME}m³ → Không bù VC`
+      })
+    } catch (err) {
+      console.error(err)
+      res.status(500).json({ error: err.message })
+    }
+  }
+
+  // ================= ✅ CẬP NHẬT CHI PHÍ PHÁT SINH & BÙ VC =================
+  // PUT /api/orders/:orderId/update-costs
+  static async updateCosts(req, res) {
+    try {
+      const orderId = Number(req.params.orderId)
+      const { additionalCosts, transportCompVolume, transportCompAmount } = req.body
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'Thiếu mã đơn hàng' })
+      }
+
+      const order = await OrderModel.findById(orderId)
+      if (!order) {
+        return res.status(404).json({ error: 'Không tìm thấy đơn hàng' })
+      }
+
+      // Cập nhật chi phí phát sinh
+      if (additionalCosts !== undefined) {
+        await OrderModel.updateAdditionalCosts(orderId, Number(additionalCosts) || 0)
+      }
+
+      // Cập nhật bù vận chuyển
+      if (transportCompVolume !== undefined && transportCompAmount !== undefined) {
+        await OrderModel.updateTransportCompensation(
+          orderId,
+          Number(transportCompVolume) || 0,
+          Number(transportCompAmount) || 0
+        )
+      }
+
+      // Tính lại TotalAmount = Volume * Price + AdditionalCosts + TransportCompAmount
+      const pool = await getConnection()
+      await pool.request()
+        .input('OrderId', sql.Int, orderId)
+        .query(`
+          UPDATE Orders
+          SET TotalAmount = 
+              ISNULL(Volume, 0) * ISNULL(Price, 0)
+              + ISNULL(AdditionalCosts, 0)
+              + ISNULL(TransportCompAmount, 0),
+              UpdatedAt = GETDATE()
+          WHERE Id = @OrderId
+        `)
+
+      res.json({ message: 'Đã cập nhật chi phí' })
+    } catch (err) {
+      console.error(err)
       res.status(500).json({ error: err.message })
     }
   }
@@ -55,7 +149,12 @@ class OrderController {
       pipeInstaller,
       pouringInstructions,
 
-      truck
+      truck,
+
+      // ✅ MỚI: Chi phí phát sinh & bù vận chuyển
+      additionalCosts,
+      transportCompVolume,
+      transportCompAmount
 
     } = req.body
     
@@ -67,8 +166,14 @@ class OrderController {
     const pool = await getConnection()
     const orderCode = 'ORD-' + Date.now()
 
-    const totalAmount = items.reduce((s, i) =>
+    const itemTotal = items.reduce((s, i) =>
       s + i.quantity * i.unitPrice, 0)
+
+    // ✅ Tính TotalAmount bao gồm chi phí phát sinh + bù vận chuyển
+    const addCosts = Number(additionalCosts) || 0
+    const tCompVolume = Number(transportCompVolume) || 0
+    const tCompAmount = Number(transportCompAmount) || 0
+    const totalAmount = itemTotal + addCosts + tCompAmount
 
     const result = await pool.request()
       .input('OrderCode', sql.NVarChar, orderCode)
@@ -76,7 +181,7 @@ class OrderController {
       .input('SourceStationId', sql.Int, mixingStationId)
       .input('DestinationStationId', sql.Int, mixingStationId)
 
-      // CUSTOMER INFO
+      // ⭐ CUSTOMER INFO
       .input('CustomerName', sql.NVarChar, customerName)
       .input('Address', sql.NVarChar, address)
       .input('Phone', sql.NVarChar, phone)
@@ -96,6 +201,11 @@ class OrderController {
       )
 
       .input('Truck', sql.NVarChar, truck)
+
+      // ✅ MỚI: Chi phí phát sinh & bù vận chuyển
+      .input('AdditionalCosts', sql.Decimal(18,2), addCosts)
+      .input('TransportCompVolume', sql.Float, tCompVolume)
+      .input('TransportCompAmount', sql.Decimal(18,2), tCompAmount)
 
       .input('TotalAmount', sql.Decimal(18,2), Number(totalAmount) || 0)
 
@@ -124,6 +234,10 @@ class OrderController {
 
           Truck,
 
+          AdditionalCosts,
+          TransportCompVolume,
+          TransportCompAmount,
+
           TotalAmount,
           Notes,
           OrderStatus,
@@ -151,6 +265,10 @@ class OrderController {
           @PouringVolume,
 
           @Truck,
+
+          @AdditionalCosts,
+          @TransportCompVolume,
+          @TransportCompAmount,
 
           @TotalAmount,
           @Notes,
@@ -256,7 +374,7 @@ class OrderController {
       }
 
       // =========================
-      // KIEM TRA CONG NO TRUOC KHI DUYET
+      // ✅ FIX 1: KIỂM TRA CÔNG NỢ TRƯỚC KHI DUYỆT
       // =========================
       if (status === 'Approved') {
         const debt = await CustomerDebtModel.findByCustomerName(order.CustomerName)
@@ -269,7 +387,7 @@ class OrderController {
           if (!forceApprove) {
             return res.status(409).json({
               debtWarning: true,
-              error: `Khach hang ${order.CustomerName} dang co cong no vuot han muc`,
+              error: `Khách hàng ${order.CustomerName} đang có công nợ vượt hạn mức`,
               details: {
                 customerName: order.CustomerName,
                 currentDebt: currentDebtAmount,
@@ -281,8 +399,8 @@ class OrderController {
           }
 
           const forceReason = reason
-            ? `${reason} (Duyet bat chap vuot cong no: No ${currentDebtAmount.toLocaleString()} d + Don ${Number(order.TotalAmount).toLocaleString()} d > Han muc ${debtLimit.toLocaleString()} d)`
-            : `Duyet bat chap vuot cong no: No ${currentDebtAmount.toLocaleString()} d + Don ${Number(order.TotalAmount).toLocaleString()} d > Han muc ${debtLimit.toLocaleString()} d`
+            ? `${reason} (Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ)`
+            : `Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ`
 
           const updated = await OrderModel.updateStatus(
             orderId,
@@ -295,14 +413,14 @@ class OrderController {
           }
 
           const io = req.app.get('io')
-          const statusMessage = `Don hang ${order.OrderCode} da chuyen sang trang thai ${status}.`
+          const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
 
           try {
             await NotificationService.notifyStationUsers(
               io,
               order.DestinationStationId,
               'OrderApproved',
-              'Don hang da duoc duyet',
+              'Đơn hàng đã được duyệt',
               statusMessage,
               order.Id
             )
@@ -318,7 +436,6 @@ class OrderController {
         }
       }
 
-      // SAU khi check no xong -> cap nhat status binh thuong
       const updated = await OrderModel.updateStatus(
         orderId,
         status,
@@ -330,7 +447,7 @@ class OrderController {
       }
 
       const io = req.app.get('io')
-      const statusMessage = `Don hang ${order.OrderCode} da chuyen sang trang thai ${status}.`
+      const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
 
       try {
         if (status === 'Pending Approval') {
@@ -338,7 +455,7 @@ class OrderController {
             io,
             'Accounting',
             'OrderPendingApproval',
-            'Don hang moi cho duyet',
+            'Đơn hàng mới chờ duyệt',
             statusMessage,
             order.Id
           )
@@ -349,7 +466,7 @@ class OrderController {
             io,
             order.DestinationStationId,
             'OrderApproved',
-            'Don hang da duoc duyet',
+            'Đơn hàng đã được duyệt',
             statusMessage,
             order.Id
           )
@@ -359,7 +476,7 @@ class OrderController {
             io,
             order.CoordinatorId,
             'OrderRejected',
-            'Don hang da bi tu choi',
+            'Đơn hàng đã bị từ chối',
             statusMessage,
             order.Id
           )
@@ -370,7 +487,7 @@ class OrderController {
             io,
             order.CoordinatorId,
             'OrderCancelled',
-            'Don hang da bi huy',
+            'Đơn hàng đã bị hủy',
             statusMessage,
             order.Id
           )
@@ -381,7 +498,7 @@ class OrderController {
             io,
             'Accounting',
             'OrderCompleted',
-            'Don hang hoan thanh',
+            'Đơn hàng hoàn thành',
             statusMessage,
             order.Id
           )
@@ -417,7 +534,7 @@ class OrderController {
     res.json(orders)
   }
 
-  // getAccountingOrders - BO SUNG DAY DU CAC TRUONG
+  // ✅ getAccountingOrders - Đầy đủ các cột mới
   static async getAccountingOrders(req, res) {
   try {
     const pool = await getConnection()
@@ -437,11 +554,17 @@ class OrderController {
     o.PipeHolder,
     o.PipeFixer,
     o.Truck,
+
     ISNULL(o.TotalAmount, o.Volume * o.Price) AS TotalAmount,
     o.OrderStatus,
     o.CreatedAt,
     o.PaymentStatus,
     o.DebtDueDate,
+
+    o.AdditionalCosts,
+    o.TransportCompVolume,
+    o.TransportCompAmount,
+
     s.StationName AS DestinationStation,
     u.FullName AS CoordinatorName,
     cd.DebtAmount,
@@ -522,6 +645,10 @@ class OrderController {
           o.OrderStatus,
 
           o.RejectReason,
+
+          o.AdditionalCosts,
+          o.TransportCompVolume,
+          o.TransportCompAmount,
 
           o.CreatedAt,
 
@@ -675,7 +802,7 @@ class OrderController {
       })
     }
 
-    // xoa file vat ly
+    // xóa file vật lý
     try {
       const relativePath =
         decodeURIComponent(
@@ -695,7 +822,7 @@ class OrderController {
       console.error('Delete file error:', fileErr)
     }
 
-    // xoa database
+    // xóa database
     const pool = await getConnection()
 
     await pool.request()
@@ -737,7 +864,7 @@ static async uploadPaymentDocument(req, res) {
     if (!req.file) {
 
       return res.status(400).json({
-        error: 'Chua chon file'
+        error: 'Chưa chọn file'
       })
 
     }
@@ -781,7 +908,7 @@ static async uploadPaymentDocument(req, res) {
     res.json({
 
       message:
-        'Upload thanh cong',
+        'Upload thành công',
 
       filePath
 
@@ -837,7 +964,7 @@ static async sendToAccounting(req, res) {
     res.json({
 
       message:
-        'Da gui ke toan'
+        'Đã gửi kế toán'
 
     })
 
@@ -865,7 +992,7 @@ static async getWaitingPayments(req, res) {
     const result =
       await pool.request()
 
-      .query(`
+    .query(`
 
         SELECT *
         FROM Orders
@@ -892,7 +1019,7 @@ static async getWaitingPayments(req, res) {
 
 }
 
-// CONFIRM PAYMENT - Ho tro Tra het hoac Ghi cong no
+// ✅ CONFIRM PAYMENT - Hỗ trợ Trả hết hoặc Ghi công nợ
 static async confirmPayment(req, res) {
 
   try {
@@ -900,23 +1027,46 @@ static async confirmPayment(req, res) {
     const orderId =
       req.params.orderId ?? req.params.id
 
-    const { paymentType, debtDueDate } = req.body
+    const { paymentType, debtDueDate, additionalCosts, transportCompVolume, transportCompAmount } = req.body
 
     if (!orderId) {
       return res.status(400).json({
-        error: 'Thieu ma don hang'
+        error: 'Thiếu mã đơn hàng'
       })
     }
 
     const pool =
       await getConnection()
 
-    // Neu chon Ghi cong no
+    // ✅ Cập nhật chi phí phát sinh & bù vận chuyển nếu có
+    if (additionalCosts !== undefined || transportCompVolume !== undefined) {
+      const addCosts = Number(additionalCosts) || 0
+      const tCompVolume = Number(transportCompVolume) || 0
+      const tCompAmount = Number(transportCompAmount) || 0
+
+      await pool.request()
+        .input('Id', sql.Int, Number(orderId))
+        .input('AdditionalCosts', sql.Decimal(18, 2), addCosts)
+        .input('TransportCompVolume', sql.Float, tCompVolume)
+        .input('TransportCompAmount', sql.Decimal(18, 2), tCompAmount)
+        .query(`
+          UPDATE Orders
+          SET
+            AdditionalCosts = @AdditionalCosts,
+            TransportCompVolume = @TransportCompVolume,
+            TransportCompAmount = @TransportCompAmount,
+            TotalAmount = ISNULL(Volume, 0) * ISNULL(Price, 0) + @AdditionalCosts + @TransportCompAmount,
+            UpdatedAt = GETDATE()
+          WHERE Id = @Id
+        `)
+    }
+
+    // Nếu chọn Ghi công nợ
     if (paymentType === 'debt') {
 
       if (!debtDueDate) {
         return res.status(400).json({
-          error: 'Vui long nhap han tra cong no'
+          error: 'Vui lòng nhập hạn trả công nợ'
         })
       }
 
@@ -935,7 +1085,7 @@ static async confirmPayment(req, res) {
           WHERE Id = @Id
 
         `)
-              // Cong cong no khi chon ghi cong no
+              // ✅ Cộng công nợ khi chọn ghi công nợ
       try {
 
         const order =
@@ -966,12 +1116,12 @@ static async confirmPayment(req, res) {
       }
 
       res.json({
-        message: 'Da ghi cong no'
+        message: 'Đã ghi công nợ'
       })
 
     } else {
 
-      // Tra het (mac dinh)
+      // Trả hết (mặc định) - giống logic cũ
       await pool.request()
         .input('Id', sql.Int, Number(orderId))
         .query(`
@@ -992,7 +1142,7 @@ static async confirmPayment(req, res) {
 
         `)
 
-      // Giam cong no khach hang khi tra het
+      // Giảm công nợ khách hàng khi trả hết
       try {
         const order = await OrderModel.findById(Number(orderId))
         if (order && order.CustomerName && order.TotalAmount) {
@@ -1003,12 +1153,13 @@ static async confirmPayment(req, res) {
         }
       } catch (debtErr) {
         console.error('Failed to decrease customer debt:', debtErr)
+        // Không rollback - thanh toán vẫn thành công
       }
 
       res.json({
 
         message:
-          'Da xac nhan thanh toan'
+          'Đã xác nhận thanh toán'
 
       })
 
@@ -1026,7 +1177,7 @@ static async confirmPayment(req, res) {
 
 }
 
-// CONFIRM DEBT PAYMENT - Thanh toan cong no (khi khach tra no)
+// ✅ CONFIRM DEBT PAYMENT - Thanh toán công nợ (khi khách trả nợ)
 static async confirmDebtPayment(req, res) {
 
   try {
@@ -1036,21 +1187,22 @@ static async confirmDebtPayment(req, res) {
 
     if (!orderId) {
       return res.status(400).json({
-        error: 'Thieu ma don hang'
+        error: 'Thiếu mã đơn hàng'
       })
     }
 
+    // Kiểm tra đơn hàng có ở trạng thái công nợ không
     const order = await OrderModel.findById(Number(orderId))
 
     if (!order) {
       return res.status(404).json({
-        error: 'Khong tim thay don hang'
+        error: 'Không tìm thấy đơn hàng'
       })
     }
 
     if (order.PaymentStatus !== 'Debt') {
       return res.status(400).json({
-        error: 'Don hang khong o trang thai cong no'
+        error: 'Đơn hàng không ở trạng thái công nợ'
       })
     }
 
@@ -1077,7 +1229,7 @@ static async confirmDebtPayment(req, res) {
 
       `)
 
-    // Giam cong no khach hang
+    // Giảm công nợ khách hàng
     try {
       if (order.CustomerName && order.TotalAmount) {
         await CustomerDebtModel.decreaseDebt(
@@ -1090,7 +1242,7 @@ static async confirmDebtPayment(req, res) {
     }
 
     res.json({
-      message: 'Da thanh toan cong no'
+      message: 'Đã thanh toán công nợ'
     })
 
   } catch (error) {
@@ -1151,7 +1303,7 @@ static async rejectPayment(req, res) {
     res.json({
 
       message:
-        'Da tu choi'
+        'Đã từ chối'
 
     })
 

@@ -17,6 +17,20 @@ router.use(authMiddleware)
 router.get('/products', OrderController.getProducts)
 router.get('/stations', OrderController.getStations)
 
+// ✅ MỚI: Tính bù vận chuyển (phải đặt TRƯỚC route /:orderId)
+router.get(
+  '/transport-compensation',
+  roleMiddleware(['Accounting', 'Coordinator']),
+  OrderController.calculateTransportCompensation
+)
+
+// ✅ MỚI: Cập nhật chi phí phát sinh & bù vận chuyển
+router.put(
+  '/:orderId/update-costs',
+  roleMiddleware(['Accounting']),
+  OrderController.updateCosts
+)
+
 // Coordinator routes
 router.post('/', roleMiddleware(['Coordinator']), OrderController.createOrder)
 router.get('/my-orders', roleMiddleware(['Coordinator']), OrderController.getMyOrders)
@@ -67,11 +81,7 @@ router.get(
   roleMiddleware(['Admin', 'Accounting']),
   OrderController.getAllOrders
 )
-router.get(
-  '/accounting-orders',
-  roleMiddleware(['Accounting']),
-  OrderController.getAccountingOrders
-)
+
 // Common routes
 router.get('/:orderId', OrderController.getOrderById)
 

@@ -44,6 +44,10 @@ class OrderModel {
 
           o.RejectReason,
 
+          o.AdditionalCosts,
+          o.TransportCompVolume,
+          o.TransportCompAmount,
+
           o.CreatedAt
 
         FROM Orders o
@@ -104,6 +108,10 @@ class OrderModel {
           o.OrderStatus,
 
           o.RejectReason,
+
+          o.AdditionalCosts,
+          o.TransportCompVolume,
+          o.TransportCompAmount,
 
           o.CreatedAt
 
@@ -181,7 +189,7 @@ class OrderModel {
         SET
           OrderStatus = @status,
 
-          -- CHI LUU LY DO KHI REJECT
+          -- ✅ CHỈ LƯU LÝ DO KHI REJECT
           RejectReason =
             CASE
               WHEN @status = 'Rejected'
@@ -211,6 +219,7 @@ class OrderModel {
           o.Id,
           o.OrderCode,
           o.CustomerName,
+
           o.Address,
           o.Phone,
 
@@ -222,6 +231,7 @@ class OrderModel {
           o.Engineer,
           o.PipeHolder,
           o.PipeFixer,
+          o.PouringVolume,
 
           o.Truck,
 
@@ -233,6 +243,10 @@ class OrderModel {
           o.OrderStatus,
 
           o.RejectReason,
+
+          o.AdditionalCosts,
+          o.TransportCompVolume,
+          o.TransportCompAmount,
 
           o.CreatedAt
 
@@ -285,6 +299,64 @@ class OrderModel {
       `)
 
     return result.recordset
+  }
+
+  // ================= ✅ MỚI: TÍNH BÙ VẬN CHUYỂN THEO NGÀY/KHÁCH HÀNG =================
+  // Lấy tổng khối lượng bê tông của 1 khách hàng trong 1 ngày
+  static async getDayVolumeByCustomer(customerName, deliveryDate) {
+    const pool = await getConnection()
+
+    const result = await pool.request()
+      .input('CustomerName', sql.NVarChar, customerName)
+      .input('DeliveryDate', sql.Date, deliveryDate)
+
+      .query(`
+        SELECT 
+          SUM(ISNULL(o.Volume, 0)) AS TotalVolume,
+          COUNT(*) AS OrderCount
+        FROM Orders o
+        WHERE o.CustomerName = @CustomerName
+          AND CAST(o.DeliveryTime AS DATE) = @DeliveryDate
+          AND o.OrderStatus NOT IN ('Cancelled', 'Rejected')
+      `)
+
+    return result.recordset[0]
+  }
+
+  // ================= ✅ MỚI: CẬP NHẬT BÙ VẬN CHUYỂN CHO ĐƠN =================
+  static async updateTransportCompensation(orderId, transportCompVolume, transportCompAmount) {
+    const pool = await getConnection()
+
+    await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .input('TransportCompVolume', sql.Float, transportCompVolume)
+      .input('TransportCompAmount', sql.Decimal(18, 2), transportCompAmount)
+
+      .query(`
+        UPDATE Orders
+        SET
+          TransportCompVolume = @TransportCompVolume,
+          TransportCompAmount = @TransportCompAmount,
+          UpdatedAt = GETDATE()
+        WHERE Id = @OrderId
+      `)
+  }
+
+  // ================= ✅ MỚI: CẬP NHẬT CHI PHÍ PHÁT SINH =================
+  static async updateAdditionalCosts(orderId, additionalCosts) {
+    const pool = await getConnection()
+
+    await pool.request()
+      .input('OrderId', sql.Int, orderId)
+      .input('AdditionalCosts', sql.Decimal(18, 2), additionalCosts)
+
+      .query(`
+        UPDATE Orders
+        SET
+          AdditionalCosts = @AdditionalCosts,
+          UpdatedAt = GETDATE()
+        WHERE Id = @OrderId
+      `)
   }
 
 }
