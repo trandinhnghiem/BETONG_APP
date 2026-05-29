@@ -345,6 +345,22 @@ const buildInvoiceHtml = (
           <div class="label">Giờ đổ</div>
           <div class="value">${order.deliveryTime ? escapeHtml(formatVNDateTime(order.deliveryTime)) : '—'}</div>
         </div>
+        <div>
+          <div class="label">Kỹ sư</div>
+          <div class="value">${escapeHtml(order.engineer || '—')}</div>
+        </div>
+        <div>
+          <div class="label">Vận hành bơm</div>
+          <div class="value">${escapeHtml(order.pipeHolder || '—')}</div>
+        </div>
+        <div>
+          <div class="label">Lắp ống</div>
+          <div class="value">${escapeHtml(order.pipeFixer || '—')}</div>
+        </div>
+        <div>
+          <div class="label">Xe</div>
+          <div class="value">${escapeHtml(order.truck || '—')}</div>
+        </div>
       </div>
 
       <h2 class="section-title">Chi tiết đơn hàng</h2>
@@ -2052,6 +2068,53 @@ export default function AccountingOrdersPage() {
                   />
                 </label>
               </div>
+
+              {/* ✅ THÔNG TIN NHÂN SỰ & XE */}
+              {(() => {
+                const order = orders.find(o => o.id === invoiceModal.orderId)
+                if (!order) return null
+                return (
+                  <div className="invoice-form-section" style={{ borderColor: '#8b5cf6', background: '#f5f3ff' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#6d28d9' }}>
+                      Nhân sự & Xe
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12 }}>Kỹ sư</span>
+                        <input
+                          value={order.engineer || '—'}
+                          readOnly
+                          style={{ padding: '6px 10px', border: '1px solid #c4b5fd', borderRadius: 6, fontSize: 13, background: '#ede9fe', color: '#4c1d95' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12 }}>Vận hành bơm</span>
+                        <input
+                          value={order.pipeHolder || '—'}
+                          readOnly
+                          style={{ padding: '6px 10px', border: '1px solid #c4b5fd', borderRadius: 6, fontSize: 13, background: '#ede9fe', color: '#4c1d95' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12 }}>Lắp ống</span>
+                        <input
+                          value={order.pipeFixer || '—'}
+                          readOnly
+                          style={{ padding: '6px 10px', border: '1px solid #c4b5fd', borderRadius: 6, fontSize: 13, background: '#ede9fe', color: '#4c1d95' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontWeight: 600, fontSize: 12 }}>Xe</span>
+                        <input
+                          value={order.truck || '—'}
+                          readOnly
+                          style={{ padding: '6px 10px', border: '1px solid #c4b5fd', borderRadius: 6, fontSize: 13, background: '#ede9fe', color: '#4c1d95' }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* THÔNG TIN HÓA ĐƠN */}
               <div className="invoice-form-section">
