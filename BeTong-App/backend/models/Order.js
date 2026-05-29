@@ -80,6 +80,21 @@ class OrderModel {
           o.OrderCode,
 
           o.CustomerName,
+          o.Address,
+          o.Phone,
+
+          o.ConcreteType,
+          o.Volume,
+          o.Price,
+          o.DeliveryTime,
+
+          o.Engineer,
+          o.PipeHolder,
+          o.PipeFixer,
+          o.PouringVolume,
+
+          o.Truck,
+          o.Notes,
 
           s1.StationName AS SourceStation,
           s2.StationName AS DestinationStation,
@@ -166,7 +181,7 @@ class OrderModel {
         SET
           OrderStatus = @status,
 
-          -- ✅ CHỈ LƯU LÝ DO KHI REJECT
+          -- CHI LUU LY DO KHI REJECT
           RejectReason =
             CASE
               WHEN @status = 'Rejected'
@@ -196,6 +211,19 @@ class OrderModel {
           o.Id,
           o.OrderCode,
           o.CustomerName,
+          o.Address,
+          o.Phone,
+
+          o.ConcreteType,
+          o.Volume,
+          o.Price,
+          o.DeliveryTime,
+
+          o.Engineer,
+          o.PipeHolder,
+          o.PipeFixer,
+
+          o.Truck,
 
           s1.StationName AS SourceStation,
           s2.StationName AS DestinationStation,
@@ -204,7 +232,6 @@ class OrderModel {
 
           o.OrderStatus,
 
-          -- ✅ THÊM
           o.RejectReason,
 
           o.CreatedAt

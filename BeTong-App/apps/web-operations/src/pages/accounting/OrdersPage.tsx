@@ -6,16 +6,26 @@ import './OrdersPage.css'
 interface Order {
   id: number
   orderCode: string
-  destinationStation: string
-  totalAmount: number
-  orderStatus: string
-  createdAt: string
   coordinatorName?: string
   customerName: string
+  phone: string
+  address: string
+  destinationStation: string
+  concreteType: string
+  volume: number
+  price: number
+  totalAmount: number
   debtAmount: number
   debtLimit: number
-  paymentStatus?: string
   debtDueDate?: string | null
+  deliveryTime: string | null
+  engineer: string
+  pipeHolder: string
+  pipeFixer: string
+  truck: string
+  orderStatus: string
+  paymentStatus?: string
+  createdAt: string
 }
 
 interface OrderDocument {
@@ -338,7 +348,6 @@ function UploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
-  // ✅ Camera stream state
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -352,7 +361,6 @@ function UploadModal({
     }
   }, [open])
 
-  // Cleanup camera stream on unmount
   useEffect(() => {
     return () => {
       if (cameraStream) {
@@ -361,14 +369,12 @@ function UploadModal({
     }
   }, [cameraStream])
 
-  // Attach stream to video element when camera opens
   useEffect(() => {
     if (cameraOpen && cameraStream && videoRef.current) {
       videoRef.current.srcObject = cameraStream
     }
   }, [cameraOpen, cameraStream])
 
-  // Cleanup preview URLs
   useEffect(() => {
     return () => {
       previews.forEach(url => URL.revokeObjectURL(url))
@@ -377,7 +383,6 @@ function UploadModal({
 
   const addFiles = (newFiles: File[]) => {
     setSelectedFiles(prev => [...prev, ...newFiles])
-    // Tạo preview URL cho ảnh
     newFiles.forEach(file => {
       if (file.type.startsWith('image/')) {
         setPreviews(prev => [...prev, URL.createObjectURL(file)])
@@ -409,7 +414,6 @@ function UploadModal({
     )
   }
 
-  // ✅ Mở camera thiết bị bằng getUserMedia
   const openCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -422,13 +426,11 @@ function UploadModal({
       setCameraStream(stream)
       setCameraOpen(true)
     } catch (err) {
-      // Fallback: dùng input capture (hoạt động tốt trên mobile)
       console.log('Camera getUserMedia thất bại, dùng fallback input:', err)
       cameraInputRef.current?.click()
     }
   }
 
-  // ✅ Chụp ảnh từ camera stream
   const capturePhoto = () => {
     if (!videoRef.current) return
     const video = videoRef.current
@@ -447,7 +449,6 @@ function UploadModal({
     }, 'image/jpeg', 0.9)
   }
 
-  // ✅ Đóng camera
   const closeCamera = () => {
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop())
@@ -485,7 +486,6 @@ function UploadModal({
 
   if (!open) return null
 
-  // Tính preview index cho file (bỏ qua file không phải ảnh)
   let previewIdx = 0
 
   return (
@@ -541,7 +541,6 @@ function UploadModal({
         </div>
 
         <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* 2 nút: Chọn file + Chụp ảnh */}
           <div>
             <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Thêm chứng từ</label>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -567,7 +566,6 @@ function UploadModal({
               </button>
             </div>
 
-            {/* Hidden file inputs */}
             <input
               ref={fileInputRef}
               type="file"
@@ -586,7 +584,6 @@ function UploadModal({
             />
           </div>
 
-          {/* Preview file đã chọn */}
           {selectedFiles.length > 0 && (
             <div>
               <div style={{ fontWeight: 700, marginBottom: 8, color: '#435ebe' }}>
@@ -629,7 +626,6 @@ function UploadModal({
                             </div>
                           </div>
                         )}
-                        {/* Nút xóa */}
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(index)}
@@ -661,7 +657,6 @@ function UploadModal({
             </div>
           )}
 
-          {/* Chứng từ hiện có (edit mode) */}
           {mode === 'edit' && documents.length > 0 && (
             <div>
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Chứng từ hiện có</div>
@@ -693,7 +688,6 @@ function UploadModal({
                         disabled={saving}
                         style={{ accentColor: '#ef4444' }}
                       />
-                      {/* Thumbnail */}
                       {isImage ? (
                         <img
                           src={fullUrl}
@@ -727,7 +721,6 @@ function UploadModal({
         </div>
       </div>
 
-      {/* ✅ CAMERA STREAM OVERLAY - Hiển thị camera thiết bị */}
       {cameraOpen && (
         <div
           style={{
@@ -795,9 +788,6 @@ export default function AccountingOrdersPage() {
   const [uploadModal, setUploadModal] = useState<{ open: boolean; orderId: number | null; mode: UploadModalMode }>({ open: false, orderId: null, mode: 'upload' })
   const [viewModal, setViewModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null })
 
-  // Hóa đơn + Thanh toán gộp chung 1 modal
-  // mode 'new' = lần đầu xuất (chọn trả hết/ghi nợ + điền form HĐ)
-  // mode 'reprint' = in lại (chỉ điền form HĐ, không chọn thanh toán)
   const [invoiceModal, setInvoiceModal] = useState<{
     open: boolean
     orderId: number | null
@@ -817,7 +807,6 @@ export default function AccountingOrdersPage() {
     customerName: ''
   })
 
-  // ✅ State cho modal xác nhận duyệt bất chấp vượt công nợ
   const [debtConfirmModal, setDebtConfirmModal] = useState<{
     open: boolean
     order: Order | null
@@ -862,16 +851,26 @@ export default function AccountingOrdersPage() {
       const mappedOrders: Order[] = list.map((o: any) => ({
         id: o.Id,
         orderCode: o.OrderCode,
-        destinationStation: o.DestinationStation || '',
-        totalAmount: o.TotalAmount || 0,
-        orderStatus: o.OrderStatus,
-        createdAt: o.CreatedAt,
+        coordinatorName: o.CoordinatorName || '',
         customerName: o.CustomerName || '',
+        phone: o.Phone || '',
+        address: o.Address || '',
+        destinationStation: o.DestinationStation || '',
+        concreteType: o.ConcreteType || '',
+        volume: o.Volume || 0,
+        price: o.Price || 0,
+        totalAmount: o.TotalAmount || 0,
         debtAmount: o.DebtAmount || 0,
         debtLimit: o.DebtLimit || 0,
-        coordinatorName: o.CoordinatorName || '',
+        debtDueDate: o.DebtDueDate || null,
+        deliveryTime: o.DeliveryTime || null,
+        engineer: o.Engineer || '',
+        pipeHolder: o.PipeHolder || '',
+        pipeFixer: o.PipeFixer || '',
+        truck: o.Truck || '',
+        orderStatus: o.OrderStatus,
         paymentStatus: o.PaymentStatus || 'pending',
-        debtDueDate: o.DebtDueDate || null
+        createdAt: o.CreatedAt
       }))
 
       setOrders(mappedOrders)
@@ -892,7 +891,6 @@ export default function AccountingOrdersPage() {
     setUploadModal({ open: true, orderId, mode: 'edit' })
   }
 
-  // ✅ FIX: Xử lý phê duyệt - hỗ trợ xác nhận khi vượt công nợ
   const handleAction = async (order: Order, action: string) => {
     if (!action) return
 
@@ -923,7 +921,6 @@ export default function AccountingOrdersPage() {
     } catch (err: any) {
       console.error(err.response?.data || err)
 
-      // ✅ FIX: Nếu backend trả về 409 (debtWarning) → mở modal xác nhận
       if (err.response?.status === 409 && err.response?.data?.debtWarning) {
         setDebtConfirmModal({
           open: true,
@@ -937,7 +934,6 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  // ✅ FIX: Duyệt bất chấp vượt công nợ (sau khi user xác nhận)
   const handleForceApprove = async () => {
     if (!debtConfirmModal.order) return
 
@@ -964,7 +960,6 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  // Mở modal Xuất hóa đơn (lần đầu - kèm chọn thanh toán)
   const openInvoiceModal = (order: Order) => {
     setPaymentChoice('full')
     setDebtDueDateInput('')
@@ -978,7 +973,6 @@ export default function AccountingOrdersPage() {
     setInvoiceModal({ open: true, orderId: order.id, mode: 'new' })
   }
 
-  // Mở modal In lại HĐ (đã xuất trước đó, chỉ in lại)
   const openReprintModal = (order: Order) => {
     setInvoiceForm({
       invoiceNumber: `HD-${order.orderCode}`,
@@ -990,14 +984,12 @@ export default function AccountingOrdersPage() {
     setInvoiceModal({ open: true, orderId: order.id, mode: 'reprint' })
   }
 
-  // Đóng modal hóa đơn
   const closeInvoiceModal = () => {
     setInvoiceModal({ open: false, orderId: null, mode: 'new' })
     setPaymentChoice('full')
     setDebtDueDateInput('')
   }
 
-  // Xử lý submit form hóa đơn (gộp cả xác nhận thanh toán nếu là lần đầu)
   const handleInvoiceSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -1011,7 +1003,6 @@ export default function AccountingOrdersPage() {
       return
     }
 
-    // Nếu là lần đầu xuất → validate chọn thanh toán
     if (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput) {
       alert('Vui lòng nhập hạn trả công nợ')
       return
@@ -1020,7 +1011,6 @@ export default function AccountingOrdersPage() {
     try {
       setConfirmingPayment(true)
 
-      // Nếu lần đầu xuất → gọi API xác nhận thanh toán
       if (invoiceModal.mode === 'new') {
         await apiClient.post(`/api/orders/${order.id}/confirm-payment`, {
           paymentType: paymentChoice,
@@ -1028,7 +1018,6 @@ export default function AccountingOrdersPage() {
         })
       }
 
-      // Xây dựng và in hóa đơn
       const currentPaymentType = invoiceModal.mode === 'new'
         ? paymentChoice
         : order.paymentStatus === 'Debt' ? 'debt' : 'full'
@@ -1052,7 +1041,6 @@ export default function AccountingOrdersPage() {
         URL.revokeObjectURL(url)
       }, 10000)
 
-      // Refresh danh sách đơn
       await fetchOrders()
       closeInvoiceModal()
 
@@ -1067,7 +1055,6 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  // Thanh toán công nợ (khi khách trả nợ)
   const handlePayDebt = async (order: Order) => {
     if (!confirm(`Xác nhận thanh toán công nợ cho đơn ${order.orderCode}?`)) return
 
@@ -1142,7 +1129,6 @@ export default function AccountingOrdersPage() {
     }
   }
 
-  // Kiểm tra đơn công nợ có quá hạn không
   const isDebtOverdue = (order: Order): boolean => {
     if (order.paymentStatus !== 'Debt' || !order.debtDueDate) return false
     const dueDate = new Date(order.debtDueDate)
@@ -1152,7 +1138,6 @@ export default function AccountingOrdersPage() {
     return today > dueDate
   }
 
-  // Tính số ngày trễ hạn
   const getDaysOverdue = (order: Order): number => {
     if (!order.debtDueDate) return 0
     const dueDate = new Date(order.debtDueDate)
@@ -1161,6 +1146,16 @@ export default function AccountingOrdersPage() {
     dueDate.setHours(0, 0, 0, 0)
     const diff = Math.ceil((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24))
     return diff > 0 ? diff : 0
+  }
+
+  // Helper format DeliveryTime
+  const formatDeliveryTime = (dt: string | null) => {
+    if (!dt) return '—'
+    try {
+      return formatVNDateTime(dt)
+    } catch {
+      return dt
+    }
   }
 
   return (
@@ -1184,11 +1179,21 @@ export default function AccountingOrdersPage() {
                 <th>Mã đơn</th>
                 <th>Điều phối</th>
                 <th>Khách hàng</th>
+                <th>SĐT</th>
+                <th>Địa chỉ</th>
                 <th>Trạm nhận</th>
-                <th>Công nợ</th>
+                <th>Loại bê tông</th>
+                <th>Khối lượng</th>
+                <th>Giá</th>
                 <th>Tổng tiền</th>
-                <th>Trạng thái</th>
+                <th>Công nợ</th>
                 <th>Hạn trả</th>
+                <th>Giờ đổ</th>
+                <th>Kỹ sư</th>
+                <th>Vận hành bơm</th>
+                <th>Lắp ống</th>
+                <th>Xe</th>
+                <th>Trạng thái</th>
                 <th>Ngày tạo</th>
                 <th>Hành động</th>
               </tr>
@@ -1208,7 +1213,13 @@ export default function AccountingOrdersPage() {
                     <td className="code">{order.orderCode}</td>
                     <td>{order.coordinatorName}</td>
                     <td>{order.customerName}</td>
+                    <td>{order.phone || '—'}</td>
+                    <td>{order.address || '—'}</td>
                     <td>{order.destinationStation}</td>
+                    <td>{order.concreteType || '—'}</td>
+                    <td>{order.volume ? `${order.volume} m³` : '—'}</td>
+                    <td className="money">{order.price ? `${order.price.toLocaleString()} đ` : '—'}</td>
+                    <td className="money">{order.totalAmount.toLocaleString()} đ</td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
                         <strong>{order.debtAmount.toLocaleString()} đ</strong>
@@ -1221,12 +1232,6 @@ export default function AccountingOrdersPage() {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="money">{order.totalAmount.toLocaleString()} đ</td>
-                    <td>
-                      <span className={`status ${getStatusClass(order.orderStatus)}`}>
-                        {getStatusLabel(order.orderStatus)}
-                      </span>
                     </td>
                     {/* Cột Hạn trả */}
                     <td>
@@ -1251,6 +1256,16 @@ export default function AccountingOrdersPage() {
                       ) : (
                         <span style={{ color: '#999' }}>—</span>
                       )}
+                    </td>
+                    <td>{formatDeliveryTime(order.deliveryTime)}</td>
+                    <td>{order.engineer || '—'}</td>
+                    <td>{order.pipeHolder || '—'}</td>
+                    <td>{order.pipeFixer || '—'}</td>
+                    <td>{order.truck || '—'}</td>
+                    <td>
+                      <span className={`status ${getStatusClass(order.orderStatus)}`}>
+                        {getStatusLabel(order.orderStatus)}
+                      </span>
                     </td>
                     <td>{formatVNDate(order.createdAt)}</td>
                     <td>
@@ -1286,7 +1301,6 @@ export default function AccountingOrdersPage() {
                             </button>
                           ) : (
                             <>
-                              {/* Nút chứng từ - luôn hiện khi có docs */}
                               <button
                                 type="button"
                                 className="action-btn"
@@ -1308,7 +1322,6 @@ export default function AccountingOrdersPage() {
                               </button>
 
                               {isPaid ? (
-                                /* ĐÃ THANH TOÁN → Badge + In lại HĐ */
                                 <>
                                   <span className="status-badge green">Đã thanh toán</span>
                                   <button
@@ -1322,7 +1335,6 @@ export default function AccountingOrdersPage() {
                                   </button>
                                 </>
                               ) : isDebt ? (
-                                /* GHI CÔNG NỢ / QUÁ HẠN → Badge + In lại HĐ + Thanh toán nợ */
                                 <>
                                   {isOverdue ? (
                                     <span className="status-badge overdue">Quá hạn</span>
@@ -1349,7 +1361,6 @@ export default function AccountingOrdersPage() {
                                   </button>
                                 </>
                               ) : (
-                                /* CHƯA THANH TOÁN → 1 nút duy nhất: Xuất hóa đơn */
                                 <button
                                   type="button"
                                   className="action-btn approve"
@@ -1385,9 +1396,7 @@ export default function AccountingOrdersPage() {
         saving={uploading}
       />
 
-      {/* ========================= */}
       {/* VIEW MODAL: Xem chứng từ */}
-      {/* ========================= */}
       {viewModal.open && (
         <div
           style={{
@@ -1509,7 +1518,7 @@ export default function AccountingOrdersPage() {
         </div>
       )}
 
-      {/* ✅ MODAL XÁC NHẬN DUYỆT BẤT CHẤP VƯỢT CÔNG NỢ */}
+      {/* MODAL XÁC NHẬN DUYỆT BẤT CHẤP VƯỢT CÔNG NỢ */}
       {debtConfirmModal.open && debtConfirmModal.details && debtConfirmModal.order && (
         <div
           style={{
@@ -1533,7 +1542,6 @@ export default function AccountingOrdersPage() {
               overflow: 'hidden'
             }}
           >
-            {/* Header cảnh báo */}
             <div
               style={{
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -1567,7 +1575,6 @@ export default function AccountingOrdersPage() {
               </div>
             </div>
 
-            {/* Nội dung chi tiết */}
             <div style={{ padding: '20px 24px' }}>
               <div style={{
                 background: '#fffbeb',
@@ -1628,7 +1635,6 @@ export default function AccountingOrdersPage() {
                 Nếu không chắc chắn, hãy nhấn "Hủy" để xem xét thêm.
               </div>
 
-              {/* Nút hành động */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button
                   type="button"
@@ -1661,11 +1667,7 @@ export default function AccountingOrdersPage() {
 
 
 
-      {/* ============================
-          MODAL HÓA ĐƠN (GỘP THANH TOÁN)
-          - mode 'new': chọn Trả hết/Ghi nợ + điền form HĐ
-          - mode 'reprint': chỉ điền form HĐ để in lại
-      ============================ */}
+      {/* MODAL HÓA ĐƠN (GỘP THANH TOÁN) */}
       {invoiceModal.open && (
         <div
           style={{
@@ -1717,19 +1719,19 @@ export default function AccountingOrdersPage() {
                   display: 'flex',
                   alignItems: 'center'
                 }}
-                aria-label="Đóng popup"
               >
                 <FiX />
               </button>
             </div>
 
-            <form onSubmit={handleInvoiceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* ===== CHỌN THANH TOÁN (chỉ hiện khi mode 'new') ===== */}
+            {/* Form */}
+            <form onSubmit={handleInvoiceSubmit}>
+              {/* Chọn thanh toán (chỉ hiện lần đầu) */}
               {invoiceModal.mode === 'new' && (
                 <div className="invoice-payment-section">
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
-                    Trạng thái thanh toán
-                  </div>
+                  <label style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, display: 'block' }}>
+                    Chọn trạng thái thanh toán
+                  </label>
                   <div className="payment-choice">
                     <div
                       className={`choice-card${paymentChoice === 'full' ? ' selected-full' : ''}`}
@@ -1737,113 +1739,91 @@ export default function AccountingOrdersPage() {
                     >
                       <div className="choice-icon">💰</div>
                       <div className="choice-title">Trả hết</div>
-                      <div className="choice-desc">Khách đã thanh toán toàn bộ. Xuất hóa đơn hoàn tất.</div>
+                      <div className="choice-desc">Khách thanh toán toàn bộ</div>
                     </div>
-
                     <div
                       className={`choice-card${paymentChoice === 'debt' ? ' selected-debt' : ''}`}
                       onClick={() => setPaymentChoice('debt')}
                     >
                       <div className="choice-icon">📋</div>
                       <div className="choice-title">Ghi công nợ</div>
-                      <div className="choice-desc">Khách chưa trả, xuất hóa đơn làm bằng chứng đòi nợ.</div>
+                      <div className="choice-desc">Ghi nhận công nợ, chọn hạn trả</div>
                     </div>
                   </div>
 
-                  {/* Hiện field nhập hạn trả khi chọn Ghi công nợ */}
                   {paymentChoice === 'debt' && (
                     <div className="debt-date-field">
-                      <label>Hạn trả công nợ *</label>
+                      <label>Hạn trả công nợ</label>
                       <input
                         type="date"
                         value={debtDueDateInput}
-                        onChange={event => setDebtDueDateInput(event.target.value)}
-                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setDebtDueDateInput(e.target.value)}
+                        required
                       />
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ===== THÔNG TIN HÓA ĐƠN ===== */}
-              <div className="invoice-form-section">
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#374151' }}>
-                  Thông tin hóa đơn
-                </div>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Số hóa đơn</span>
-                  <input
-                    value={invoiceForm.invoiceNumber}
-                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceNumber: event.target.value }))}
-                    placeholder="VD: HD-ORD001"
-                  />
-                </label>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ngày lập</span>
-                  <input
-                    type="date"
-                    value={invoiceForm.invoiceDate}
-                    onChange={event => setInvoiceForm(prev => ({ ...prev, invoiceDate: event.target.value }))}
-                  />
-                </label>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Khách hàng</span>
-                  <input
-                    value={invoiceForm.customerName}
-                    onChange={event => setInvoiceForm(prev => ({ ...prev, customerName: event.target.value }))}
-                    placeholder="Tên khách hàng"
-                  />
-                </label>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Phương thức thanh toán</span>
-                  <select
-                    value={invoiceForm.paymentMethod}
-                    onChange={event => setInvoiceForm(prev => ({ ...prev, paymentMethod: event.target.value }))}
-                  >
-                    <option value="Tiền mặt">Tiền mặt</option>
-                    <option value="Chuyển khoản">Chuyển khoản</option>
-                    <option value="Thẻ">Thẻ</option>
-                  </select>
-                </label>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>Ghi chú</span>
-                  <textarea
-                    rows={3}
-                    value={invoiceForm.note}
-                    onChange={event => setInvoiceForm(prev => ({ ...prev, note: event.target.value }))}
-                    placeholder="Thông tin bổ sung"
-                  />
-                </label>
+              {/* Form Hóa đơn */}
+              <div className="invoice-form-section" style={{ marginTop: 14 }}>
+                <label style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Thông tin hóa đơn</label>
+                <input
+                  type="text"
+                  placeholder="Số hóa đơn"
+                  value={invoiceForm.invoiceNumber}
+                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                  required
+                />
+                <input
+                  type="date"
+                  value={invoiceForm.invoiceDate}
+                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Khách hàng"
+                  value={invoiceForm.customerName}
+                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, customerName: e.target.value }))}
+                />
+                <select
+                  value={invoiceForm.paymentMethod}
+                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                >
+                  <option value="Tiền mặt">Tiền mặt</option>
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Khác">Khác</option>
+                </select>
+                <textarea
+                  placeholder="Ghi chú"
+                  value={invoiceForm.note}
+                  onChange={(e) => setInvoiceForm(prev => ({ ...prev, note: e.target.value }))}
+                  rows={2}
+                />
               </div>
 
-              {/* ===== NÚT SUBMIT ===== */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
-                <button type="button" className="action-btn" onClick={closeInvoiceModal}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                <button
+                  type="button"
+                  className="action-btn"
+                  onClick={closeInvoiceModal}
+                  disabled={confirmingPayment}
+                  style={{ background: '#6b7280' }}
+                >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   className="action-btn"
-                  disabled={confirmingPayment || (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput)}
-                  style={{
-                    background: invoiceModal.mode === 'new'
-                      ? (paymentChoice === 'debt' ? '#f59e0b' : '#10b981')
-                      : '#6366f1',
-                    color: 'white',
-                    opacity: (invoiceModal.mode === 'new' && paymentChoice === 'debt' && !debtDueDateInput) ? 0.5 : 1
-                  }}
+                  disabled={confirmingPayment}
+                  style={{ minWidth: 160 }}
                 >
                   {confirmingPayment
                     ? 'Đang xử lý...'
                     : invoiceModal.mode === 'new'
-                      ? (paymentChoice === 'debt' ? 'Ghi công nợ & Xuất HĐ' : 'Xác nhận trả hết & Xuất HĐ')
-                      : 'In lại hóa đơn'
-                  }
+                      ? 'Xác nhận & In hóa đơn'
+                      : 'In hóa đơn'}
                 </button>
               </div>
             </form>

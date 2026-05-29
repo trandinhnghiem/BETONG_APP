@@ -76,13 +76,9 @@ class OrderController {
       .input('SourceStationId', sql.Int, mixingStationId)
       .input('DestinationStationId', sql.Int, mixingStationId)
 
-      // ⭐ CUSTOMER INFO
+      // CUSTOMER INFO
       .input('CustomerName', sql.NVarChar, customerName)
       .input('Address', sql.NVarChar, address)
-      
-
-      
-      
       .input('Phone', sql.NVarChar, phone)
 
       .input('ConcreteType', sql.NVarChar, concreteType)
@@ -260,9 +256,7 @@ class OrderController {
       }
 
       // =========================
-      // ✅ FIX 1: KIỂM TRA CÔNG NỢ TRƯỚC KHI DUYỆT
-      // Nếu vượt hạn mức VÀ chưa forceApprove → trả cảnh báo (409)
-      // Nếu vượt hạn mức VÀ forceApprove=true → vẫn duyệt (khách quen)
+      // KIEM TRA CONG NO TRUOC KHI DUYET
       // =========================
       if (status === 'Approved') {
         const debt = await CustomerDebtModel.findByCustomerName(order.CustomerName)
@@ -271,13 +265,11 @@ class OrderController {
         const debtLimit = debt ? Number(debt.DebtLimit || 0) : 0
         const futureDebt = currentDebtAmount + Number(order.TotalAmount || 0)
 
-        // Nếu khách đã có record công nợ VÀ vượt hạn mức
         if (debt && futureDebt > debtLimit) {
-          // Nếu user chưa xác nhận forceApprove → trả cảnh báo, KHÔNG thay đổi trạng thái đơn
           if (!forceApprove) {
             return res.status(409).json({
               debtWarning: true,
-              error: `Khách hàng ${order.CustomerName} đang có công nợ vượt hạn mức`,
+              error: `Khach hang ${order.CustomerName} dang co cong no vuot han muc`,
               details: {
                 customerName: order.CustomerName,
                 currentDebt: currentDebtAmount,
@@ -288,13 +280,10 @@ class OrderController {
             })
           }
 
-          // Nếu forceApprove=true → user đã xác nhận, cho phép duyệt bất chấp vượt nợ
-          // Ghi nhận lý do duyệt bất chấp vào reason
           const forceReason = reason
-            ? `${reason} (Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ)`
-            : `Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ`
+            ? `${reason} (Duyet bat chap vuot cong no: No ${currentDebtAmount.toLocaleString()} d + Don ${Number(order.TotalAmount).toLocaleString()} d > Han muc ${debtLimit.toLocaleString()} d)`
+            : `Duyet bat chap vuot cong no: No ${currentDebtAmount.toLocaleString()} d + Don ${Number(order.TotalAmount).toLocaleString()} d > Han muc ${debtLimit.toLocaleString()} d`
 
-          // ✅ SAU khi check xong mới cập nhật status (với lý do force approve)
           const updated = await OrderModel.updateStatus(
             orderId,
             status,
@@ -306,16 +295,14 @@ class OrderController {
           }
 
           const io = req.app.get('io')
-          const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
+          const statusMessage = `Don hang ${order.OrderCode} da chuyen sang trang thai ${status}.`
 
           try {
-            // Tăng công nợ khách hàng khi duyệt đơn (bất chấp)
-            
             await NotificationService.notifyStationUsers(
               io,
               order.DestinationStationId,
               'OrderApproved',
-              'Đơn hàng đã được duyệt',
+              'Don hang da duoc duyet',
               statusMessage,
               order.Id
             )
@@ -331,7 +318,7 @@ class OrderController {
         }
       }
 
-      // ✅ SAU khi check nợ xong (hoặc không vượt nợ) → cập nhật status bình thường
+      // SAU khi check no xong -> cap nhat status binh thuong
       const updated = await OrderModel.updateStatus(
         orderId,
         status,
@@ -343,7 +330,7 @@ class OrderController {
       }
 
       const io = req.app.get('io')
-      const statusMessage = `Đơn hàng ${order.OrderCode} đã chuyển sang trạng thái ${status}.`
+      const statusMessage = `Don hang ${order.OrderCode} da chuyen sang trang thai ${status}.`
 
       try {
         if (status === 'Pending Approval') {
@@ -351,20 +338,18 @@ class OrderController {
             io,
             'Accounting',
             'OrderPendingApproval',
-            'Đơn hàng mới chờ duyệt',
+            'Don hang moi cho duyet',
             statusMessage,
             order.Id
           )
         }
 
         if (status === 'Approved') {
-          // Tăng công nợ khách hàng khi duyệt đơn
-         
           await NotificationService.notifyStationUsers(
             io,
             order.DestinationStationId,
             'OrderApproved',
-            'Đơn hàng đã được duyệt',
+            'Don hang da duoc duyet',
             statusMessage,
             order.Id
           )
@@ -374,7 +359,7 @@ class OrderController {
             io,
             order.CoordinatorId,
             'OrderRejected',
-            'Đơn hàng đã bị từ chối',
+            'Don hang da bi tu choi',
             statusMessage,
             order.Id
           )
@@ -385,7 +370,7 @@ class OrderController {
             io,
             order.CoordinatorId,
             'OrderCancelled',
-            'Đơn hàng đã bị hủy',
+            'Don hang da bi huy',
             statusMessage,
             order.Id
           )
@@ -396,7 +381,7 @@ class OrderController {
             io,
             'Accounting',
             'OrderCompleted',
-            'Đơn hàng hoàn thành',
+            'Don hang hoan thanh',
             statusMessage,
             order.Id
           )
@@ -432,7 +417,7 @@ class OrderController {
     res.json(orders)
   }
 
-  // ✅ getAccountingOrders thêm DebtDueDate
+  // getAccountingOrders - BO SUNG DAY DU CAC TRUONG
   static async getAccountingOrders(req, res) {
   try {
     const pool = await getConnection()
@@ -442,7 +427,17 @@ class OrderController {
     o.Id,
     o.OrderCode,
     o.CustomerName,
-    o.TotalAmount,
+    o.Address,
+    o.Phone,
+    o.ConcreteType,
+    o.Volume,
+    o.Price,
+    o.DeliveryTime,
+    o.Engineer,
+    o.PipeHolder,
+    o.PipeFixer,
+    o.Truck,
+    ISNULL(o.TotalAmount, o.Volume * o.Price) AS TotalAmount,
     o.OrderStatus,
     o.CreatedAt,
     o.PaymentStatus,
@@ -680,7 +675,7 @@ class OrderController {
       })
     }
 
-    // xóa file vật lý
+    // xoa file vat ly
     try {
       const relativePath =
         decodeURIComponent(
@@ -700,7 +695,7 @@ class OrderController {
       console.error('Delete file error:', fileErr)
     }
 
-    // xóa database
+    // xoa database
     const pool = await getConnection()
 
     await pool.request()
@@ -742,7 +737,7 @@ static async uploadPaymentDocument(req, res) {
     if (!req.file) {
 
       return res.status(400).json({
-        error: 'Chưa chọn file'
+        error: 'Chua chon file'
       })
 
     }
@@ -786,7 +781,7 @@ static async uploadPaymentDocument(req, res) {
     res.json({
 
       message:
-        'Upload thành công',
+        'Upload thanh cong',
 
       filePath
 
@@ -842,7 +837,7 @@ static async sendToAccounting(req, res) {
     res.json({
 
       message:
-        'Đã gửi kế toán'
+        'Da gui ke toan'
 
     })
 
@@ -897,7 +892,7 @@ static async getWaitingPayments(req, res) {
 
 }
 
-// ✅ CONFIRM PAYMENT - Hỗ trợ Trả hết hoặc Ghi công nợ
+// CONFIRM PAYMENT - Ho tro Tra het hoac Ghi cong no
 static async confirmPayment(req, res) {
 
   try {
@@ -909,19 +904,19 @@ static async confirmPayment(req, res) {
 
     if (!orderId) {
       return res.status(400).json({
-        error: 'Thiếu mã đơn hàng'
+        error: 'Thieu ma don hang'
       })
     }
 
     const pool =
       await getConnection()
 
-    // Nếu chọn Ghi công nợ
+    // Neu chon Ghi cong no
     if (paymentType === 'debt') {
 
       if (!debtDueDate) {
         return res.status(400).json({
-          error: 'Vui lòng nhập hạn trả công nợ'
+          error: 'Vui long nhap han tra cong no'
         })
       }
 
@@ -940,7 +935,7 @@ static async confirmPayment(req, res) {
           WHERE Id = @Id
 
         `)
-              // ✅ Cộng công nợ khi chọn ghi công nợ
+              // Cong cong no khi chon ghi cong no
       try {
 
         const order =
@@ -971,12 +966,12 @@ static async confirmPayment(req, res) {
       }
 
       res.json({
-        message: 'Đã ghi công nợ'
+        message: 'Da ghi cong no'
       })
 
     } else {
 
-      // Trả hết (mặc định) - giống logic cũ
+      // Tra het (mac dinh)
       await pool.request()
         .input('Id', sql.Int, Number(orderId))
         .query(`
@@ -997,7 +992,7 @@ static async confirmPayment(req, res) {
 
         `)
 
-      // Giảm công nợ khách hàng khi trả hết
+      // Giam cong no khach hang khi tra het
       try {
         const order = await OrderModel.findById(Number(orderId))
         if (order && order.CustomerName && order.TotalAmount) {
@@ -1008,13 +1003,12 @@ static async confirmPayment(req, res) {
         }
       } catch (debtErr) {
         console.error('Failed to decrease customer debt:', debtErr)
-        // Không rollback - thanh toán vẫn thành công
       }
 
       res.json({
 
         message:
-          'Đã xác nhận thanh toán'
+          'Da xac nhan thanh toan'
 
       })
 
@@ -1032,7 +1026,7 @@ static async confirmPayment(req, res) {
 
 }
 
-// ✅ CONFIRM DEBT PAYMENT - Thanh toán công nợ (khi khách trả nợ)
+// CONFIRM DEBT PAYMENT - Thanh toan cong no (khi khach tra no)
 static async confirmDebtPayment(req, res) {
 
   try {
@@ -1042,22 +1036,21 @@ static async confirmDebtPayment(req, res) {
 
     if (!orderId) {
       return res.status(400).json({
-        error: 'Thiếu mã đơn hàng'
+        error: 'Thieu ma don hang'
       })
     }
 
-    // Kiểm tra đơn hàng có ở trạng thái công nợ không
     const order = await OrderModel.findById(Number(orderId))
 
     if (!order) {
       return res.status(404).json({
-        error: 'Không tìm thấy đơn hàng'
+        error: 'Khong tim thay don hang'
       })
     }
 
     if (order.PaymentStatus !== 'Debt') {
       return res.status(400).json({
-        error: 'Đơn hàng không ở trạng thái công nợ'
+        error: 'Don hang khong o trang thai cong no'
       })
     }
 
@@ -1084,7 +1077,7 @@ static async confirmDebtPayment(req, res) {
 
       `)
 
-    // Giảm công nợ khách hàng
+    // Giam cong no khach hang
     try {
       if (order.CustomerName && order.TotalAmount) {
         await CustomerDebtModel.decreaseDebt(
@@ -1097,7 +1090,7 @@ static async confirmDebtPayment(req, res) {
     }
 
     res.json({
-      message: 'Đã thanh toán công nợ'
+      message: 'Da thanh toan cong no'
     })
 
   } catch (error) {
@@ -1158,7 +1151,7 @@ static async rejectPayment(req, res) {
     res.json({
 
       message:
-        'Đã từ chối'
+        'Da tu choi'
 
     })
 
