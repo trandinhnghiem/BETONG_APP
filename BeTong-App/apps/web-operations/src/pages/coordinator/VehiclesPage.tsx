@@ -354,7 +354,7 @@ export default function VehiclesPage() {
         <div>
 
           <h1>
-            🚚 Quản lý phương tiện
+            Quản lý phương tiện
           </h1>
 
           <p>
