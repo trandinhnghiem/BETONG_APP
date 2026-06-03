@@ -410,13 +410,7 @@ const [searchCustomer, setSearchCustomer] =
                     -- Chọn xe --
                   </option>
 
-                  {vehicles
-                    .filter(
-                      v =>
-                        v.VehicleStatus ===
-                        'Sẵn sàng'
-                    )
-                    .map(v => (
+                  {vehicles.map(v => (
 
                       <option
                         key={v.Id}

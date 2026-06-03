@@ -8,6 +8,8 @@ const StationModel = require('../models/Station')
 const { getConnection, sql } = require('../config/database')
 const NotificationService = require('../services/notificationService')
 const CustomerDebtModel = require('../models/CustomerDebt')
+const VehicleModel =
+  require('../models/VehicleModel')
 
 // ✅ Hằng số: Đơn tối thiểu (m³)
 const MIN_VOLUME = 5
@@ -402,6 +404,47 @@ class OrderController {
             ? `${reason} (Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ)`
             : `Duyệt bất chấp vượt công nợ: Nợ ${currentDebtAmount.toLocaleString()} đ + Đơn ${Number(order.TotalAmount).toLocaleString()} đ > Hạn mức ${debtLimit.toLocaleString()} đ`
 
+
+          // =========================
+// KIỂM TRA XE ĐANG GIAO HÀNG
+// =========================
+
+if (status === 'Delivering') {
+
+  if (!order.Truck) {
+
+    return res.status(400).json({
+      error: 'Đơn hàng chưa được gán xe'
+    })
+
+  }
+
+  const vehicle =
+    await VehicleModel.findByLicensePlate(
+      order.Truck
+    )
+
+  if (!vehicle) {
+
+    return res.status(404).json({
+      error: `Không tìm thấy xe ${order.Truck}`
+    })
+
+  }
+
+  if (
+    vehicle.VehicleStatus ===
+    'Delivering'
+  ) {
+
+    return res.status(400).json({
+      error:
+        `Xe ${order.Truck} đang giao đơn khác`
+    })
+
+  }
+
+}
           const updated = await OrderModel.updateStatus(
             orderId,
             status,
@@ -435,6 +478,7 @@ class OrderController {
           })
         }
       }
+      
 
       const updated = await OrderModel.updateStatus(
         orderId,
@@ -442,6 +486,12 @@ class OrderController {
         req.user.Id,
         reason || null
       )
+
+      // =========================
+// CẬP NHẬT TRẠNG THÁI XE
+// =========================
+
+
       if (!updated) {
         return res.status(500).json({ error: 'Failed to update status' })
       }
@@ -509,8 +559,17 @@ class OrderController {
 
       return res.json({ message: 'Updated', status })
     } catch (err) {
-      res.status(500).json({ error: err.message })
-    }
+
+  console.error(
+    'UPDATE STATUS ERROR:',
+    err
+  )
+
+  res.status(500).json({
+    error: err.message
+  })
+
+}
   }
 
   // ================= OTHER ROUTES KEEP SAFE =================

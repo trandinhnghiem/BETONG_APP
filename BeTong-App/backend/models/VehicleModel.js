@@ -191,6 +191,66 @@ static async bulkInsert(
 
 }
 
+static async findByLicensePlate(
+  licensePlate
+) {
+
+  const pool =
+    await getConnection()
+
+  const result =
+    await pool.request()
+
+      .input(
+        'LicensePlate',
+        sql.NVarChar,
+        licensePlate
+      )
+
+      .query(`
+
+        SELECT
+
+          v.*,
+
+          CASE
+
+            WHEN EXISTS (
+
+              SELECT 1
+              FROM Orders o
+
+              WHERE
+                o.Truck = v.LicensePlate
+
+                AND o.OrderStatus IN (
+                  'Processing',
+                  'Delivering'
+                )
+
+            )
+
+            THEN N'Đang giao'
+
+            WHEN v.IsActive = 0
+
+            THEN N'Ngưng hoạt động'
+
+            ELSE N'Sẵn sàng'
+
+          END AS VehicleStatus
+
+        FROM Vehicles v
+
+        WHERE v.LicensePlate =
+          @LicensePlate
+
+      `)
+
+  return result.recordset[0]
+
+}
+
 }
 
 module.exports =
